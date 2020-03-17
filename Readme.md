@@ -40,3 +40,7 @@ BusCommon bus = new BusCommon(_conn);
 bus.IndividualAddressWrite(UnicastAddress.FromString("1.1.6"));
 bus.GroupValueWrite(MulticastAddress.FromString("1/4/3"), 0x1);
 ```
+
+# Credits
+
+Many thanks go to @[xp-development](https://github.com/xp-development) and his Code from [Automation.KNX](https://github.com/xp-development/Automation.Knx) which was the base code for my lib.
