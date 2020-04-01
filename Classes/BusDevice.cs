@@ -19,9 +19,30 @@ namespace Kaenx.Konnect.Classes
         private Dictionary<int, TunnelResponse> responses = new Dictionary<int, TunnelResponse>();
         private List<int> acks = new List<int>();
 
-        private int _currentSeqNum = 0;
+
+        private int _seqNum = 0;
+        private int _currentSeqNum
+        {
+            get { return _seqNum; }
+            set
+            {
+                _seqNum = value;
+                if (_seqNum > 15) _seqNum = 0;
+            }
+        }
+
+        private int _lastNumb = -1;
+        private int lastReceivedNumber
+        {
+            get { return _lastNumb + 1; }
+            set { _lastNumb = value; }
+        }
+
+
+
+
+
         private bool _connected = false;
-        private int lastReceivedNumber = -1;
 
         public BusDevice(string address, Connection conn)
         {
@@ -96,8 +117,7 @@ namespace Kaenx.Konnect.Classes
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.Restart, _currentSeqNum);
-            _currentSeqNum++;
+            builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.Restart, _currentSeqNum++);
             _conn.Send(builder);
         }
 
@@ -188,9 +208,8 @@ namespace Kaenx.Konnect.Classes
             byte[] data_temp = BitConverter.GetBytes(Convert.ToInt16(x2));
             byte[] data = { objIdx, propId, data_temp[1], data_temp[0] };
 
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.PropertyValueRead, _currentSeqNum, data);
-            var seq = lastReceivedNumber + 1;
-            _currentSeqNum++;
+            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.PropertyValueRead, _currentSeqNum++, data);
+            var seq = lastReceivedNumber;
             _conn.Send(builder);
             TunnelResponse resp = await WaitForData(seq);
 
@@ -252,8 +271,7 @@ namespace Kaenx.Konnect.Classes
                 Array.Reverse(addr);
                 data.AddRange(addr);
                 data.AddRange(data_temp);
-                builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.MemoryWrite, _currentSeqNum, data.ToArray());
-                _currentSeqNum++;
+                builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.MemoryWrite, _currentSeqNum++, data.ToArray());
                 _conn.Send(builder);
             }
 
@@ -284,9 +302,9 @@ namespace Kaenx.Konnect.Classes
                 data.AddRange(addr);
                 data.AddRange(data_temp);
 
-                var seq = lastReceivedNumber + 1;
-                builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryWrite, _currentSeqNum, data.ToArray());
-                _currentSeqNum++;
+                var seq = _currentSeqNum++;
+                builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryWrite, seq, data.ToArray());
+
                 _conn.Send(builder);
                 Debug.WriteLine("Warten auf: " + seq);
                 await WaitForAck(seq);
@@ -322,9 +340,8 @@ namespace Kaenx.Konnect.Classes
             data.Add(addr[0]);
 
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryRead, _currentSeqNum, data.ToArray());
-            _currentSeqNum++;
-            var seq = lastReceivedNumber + 1;
+            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryRead, _currentSeqNum++, data.ToArray());
+            var seq = lastReceivedNumber;
             _conn.Send(builder);
             Debug.WriteLine("Warten auf: " + seq);
             TunnelResponse resp = await WaitForData(seq);
@@ -362,9 +379,8 @@ namespace Kaenx.Konnect.Classes
         public async Task<string> DeviceDescriptorRead()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.DeviceDescriptorRead, _currentSeqNum);
-            _currentSeqNum++;
-            var seq = lastReceivedNumber + 1;
+            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.DeviceDescriptorRead, _currentSeqNum++);
+            var seq = lastReceivedNumber;
             _conn.Send(builder);
             Debug.WriteLine("Warten auf: " + seq);
             TunnelResponse resp = await WaitForData(seq); 
