@@ -26,6 +26,8 @@ namespace Kaenx.Konnect
         public event TunnelRequestHandler OnTunnelRequest;
         public event TunnelRequestHandler OnTunnelResponse;
         public event TunnelRequestHandler OnTunnelAck;
+        public delegate void SearchResponseHandler(SearchResponse response);
+        public event SearchResponseHandler OnSearchResponse;
 
         private readonly IPEndPoint _receiveEndPoint;
         private readonly IPEndPoint _sendEndPoint;
@@ -35,13 +37,16 @@ namespace Kaenx.Konnect
         private byte _communicationChannel;
         private byte _sequenceCounter = 0;
 
+        public int Port;
         public bool IsConnected { get; private set; }
 
 
         public Connection(IPEndPoint sendEndPoint)
         {
+            Port = GetFreePort();
+
             _sendEndPoint = sendEndPoint;
-            _receiveEndPoint = new IPEndPoint(IPAddress.Any, GetFreePort());
+            _receiveEndPoint = new IPEndPoint(IPAddress.Any, Port);
             _udpClient = new UdpClient(_receiveEndPoint);
             _receiveParserDispatcher = new ReceiverParserDispatcher();
             _sendMessages = new BlockingCollection<byte[]>();
@@ -49,7 +54,7 @@ namespace Kaenx.Konnect
             ProcessSendMessages();
         }
 
-        public int GetFreePort()
+        public static int GetFreePort()
         {
             TcpListener l = new TcpListener(IPAddress.Loopback, 0);
             l.Start();
@@ -98,6 +103,12 @@ namespace Kaenx.Konnect
             return seq;
         }
 
+        public void SendWithoutConnected(IRequestBuilder builder)
+        {
+            byte[] data = builder.GetBytes();
+            _sendMessages.Add(data);
+        }
+
         /// <summary>
         /// Sendet die Daten vom angegebenen Builder.
         /// </summary>
@@ -144,6 +155,7 @@ namespace Kaenx.Konnect
                         rofl++;
                         var result = await _udpClient.ReceiveAsync();
                         var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
+
                         switch (knxResponse)
                         {
                             case ConnectResponse connectResponse:
@@ -161,7 +173,6 @@ namespace Kaenx.Konnect
                                 break;
                             case Builders.TunnelResponse tunnelResponse:
                                 _sendMessages.Add(new Responses.TunnelResponse(0x06, 0x10, 0x0A, 0x04, _communicationChannel, tunnelResponse.SequenceCounter, 0x00).GetBytes());
-
 
                                 if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
@@ -182,8 +193,12 @@ namespace Kaenx.Konnect
 
                                 break;
 
+                            case SearchResponse searchResponse:
+                                OnSearchResponse?.Invoke(searchResponse);
+                                break;
+
                             case TunnelAckResponse tunnelAck:
-                                
+                                //Do nothing
                                 break;
 
                             case DisconnectResponse disconnectResponse:

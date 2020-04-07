@@ -17,7 +17,7 @@ namespace Kaenx.Konnect.Classes
         private UnicastAddress _address;
         private Connection _conn;
         private Dictionary<int, TunnelResponse> responses = new Dictionary<int, TunnelResponse>();
-        private List<int> acks = new List<int>();
+        private Dictionary<int, bool> acks = new Dictionary<int, bool>();
 
 
         private int _seqNum = 0;
@@ -34,7 +34,7 @@ namespace Kaenx.Konnect.Classes
         private int _lastNumb = -1;
         private int lastReceivedNumber
         {
-            get { return _lastNumb + 1; }
+            get { return _lastNumb == 15 ? 0 : _lastNumb + 1; }
             set { _lastNumb = value; }
         }
 
@@ -50,12 +50,21 @@ namespace Kaenx.Konnect.Classes
             _conn = conn;
             _conn.OnTunnelResponse += OnTunnelResponse;
             _conn.OnTunnelRequest += _conn_OnTunnelRequest;
+            _conn.OnTunnelAck += _conn_OnTunnelAck;
+
+            for (int i = 0; i <= 15; i++)
+                acks.Add(i, false);
+        }
+
+        private void _conn_OnTunnelAck(TunnelResponse response)
+        {
+            acks[response.SequenceNumber] = true;
+            Debug.WriteLine(response.SequenceNumber + ": " + response.SequenceCounter);
         }
 
         private void _conn_OnTunnelRequest(TunnelResponse response)
         {
-            acks.Add(response.SequenceNumber);
-            Debug.WriteLine(response.SequenceNumber + ": " + response.APCI);
+           
         }
 
         private void OnTunnelResponse(TunnelResponse response)
@@ -63,7 +72,7 @@ namespace Kaenx.Konnect.Classes
             responses.Add(response.SequenceNumber, response);
             lastReceivedNumber = response.SequenceNumber;
 
-            Debug.WriteLine(response.SequenceNumber + ": " + response.APCI + " - " + response.Data.Length);
+            //Debug.WriteLine(response.SequenceNumber + ": " + response.APCI + " - " + response.Data.Length);
         }
 
         public BusDevice(UnicastAddress address, Connection conn)
@@ -80,7 +89,10 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Daten als Byte Array</returns>
         private async Task<TunnelResponse> WaitForData(int seq)
         {
-            while(!responses.ContainsKey(seq))
+            if (responses.ContainsKey(seq))
+                responses.Remove(seq);
+
+            while (!responses.ContainsKey(seq))
                 await Task.Delay(10); // TODO maybe erhöhen
 
             var resp = responses[seq];
@@ -90,8 +102,11 @@ namespace Kaenx.Konnect.Classes
 
         private async Task WaitForAck(int seq)
         {
-            while (!acks.Contains(seq))
+            acks[seq] = false;
+
+            while (!acks[seq])
                 await Task.Delay(10); // TODO maybe erhöhen
+
             acks.Remove(seq);
         }
 
@@ -251,6 +266,7 @@ namespace Kaenx.Konnect.Classes
         public void MemoryWrite(int address, byte[] databytes)
         {
             List<byte> datalist = databytes.ToList();
+            int currentPosition = address;
 
             while (datalist.Count != 0)
             {
@@ -267,12 +283,14 @@ namespace Kaenx.Konnect.Classes
 
                 TunnelRequest builder = new TunnelRequest();
                 List<byte> data = new List<byte> { Convert.ToByte(data_temp.Count) };
-                byte[] addr = BitConverter.GetBytes(Convert.ToInt16(address));
+                byte[] addr = BitConverter.GetBytes(Convert.ToInt16(currentPosition));
                 Array.Reverse(addr);
                 data.AddRange(addr);
                 data.AddRange(data_temp);
                 builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.MemoryWrite, _currentSeqNum++, data.ToArray());
                 _conn.Send(builder);
+
+                currentPosition += data_temp.Count;
             }
 
         }
@@ -280,14 +298,15 @@ namespace Kaenx.Konnect.Classes
         public async Task MemoryWriteSync(int address, byte[] databytes)
         {
             List<byte> datalist = databytes.ToList();
+            int currentPosition = address;
 
             while (datalist.Count != 0)
             {
                 List<byte> data_temp = new List<byte>();
-                if (datalist.Count >= 14)
+                if (datalist.Count >= 12)
                 {
-                    data_temp.AddRange(datalist.Take(14));
-                    datalist.RemoveRange(0, 14);
+                    data_temp.AddRange(datalist.Take(12));
+                    datalist.RemoveRange(0, 12);
                 }
                 else
                 {
@@ -297,7 +316,7 @@ namespace Kaenx.Konnect.Classes
 
                 TunnelRequest builder = new TunnelRequest();
                 List<byte> data = new List<byte> { Convert.ToByte(data_temp.Count) };
-                byte[] addr = BitConverter.GetBytes(Convert.ToInt16(address));
+                byte[] addr = BitConverter.GetBytes(Convert.ToInt16(currentPosition));
                 Array.Reverse(addr);
                 data.AddRange(addr);
                 data.AddRange(data_temp);
@@ -308,6 +327,8 @@ namespace Kaenx.Konnect.Classes
                 _conn.Send(builder);
                 Debug.WriteLine("Warten auf: " + seq);
                 await WaitForAck(seq);
+
+                currentPosition += data_temp.Count;
             }
 
         }

@@ -129,8 +129,18 @@ namespace Kaenx.Konnect.Parser
                 data = new byte[0];
                 int apci3 = npdu[0] & 3;
 
-                switch(apci3)
+                BitArray bitsNpdu = new BitArray(npdu);
+                if (bitsNpdu.Get(6))
                 {
+                    seqNumb = npdu[0] >> 2;
+                    seqNumb = seqNumb & 0xF;
+                }
+
+                switch (apci3)
+                {
+                    case 1:
+                        type = ApciTypes.Disconnect;
+                        break;
                     case 2:
                         type = ApciTypes.Ack;
                         break;
