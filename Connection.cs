@@ -36,6 +36,7 @@ namespace Kaenx.Konnect
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
         private byte _communicationChannel;
         private byte _sequenceCounter = 0;
+        private bool StopProcessing = false;
 
         public int Port;
         public bool IsConnected { get; private set; }
@@ -80,6 +81,9 @@ namespace Kaenx.Konnect
             DisconnectRequest builder = new DisconnectRequest();
             builder.Build(_receiveEndPoint, _communicationChannel);
             _sendMessages.Add(builder.GetBytes());
+
+            StopProcessing = true;
+            IsConnected = false;
         }
 
         /// <summary>
@@ -150,7 +154,7 @@ namespace Kaenx.Konnect
                 try
                 {
 
-                    while (true)
+                    while (!StopProcessing)
                     {
                         rofl++;
                         var result = await _udpClient.ReceiveAsync();
@@ -179,6 +183,7 @@ namespace Kaenx.Konnect
                                     TunnelRequest builder = new TunnelRequest();
                                     builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, Parser.ApciTypes.Ack, tunnelResponse.SequenceNumber);
                                     Send(builder);
+                                    Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
                                     OnTunnelResponse?.Invoke(tunnelResponse);
                                 }
                                 else if (tunnelResponse.APCI == ApciTypes.Ack)
@@ -208,6 +213,10 @@ namespace Kaenx.Konnect
                                 break;
                         }
                     }
+
+                    Debug.WriteLine("Stopped Processing Messages " + _udpClient.Client.LocalEndPoint.ToString());
+                    _udpClient.Close();
+                    _udpClient.Dispose();
                 }catch
                 {
 
@@ -218,7 +227,10 @@ namespace Kaenx.Konnect
             {
                 
                 foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
-                    _udpClient.SendAsync(sendMessage, sendMessage.Length, _sendEndPoint);
+                {
+
+                        _udpClient.SendAsync(sendMessage, sendMessage.Length, _sendEndPoint);
+                }
             });
         }
 

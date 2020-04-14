@@ -48,9 +48,6 @@ namespace Kaenx.Konnect.Classes
         {
             _address = UnicastAddress.FromString(address);
             _conn = conn;
-            _conn.OnTunnelResponse += OnTunnelResponse;
-            _conn.OnTunnelRequest += _conn_OnTunnelRequest;
-            _conn.OnTunnelAck += _conn_OnTunnelAck;
 
             for (int i = 0; i <= 15; i++)
                 acks.Add(i, false);
@@ -59,20 +56,18 @@ namespace Kaenx.Konnect.Classes
         private void _conn_OnTunnelAck(TunnelResponse response)
         {
             acks[response.SequenceNumber] = true;
-            Debug.WriteLine(response.SequenceNumber + ": " + response.SequenceCounter);
-        }
-
-        private void _conn_OnTunnelRequest(TunnelResponse response)
-        {
-           
+            Debug.WriteLine(response.SequenceNumber + ": ACK " + response.SequenceCounter);
         }
 
         private void OnTunnelResponse(TunnelResponse response)
         {
-            responses.Add(response.SequenceNumber, response);
-            lastReceivedNumber = response.SequenceNumber;
+            if (responses.ContainsKey(response.SequenceNumber))
+                responses[response.SequenceNumber] = response;
+            else
+                responses.Add(response.SequenceNumber, response);
 
-            //Debug.WriteLine(response.SequenceNumber + ": " + response.APCI + " - " + response.Data.Length);
+            lastReceivedNumber = response.SequenceNumber;
+            Debug.WriteLine(response.SequenceNumber + ": " + response.APCI + " - " + response.Data.Length);
         }
 
         public BusDevice(UnicastAddress address, Connection conn)
@@ -118,10 +113,15 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         public void Connect()
         {
+            Debug.WriteLine("New Device Connect to: " + _conn.Port);
+
             TunnelRequest builder = new TunnelRequest();
             builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.Connect, 255);
             _conn.Send(builder);
             _connected = true;
+
+            _conn.OnTunnelResponse += OnTunnelResponse;
+            _conn.OnTunnelAck += _conn_OnTunnelAck;
         }
 
         /// <summary>
@@ -355,26 +355,42 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Daten</returns>
         public async Task<T> MemoryRead<T>(int address, int length)
         {
-            List<byte> data = new List<byte> { BitConverter.GetBytes(length)[0] };
-            byte[] addr = BitConverter.GetBytes(address);
-            data.Add(addr[1]);
-            data.Add(addr[0]);
+            List<byte> readed = new List<byte>();
+            int currentPosition = address;
+            int toRead = length;
 
-            TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryRead, _currentSeqNum++, data.ToArray());
-            var seq = lastReceivedNumber;
-            _conn.Send(builder);
-            Debug.WriteLine("Warten auf: " + seq);
-            TunnelResponse resp = await WaitForData(seq);
+
+            while (true)
+            {
+                if (length == 0) break;
+
+                if(length > 12) toRead = 12;
+                else toRead = length;
+
+                List<byte> data = new List<byte> { BitConverter.GetBytes(toRead)[0] };
+                byte[] addr = BitConverter.GetBytes(currentPosition);
+                data.Add(addr[1]);
+                data.Add(addr[0]);
+
+                TunnelRequest builder = new TunnelRequest();
+                builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryRead, _currentSeqNum++, data.ToArray());
+                var seq = lastReceivedNumber;
+                _conn.Send(builder);
+                Debug.WriteLine("Warten auf: " + seq);
+                TunnelResponse resp = await WaitForData(seq);
+                readed.AddRange(resp.Data.Skip(2));
+                currentPosition += toRead;
+                length -= toRead;
+            }
 
             switch (Type.GetTypeCode(typeof(T)))
             {
                 case TypeCode.String:
-                    string datas = BitConverter.ToString(resp.Data.Skip(2).ToArray()).Replace("-", "");
+                    string datas = BitConverter.ToString(readed.ToArray()).Replace("-", "");
                     return (T)Convert.ChangeType(datas, typeof(T));
 
                 case TypeCode.Int32:
-                    byte[] datai = resp.Data.Skip(2).ToArray();
+                    byte[] datai = readed.ToArray();
                     byte[] xint = new byte[4];
 
                     for(int i = 0; i < datai.Length; i++)
@@ -386,7 +402,7 @@ namespace Kaenx.Konnect.Classes
                 default:
                     try
                     {
-                        return (T)Convert.ChangeType(resp.Data.Skip(2).ToArray(), typeof(T));
+                        return (T)Convert.ChangeType(readed.ToArray(), typeof(T));
                     }
                     catch (Exception e)
                     {
@@ -412,6 +428,14 @@ namespace Kaenx.Konnect.Classes
         public void Disconnect()
         {
             _connected = false;
+
+            TunnelRequest builder = new TunnelRequest();
+            var seq = _currentSeqNum++;
+            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.Disconnect, seq);
+            _conn.Send(builder);
+
+            _conn.OnTunnelResponse -= OnTunnelResponse;
+            _conn.OnTunnelAck -= _conn_OnTunnelAck;
         }
 
         private XDocument GetKnxMaster()

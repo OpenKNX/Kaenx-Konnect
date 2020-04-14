@@ -138,6 +138,9 @@ namespace Kaenx.Konnect.Parser
 
                 switch (apci3)
                 {
+                    case 0:
+                        type = ApciTypes.Connect;
+                        break;
                     case 1:
                         type = ApciTypes.Disconnect;
                         break;
@@ -232,6 +235,6 @@ namespace Kaenx.Konnect.Parser
         DomainAddressSerialNumberWrite,
         FileStreamInfoReport,
         Connect = 32768,
-        Disconnect = 32769
+        Disconnect = 33024
     }
 }

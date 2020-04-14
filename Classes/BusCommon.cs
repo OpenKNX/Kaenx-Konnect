@@ -60,6 +60,22 @@ namespace Kaenx.Konnect.Classes
         }
 
 
+        public void IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
+        {
+            TunnelRequest builder = new TunnelRequest();
+
+            List<byte> data = new List<byte>();
+            data.AddRange(serialNumber);
+
+            data.AddRange(newAddr.GetBytes());
+            data.AddRange(new byte[] { 0, 0, 0, 0 });
+
+            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressSerialNumberWrite, 255, data.ToArray());
+            builder.SetPriority(Prios.System);
+            _conn.Send(builder);
+        }
+
+
 
 
         public void GroupValueWrite(MulticastAddress ga, byte[] data)

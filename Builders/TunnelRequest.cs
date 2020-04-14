@@ -53,6 +53,7 @@ namespace Kaenx.Konnect.Builders
             if(data != null)
             {
                 lengthData = BitConverter.GetBytes((ushort)(data.Count() + 1))[0];
+                List<ApciTypes> length0Apci = new List<ApciTypes>() { ApciTypes.MemoryRead, ApciTypes.MemoryWrite, ApciTypes.GroupValueWrite, ApciTypes.ADCRead, ApciTypes.Disconnect };
                 if (apciType == ApciTypes.MemoryRead || apciType == ApciTypes.MemoryWrite || apciType == ApciTypes.GroupValueWrite || apciType == ApciTypes.ADCRead)
                     lengthData--;
             }
@@ -66,6 +67,7 @@ namespace Kaenx.Konnect.Builders
                     case ApciTypes.GroupValueWrite:
                     case ApciTypes.Ack:
                     case ApciTypes.Connect:
+                    case ApciTypes.Disconnect:
                         lengthData = 0x0;
                         break;
                 }
@@ -109,6 +111,7 @@ namespace Kaenx.Konnect.Builders
                 case ApciTypes.ADCResponse:
                 case ApciTypes.Ack:
                 case ApciTypes.Connect:
+                case ApciTypes.Disconnect:
                     bytes.Add(_apci2[1]);
                     break;
                 default:
