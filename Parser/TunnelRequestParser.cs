@@ -35,7 +35,6 @@ namespace Kaenx.Konnect.Parser
             var controlField2 = responseBytes[7];
             var npduLength = responseBytes[12];
             byte[] npdu;
-            byte[] apci = new byte[2];
 
             if(npduLength != 0)
             {
@@ -69,6 +68,13 @@ namespace Kaenx.Konnect.Parser
                         break;
                     case 1:
                         type = ApciTypes.GroupValueResponse;
+                        int datai2 = npdu[1] & 63;
+                        data = new byte[responseBytes.Length - 15 + 1];
+                        data[0] = Convert.ToByte(datai2);
+                        for (int i = 1; i < responseBytes.Length - 15 + 1; i++)
+                        {
+                            data[i] = responseBytes[i];
+                        }
                         break;
                     case 2:
                         type = ApciTypes.GroupValueWrite;
@@ -147,19 +153,39 @@ namespace Kaenx.Konnect.Parser
                     case 2:
                         type = ApciTypes.Ack;
                         break;
+                    case 3:
+                        type = ApciTypes.NAK;
+                        break;
                     default:
                         Debug.WriteLine("Unbekantes NPDU: " + apci3);
                         break;
                 }
             }
 
+            IKnxAddress destAddr = null;
+
+            BitArray bitsCtrl1 = new BitArray(new[] { responseBytes[6] });
+            BitArray bitsCtrl2 = new BitArray(new[] { responseBytes[7] });
+            if (bitsCtrl2.Get(7))
+                destAddr = MulticastAddress.FromByteArray(new[] { responseBytes[10], responseBytes[11] });
+            else
+                destAddr = UnicastAddress.FromByteArray(new[] { responseBytes[10], responseBytes[11] });
+
+            bool ackWanted = bitsCtrl1.Get(2);
+            bool isRequest = ReqMC.Contains(responseBytes[4]);
 
             return new Builders.TunnelResponse(headerLength, protocolVersion, totalLength, structureLength, communicationChannel,
-              sequenceCounter, messageCode, addInformationLength, controlField, controlField2,
+              sequenceCounter, messageCode, addInformationLength, isRequest, ackWanted, controlField, controlField2,
               UnicastAddress.FromByteArray(new[] { responseBytes[8], responseBytes[9] }),
-              MulticastAddress.FromByteArray(new[] { responseBytes[10], responseBytes[11] }), type, seqNumb,
+              destAddr, type, seqNumb,
               data);
         }
+
+        //Message Codes für Requests
+        private List<byte> ReqMC = new List<byte>() {
+            0x11, // L_Data.req -> 0x2e
+            0xfc // M_PropRead.req -> 0xfc
+        };
     }
 
 
@@ -179,6 +205,7 @@ namespace Kaenx.Konnect.Parser
         SystemNetworkParameterResponse = 457,
         MemoryRead = 512,
         Ack = 513, //TODO remove last byte
+        NAK = 514, //TODO remove last byte
         MemoryResponse = 576,
         MemoryWrite = 640,
         UserMemoryRead = 704,

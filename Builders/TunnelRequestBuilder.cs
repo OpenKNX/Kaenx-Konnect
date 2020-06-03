@@ -10,8 +10,8 @@ namespace Kaenx.Konnect.Builders
     public class TunnelResponse : IResponse
     {
         public TunnelResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte structureLength,
-          byte communicationChannel, byte sequenceCounter, byte messageCode, byte addInformationLength, byte controlField,
-          byte controlField2, UnicastAddress sourceAddress, MulticastAddress destinationAddress, ApciTypes apci, int seqNumb,
+          byte communicationChannel, byte sequenceCounter, byte messageCode, byte addInformationLength, bool isRequest, bool ackWanted, byte controlField,
+          byte controlField2, UnicastAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apci, int seqNumb,
           byte[] data)
         {
             HeaderLength = headerLength;
@@ -22,6 +22,7 @@ namespace Kaenx.Konnect.Builders
             SequenceCounter = sequenceCounter;
             MessageCode = messageCode;
             AddInformationLength = addInformationLength;
+            AckWanted = ackWanted;
             ControlField = controlField;
             ControlField2 = controlField2;
             SourceAddress = sourceAddress;
@@ -29,8 +30,10 @@ namespace Kaenx.Konnect.Builders
             APCI = apci;
             SequenceNumber = seqNumb;
             Data = data;
+            IsRequest = IsRequest;
         }
 
+        public bool IsRequest { get; }
         public byte HeaderLength { get; }
         public byte ProtocolVersion { get; }
         public ushort TotalLength { get; }
@@ -40,10 +43,11 @@ namespace Kaenx.Konnect.Builders
         public int SequenceNumber { get; }
         public byte MessageCode { get; }
         public byte AddInformationLength { get; }
+        public bool AckWanted { get; }
         public byte ControlField { get; }
         public byte ControlField2 { get; }
         public UnicastAddress SourceAddress { get; }
-        public object DestinationAddress { get; }
+        public IKnxAddress DestinationAddress { get; }
         public ApciTypes APCI { get; }
         public byte[] Data { get; }
     }

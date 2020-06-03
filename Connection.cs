@@ -37,6 +37,7 @@ namespace Kaenx.Konnect
         private byte _communicationChannel;
         private byte _sequenceCounter = 0;
         private bool StopProcessing = false;
+        private UnicastAddress SelfAddress;
 
         public int Port;
         public bool IsConnected { get; private set; }
@@ -85,6 +86,15 @@ namespace Kaenx.Konnect
             StopProcessing = true;
             IsConnected = false;
         }
+
+
+        public void SendStatusReq()
+        {
+            ConnectionStatusRequest stat = new ConnectionStatusRequest();
+            stat.Build(_receiveEndPoint, _communicationChannel);
+            Send(stat);
+        }
+
 
         /// <summary>
         /// Sendet die Daten vom angegebenen Builder.
@@ -169,6 +179,7 @@ namespace Kaenx.Konnect
                                     _communicationChannel = connectResponse.CommunicationChannel;
                                     IsConnected = true;
                                     ConnectionChanged?.Invoke(IsConnected);
+                                    SelfAddress = connectResponse.ConnectionResponseDataBlock.KnxAddress;
                                 } else
                                 {
 
@@ -176,6 +187,9 @@ namespace Kaenx.Konnect
 
                                 break;
                             case Builders.TunnelResponse tunnelResponse:
+                                if (tunnelResponse.IsRequest && tunnelResponse.DestinationAddress != SelfAddress)
+                                    break;
+
                                 _sendMessages.Add(new Responses.TunnelResponse(0x06, 0x10, 0x0A, 0x04, _communicationChannel, tunnelResponse.SequenceCounter, 0x00).GetBytes());
 
                                 if (tunnelResponse.APCI.ToString().EndsWith("Response"))
@@ -194,6 +208,8 @@ namespace Kaenx.Konnect
                                 {
                                     OnTunnelRequest?.Invoke(tunnelResponse);
                                 }
+
+
 
 
                                 break;
@@ -219,7 +235,7 @@ namespace Kaenx.Konnect
                     _udpClient.Dispose();
                 }catch
                 {
-
+                    
                 }
             });
 

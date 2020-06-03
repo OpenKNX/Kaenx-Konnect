@@ -75,7 +75,7 @@ namespace Kaenx.Konnect.Builders
 
             bytes.Add(lengthData);
 
-            List<ApciTypes> datatypes = new List<ApciTypes>() { ApciTypes.Restart, ApciTypes.IndividualAddressRead, ApciTypes.DeviceDescriptorRead, ApciTypes.GroupValueResponse, ApciTypes.GroupValueWrite, ApciTypes.ADCRead, ApciTypes.ADCResponse, ApciTypes.MemoryRead, ApciTypes.MemoryResponse, ApciTypes.MemoryWrite };
+            List<ApciTypes> datatypes = new List<ApciTypes>() { ApciTypes.Restart, ApciTypes.IndividualAddressRead, ApciTypes.DeviceDescriptorRead, ApciTypes.GroupValueRead, ApciTypes.GroupValueResponse, ApciTypes.GroupValueWrite, ApciTypes.ADCRead, ApciTypes.ADCResponse, ApciTypes.MemoryRead, ApciTypes.MemoryResponse, ApciTypes.MemoryWrite };
             
             int _apci = (int)apciType;
             if (apciType == ApciTypes.Ack)

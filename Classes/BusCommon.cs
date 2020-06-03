@@ -13,27 +13,38 @@ namespace Kaenx.Konnect.Classes
         private Connection _conn;
         private MulticastAddress to = MulticastAddress.FromString("0/0/0");
         private UnicastAddress from = UnicastAddress.FromString("0.0.0");
-        private Dictionary<byte, TunnelResponse> responses = new Dictionary<byte, TunnelResponse>();
+        private Dictionary<int, TunnelResponse> responses = new Dictionary<int, TunnelResponse>();
+
+        private int _lastNumb = -1;
+        private int lastReceivedNumber
+        {
+            get { return _lastNumb == 15 ? 0 : _lastNumb + 1; }
+            set { _lastNumb = value; }
+        }
+
 
         public BusCommon(Connection conn)
         {
             _conn = conn;
-            _conn.OnTunnelRequest += OnTunnelRequest;
+            _conn.OnTunnelResponse += _conn_OnTunnelResponse;
         }
 
-        private void OnTunnelRequest(TunnelResponse response)
+        private void _conn_OnTunnelResponse(TunnelResponse response)
         {
-            responses.Add(response.SequenceCounter, response);
-            //TODO move ack to connection class!
-            //TunnelRequest builder = new TunnelRequest();
-            //builder.Build(UnicastAddress.FromString("0.0.0"), from, Parser.ApciTypes.Ack, Convert.ToByte(response.SequenceNumber));
-            //_conn.Send(builder);
+            if (responses.ContainsKey(response.SequenceNumber))
+                responses[response.SequenceNumber] = response;
+            else
+                responses.Add(response.SequenceNumber, response);
+
+            lastReceivedNumber = response.SequenceNumber;
         }
 
 
-
-        private async Task<TunnelResponse> WaitForData(byte seq)
+        private async Task<TunnelResponse> WaitForData(int seq)
         {
+            if (responses.ContainsKey(seq))
+                responses.Remove(seq);
+
             while (!responses.ContainsKey(seq))
                 await Task.Delay(10); // TODO maybe erhöhen
 
@@ -77,7 +88,6 @@ namespace Kaenx.Konnect.Classes
 
 
 
-
         public void GroupValueWrite(MulticastAddress ga, byte[] data)
         {
             TunnelRequest builder = new TunnelRequest();
@@ -88,8 +98,9 @@ namespace Kaenx.Konnect.Classes
         public async Task GroupValueRead(MulticastAddress ga)
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(from, ga, Parser.ApciTypes.GroupValueWrite);
-            var seq = _conn.Send(builder);
+            builder.Build(from, ga, Parser.ApciTypes.GroupValueRead);
+            _conn.Send(builder);
+            var x = await WaitForData(lastReceivedNumber);
         }
     }
 }

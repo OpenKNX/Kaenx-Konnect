@@ -10,7 +10,7 @@ namespace Kaenx.Konnect.Parser
 {
     public class DisconnectResponseParser : IReceiveParser
     {
-        public ushort ServiceTypeIdentifier => 0x0209;
+        public ushort ServiceTypeIdentifier => 0x020a;
 
         IResponse IReceiveParser.Build(byte headerLength, byte protocolVersion, ushort totalLength,
           byte[] responseBytes)
