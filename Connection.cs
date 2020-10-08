@@ -14,6 +14,7 @@ using Kaenx.Konnect.Parser;
 using System.Net.NetworkInformation;
 using System.Linq;
 using System.Diagnostics;
+using Kaenx.Konnect.Connections;
 
 namespace Kaenx.Konnect
 {
@@ -42,28 +43,16 @@ namespace Kaenx.Konnect
         public int Port;
         public bool IsConnected { get; private set; }
 
+        private IKnxConnection conn { get; set; }
 
-        public Connection(IPEndPoint sendEndPoint)
+
+
+        public Connection(IKnxConnection _conn)
         {
-            Port = GetFreePort();
-
-            _sendEndPoint = sendEndPoint;
-            _receiveEndPoint = new IPEndPoint(IPAddress.Any, Port);
-            _udpClient = new UdpClient(_receiveEndPoint);
-            _receiveParserDispatcher = new ReceiverParserDispatcher();
-            _sendMessages = new BlockingCollection<byte[]>();
-
-            ProcessSendMessages();
+            conn = _conn;
         }
 
-        public static int GetFreePort()
-        {
-            TcpListener l = new TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            int port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            return port;
-        }
+        
 
 
 
@@ -197,7 +186,7 @@ namespace Kaenx.Konnect
                                     TunnelRequest builder = new TunnelRequest();
                                     builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, Parser.ApciTypes.Ack, tunnelResponse.SequenceNumber);
                                     Send(builder);
-                                    Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
+                                    //Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
                                     OnTunnelResponse?.Invoke(tunnelResponse);
                                 }
                                 else if (tunnelResponse.APCI == ApciTypes.Ack)

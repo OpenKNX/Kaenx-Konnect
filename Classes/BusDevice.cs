@@ -377,7 +377,7 @@ namespace Kaenx.Konnect.Classes
                 builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryWrite, seq, data.ToArray());
 
                 _conn.Send(builder);
-                Debug.WriteLine("Warten auf: " + seq);
+                //Debug.WriteLine("Warten auf: " + seq);
                 CancellationTokenSource tokenS = new CancellationTokenSource(10000);
                 await WaitForAck(seq, tokenS.Token);
 
@@ -429,7 +429,7 @@ namespace Kaenx.Konnect.Classes
                 builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryRead, _currentSeqNum++, data.ToArray());
                 var seq = lastReceivedNumber;
                 _conn.Send(builder);
-                Debug.WriteLine("Warten auf: " + seq);
+                //Debug.WriteLine("Warten auf: " + seq);
                 CancellationTokenSource tokenS = new CancellationTokenSource(10000);
                 TunnelResponse resp = await WaitForData(seq, tokenS.Token);
                 readed.AddRange(resp.Data.Skip(2));
@@ -476,7 +476,7 @@ namespace Kaenx.Konnect.Classes
             builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.DeviceDescriptorRead, _currentSeqNum++);
             var seq = lastReceivedNumber;
             _conn.Send(builder);
-            Debug.WriteLine("Warten auf: " + seq);
+            //Debug.WriteLine("Warten auf: " + seq);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
             TunnelResponse resp = await WaitForData(seq, tokenS.Token); 
             return BitConverter.ToString(resp.Data).Replace("-", "");
