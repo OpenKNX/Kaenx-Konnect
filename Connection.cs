@@ -20,225 +20,84 @@ namespace Kaenx.Konnect
 {
     public class Connection
     {
-        public delegate void ConnectionChangedHandler(bool isConnected);
-        public event ConnectionChangedHandler ConnectionChanged;
-
-        public delegate void TunnelRequestHandler(Builders.TunnelResponse response);
-        public event TunnelRequestHandler OnTunnelRequest;
-        public event TunnelRequestHandler OnTunnelResponse;
-        public event TunnelRequestHandler OnTunnelAck;
-        public delegate void SearchResponseHandler(SearchResponse response);
-        public event SearchResponseHandler OnSearchResponse;
-
-        private readonly IPEndPoint _receiveEndPoint;
-        private readonly IPEndPoint _sendEndPoint;
-        private UdpClient _udpClient;
-        private readonly BlockingCollection<byte[]> _sendMessages;
-        private readonly ReceiverParserDispatcher _receiveParserDispatcher;
-        private byte _communicationChannel;
-        private byte _sequenceCounter = 0;
-        private bool StopProcessing = false;
-        private UnicastAddress SelfAddress;
-
-        public int Port;
-        public bool IsConnected { get; private set; }
-
-        private IKnxConnection conn { get; set; }
+        public IKnxConnection BusConnection { get; private set; }
 
 
 
         public Connection(IKnxConnection _conn)
         {
-            conn = _conn;
+            BusConnection = _conn;
         }
 
-        
-
-
-
+        /// <summary>
+        /// Send the Connect Telegram to the interface.
+        /// </summary>
         public void Connect()
         {
-            ConnectionRequest builder = new ConnectionRequest();
-            builder.Build(_receiveEndPoint, 0x00);
-            _sendMessages.Add(builder.GetBytes());
+            BusConnection.Connect();
         }
 
+        /// <summary>
+        /// Send the Disconnect Telegram to the interface.
+        /// </summary>
         public void Disconnect()
         {
-            if (!IsConnected)
-                return;
-
-            DisconnectRequest builder = new DisconnectRequest();
-            builder.Build(_receiveEndPoint, _communicationChannel);
-            _sendMessages.Add(builder.GetBytes());
-
-            StopProcessing = true;
-            IsConnected = false;
+            BusConnection.Disconnect();
         }
 
-
+        /// <summary>
+        /// Send Status Request Telegram to the interface.
+        /// </summary>
         public void SendStatusReq()
         {
-            ConnectionStatusRequest stat = new ConnectionStatusRequest();
-            stat.Build(_receiveEndPoint, _communicationChannel);
-            Send(stat);
+            BusConnection.SendStatusReq();
         }
 
 
         /// <summary>
-        /// Sendet die Daten vom angegebenen Builder.
+        /// Sends given Data to the Bus.
         /// </summary>
-        /// <param name="builder">Builder</param>
-        /// <returns>Gibt den Sequenz Counter zurück</returns>
+        /// <param name="builder">Telegram Builder</param>
+        /// <returns>Returns Sequenz Counter</returns>
         public byte Send(IRequestBuilder builder)
         {
-            if (!IsConnected)
-                throw new Exception("Roflkopter");
-
-            var seq = _sequenceCounter;
-            builder.SetChannelId(_communicationChannel);
-            builder.SetSequence(_sequenceCounter);
-            _sequenceCounter++;
-            byte[] data = builder.GetBytes();
-
-            _sendMessages.Add(data);
-
-            return seq;
+            return BusConnection.Send(builder);
         }
 
+        /// <summary>
+        /// Sends given Data to the bus, also when it is not connected.
+        /// </summary>
+        /// <param name="builder">Telegram Builder</param>
         public void SendWithoutConnected(IRequestBuilder builder)
         {
             byte[] data = builder.GetBytes();
-            _sendMessages.Add(data);
+            BusConnection.Send(data);
         }
 
         /// <summary>
-        /// Sendet die Daten vom angegebenen Builder.
+        /// Sends given Data to the Bus asynchron.
         /// </summary>
-        /// <param name="builder">Builder</param>
-        /// <returns>Gibt den Sequenz Counter zurück</returns>
+        /// <param name="builder">Telegram Builder</param>
+        /// <returns>Returns Sequenz Counter</returns>
         public async Task<byte> SendAsync(IRequestBuilder builder)
         {
-            if (!IsConnected)
-                throw new Exception("Roflkopter");
-
-            var seq = _sequenceCounter;
-            builder.SetChannelId(_communicationChannel);
-            builder.SetSequence(_sequenceCounter);
-            _sequenceCounter++;
-            byte[] data = builder.GetBytes();
-
-            _sendMessages.Add(data);
-
-            return seq;
+            return BusConnection.Send(builder);
         }
 
+        /// <summary>
+        /// Sends given Data to the Bus asynchron.
+        /// </summary>
+        /// <param name="bytes">Telegram as bytes</param>
+        /// <returns></returns>
         public Task SendAsync(byte[] bytes)
         {
-            if (!IsConnected)
+            if (!BusConnection.IsConnected)
                 throw new Exception("Roflkopter");
 
-            _sendMessages.Add(bytes);
+            BusConnection.Send(bytes);
+
 
             return Task.CompletedTask;
         }
-
-
-
-        private void ProcessSendMessages()
-        {
-            Task.Run(async () =>
-            {
-                int rofl = 0;
-                try
-                {
-
-                    while (!StopProcessing)
-                    {
-                        rofl++;
-                        var result = await _udpClient.ReceiveAsync();
-                        var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
-
-                        switch (knxResponse)
-                        {
-                            case ConnectResponse connectResponse:
-                                if (connectResponse.Status == 0x00)
-                                {
-                                    _sequenceCounter = 0;
-                                    _communicationChannel = connectResponse.CommunicationChannel;
-                                    IsConnected = true;
-                                    ConnectionChanged?.Invoke(IsConnected);
-                                    SelfAddress = connectResponse.ConnectionResponseDataBlock.KnxAddress;
-                                } else
-                                {
-
-                                }
-
-                                break;
-                            case Builders.TunnelResponse tunnelResponse:
-                                if (tunnelResponse.IsRequest && tunnelResponse.DestinationAddress != SelfAddress)
-                                    break;
-
-                                _sendMessages.Add(new Responses.TunnelResponse(0x06, 0x10, 0x0A, 0x04, _communicationChannel, tunnelResponse.SequenceCounter, 0x00).GetBytes());
-
-                                if (tunnelResponse.APCI.ToString().EndsWith("Response"))
-                                {
-                                    TunnelRequest builder = new TunnelRequest();
-                                    builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, Parser.ApciTypes.Ack, tunnelResponse.SequenceNumber);
-                                    Send(builder);
-                                    //Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
-                                    OnTunnelResponse?.Invoke(tunnelResponse);
-                                }
-                                else if (tunnelResponse.APCI == ApciTypes.Ack)
-                                {
-                                    OnTunnelAck?.Invoke(tunnelResponse);
-                                }
-                                else
-                                {
-                                    OnTunnelRequest?.Invoke(tunnelResponse);
-                                }
-
-
-
-
-                                break;
-
-                            case SearchResponse searchResponse:
-                                OnSearchResponse?.Invoke(searchResponse);
-                                break;
-
-                            case TunnelAckResponse tunnelAck:
-                                //Do nothing
-                                break;
-
-                            case DisconnectResponse disconnectResponse:
-                                IsConnected = false;
-                                _communicationChannel = 0;
-                                ConnectionChanged?.Invoke(IsConnected);
-                                break;
-                        }
-                    }
-
-                    Debug.WriteLine("Stopped Processing Messages " + _udpClient.Client.LocalEndPoint.ToString());
-                    _udpClient.Close();
-                    _udpClient.Dispose();
-                }catch
-                {
-                    
-                }
-            });
-
-            Task.Run(() =>
-            {
-                
-                foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
-                {
-
-                        _udpClient.SendAsync(sendMessage, sendMessage.Length, _sendEndPoint);
-                }
-            });
-        }
-
-
     }
 }
