@@ -3,8 +3,7 @@ using Kaenx.Konnect.Builders;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Windows.Devices.Enumeration;
-using Windows.Devices.HumanInterfaceDevice;
+using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Connections
 {
@@ -28,7 +27,7 @@ namespace Kaenx.Konnect.Connections
         }
 
 
-        public async void Connect()
+        public async Task Connect()
         {
             var deviceDefinitions = new List<FilterDeviceDefinition>
             {
@@ -43,24 +42,44 @@ namespace Kaenx.Konnect.Connections
             //dev.InputReportReceived += Dev_InputReportReceived;
         }
 
-        public void Disconnect()
+        public async Task Disconnect()
         {
             throw new NotImplementedException();
         }
 
-        public void Send(byte[] data)
+        public async Task Send(byte[] data)
         {
             throw new NotImplementedException();
         }
 
-        public byte Send(IRequestBuilder builder)
+        public async Task<byte> Send(IRequestBuilder builder)
         {
             throw new NotImplementedException();
         }
 
-        public void SendStatusReq()
+        public async Task SendStatusReq()
         {
-            throw new NotImplementedException();
+            byte[] packet = new byte[64]; //Create packet which will be fixed 64 bytes long
+
+            //Report Header
+            packet[0] = 1; // Report ID fixed 1;
+            packet[1] = 0x13; // First Packet with start and end
+            packet[2] = 9; // Data length
+
+
+            //Transfer Header
+            packet[3] = 0; // Version fixed 0
+            packet[4] = 8; // Header length
+            packet[5] = 1; // Body length
+            packet[6] = 0x0F; // Protocol ID
+            packet[7] = 0x01; // Service Identifier
+            packet[8] = 0; // Manufacturer Code
+
+            // Body
+            packet[9] = 3; // Bus Status
+
+            ReadResult x = await Device.WriteAndReadAsync(packet);
+
         }
     }
 }

@@ -66,15 +66,17 @@ namespace Kaenx.Konnect.Connections
 
 
 
-        public void Send(byte[] data)
+        public Task Send(byte[] data)
         {
             if (!IsConnected)
                 throw new Exception("Roflkopter");
 
             _sendMessages.Add(data);
+
+            return Task.CompletedTask;
         }
 
-        public byte Send(IRequestBuilder builder)
+        public Task<byte> Send(IRequestBuilder builder)
         {
             if (!IsConnected)
                 throw new Exception("Roflkopter");
@@ -87,37 +89,40 @@ namespace Kaenx.Konnect.Connections
 
             _sendMessages.Add(data);
 
-            return seq;
+            return Task.FromResult(seq);
         }
 
 
 
 
 
-        public void Connect()
+        public Task Connect()
         {
             ConnectionRequest builder = new ConnectionRequest();
             builder.Build(_receiveEndPoint, 0x00);
             _sendMessages.Add(builder.GetBytes());
+            return Task.CompletedTask;
         }
 
-        public void Disconnect()
+        public Task Disconnect()
         {
             if (!IsConnected)
-                return;
+                return Task.CompletedTask;
 
             DisconnectRequest builder = new DisconnectRequest();
             builder.Build(_receiveEndPoint, _communicationChannel);
             _sendMessages.Add(builder.GetBytes());
 
             StopProcessing = true;
+            return Task.CompletedTask;
         }
 
-        public void SendStatusReq()
+        public Task SendStatusReq()
         {
             ConnectionStatusRequest stat = new ConnectionStatusRequest();
             stat.Build(_receiveEndPoint, _communicationChannel);
             Send(stat.GetBytes());
+            return Task.CompletedTask;
         }
 
 

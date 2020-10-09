@@ -3,6 +3,7 @@ using Kaenx.Konnect.Responses;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Connections
 {
@@ -21,10 +22,10 @@ namespace Kaenx.Konnect.Connections
 
         public bool IsConnected { get; set; }
 
-        void Connect();
-        void Disconnect();
-        void SendStatusReq();
-        void Send(byte[] data);
-        byte Send(IRequestBuilder builder);
+        Task Connect();
+        Task Disconnect();
+        Task SendStatusReq();
+        Task Send(byte[] data);
+        Task<byte> Send(IRequestBuilder builder);
     }
 }
