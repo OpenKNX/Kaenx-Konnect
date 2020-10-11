@@ -22,14 +22,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Data\knx_interfaces.xml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Data\knx_interfaces.xml" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="Assets\Logo.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
@@ -42,16 +34,16 @@
 
   <ItemGroup>
     <Reference Include="Device.Net">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Device.Net.dll</HintPath>
+      <HintPath>..\Device.Net\src\Hid.Net.UWP\bin\Debug\Device.Net.dll</HintPath>
     </Reference>
     <Reference Include="Device.Net.UWP">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Device.Net.UWP.dll</HintPath>
+      <HintPath>..\Device.Net\src\Hid.Net.UWP\bin\Debug\Device.Net.UWP.dll</HintPath>
     </Reference>
     <Reference Include="Hid.Net">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Hid.Net.dll</HintPath>
+      <HintPath>..\Device.Net\src\Hid.Net.UWP\bin\Debug\Hid.Net.dll</HintPath>
     </Reference>
     <Reference Include="Hid.Net.UWP">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Hid.Net.UWP.dll</HintPath>
+      <HintPath>..\Device.Net\src\Hid.Net.UWP\bin\Debug\Hid.Net.UWP.dll</HintPath>
     </Reference>
   </ItemGroup>
 

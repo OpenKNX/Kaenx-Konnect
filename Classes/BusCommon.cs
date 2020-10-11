@@ -1,5 +1,6 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
+using Kaenx.Konnect.Connections;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace Kaenx.Konnect.Classes
 {
     public class BusCommon
     {
-        private Connection _conn;
+        private IKnxConnection _conn;
         private MulticastAddress to = MulticastAddress.FromString("0/0/0");
         private UnicastAddress from = UnicastAddress.FromString("0.0.0");
         private Dictionary<int, TunnelResponse> responses = new Dictionary<int, TunnelResponse>();
@@ -23,7 +24,7 @@ namespace Kaenx.Konnect.Classes
         }
 
 
-        public BusCommon(Connection conn)
+        public BusCommon(IKnxConnection conn)
         {
             _conn = conn;
             _conn.OnTunnelResponse += _conn_OnTunnelResponse;

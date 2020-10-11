@@ -1,5 +1,6 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
+using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace Kaenx.Konnect.Classes
         private int MaxFrameLength { get; set; }
 
         private UnicastAddress _address;
-        private Connection _conn;
+        private IKnxConnection _conn;
         private Dictionary<int, TunnelResponse> responses = new Dictionary<int, TunnelResponse>();
         private Dictionary<int, bool> acks = new Dictionary<int, bool>();
 
@@ -48,7 +49,7 @@ namespace Kaenx.Konnect.Classes
 
         private bool _connected = false;
 
-        public BusDevice(string address, Connection conn)
+        public BusDevice(string address, IKnxConnection conn)
         {
             _address = UnicastAddress.FromString(address);
             _conn = conn;
@@ -74,7 +75,7 @@ namespace Kaenx.Konnect.Classes
             //Debug.WriteLine(response.SequenceNumber + ": " + response.APCI + " - " + response.Data.Length);
         }
 
-        public BusDevice(UnicastAddress address, Connection conn)
+        public BusDevice(UnicastAddress address, IKnxConnection conn)
         {
             _address = address;
             _conn = conn;

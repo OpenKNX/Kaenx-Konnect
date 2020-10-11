@@ -66,9 +66,9 @@ namespace Kaenx.Konnect.Connections
 
 
 
-        public Task Send(byte[] data)
+        public Task Send(byte[] data, bool ignoreConnected = false)
         {
-            if (!IsConnected)
+            if (!ignoreConnected && !IsConnected)
                 throw new Exception("Roflkopter");
 
             _sendMessages.Add(data);
@@ -76,9 +76,9 @@ namespace Kaenx.Konnect.Connections
             return Task.CompletedTask;
         }
 
-        public Task<byte> Send(IRequestBuilder builder)
+        public Task<byte> Send(IRequestBuilder builder, bool ignoreConnected = false)
         {
-            if (!IsConnected)
+            if (!ignoreConnected && !IsConnected)
                 throw new Exception("Roflkopter");
 
             var seq = _sequenceCounter;
@@ -117,12 +117,12 @@ namespace Kaenx.Konnect.Connections
             return Task.CompletedTask;
         }
 
-        public Task SendStatusReq()
+        public Task<bool> SendStatusReq()
         {
             ConnectionStatusRequest stat = new ConnectionStatusRequest();
             stat.Build(_receiveEndPoint, _communicationChannel);
             Send(stat.GetBytes());
-            return Task.CompletedTask;
+            return Task.FromResult(false);
         }
 
 
