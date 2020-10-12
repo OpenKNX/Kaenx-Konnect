@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Connections
@@ -28,6 +29,8 @@ namespace Kaenx.Konnect.Connections
             DeviceKnx = DeviceManager.Current.GetDevice(new ConnectedDeviceDefinition(deviceId));
         }
 
+
+        //TODO Adresse der Schnitstelle schreibt man im Speicher an Adresse 279
 
         public async Task Connect()
         {
@@ -53,10 +56,30 @@ namespace Kaenx.Konnect.Connections
 
             await DeviceKnx.InitializeAsync();
 
-            Device.Net.ReadResult read = await DeviceKnx.WriteAndReadAsync(packet);
+            bool myflag = false;
+            CancellationTokenSource source = new CancellationTokenSource(1000);
+
+
+            _ = Task.Run(async () =>
+            {
+                Device.Net.ReadResult read = await DeviceKnx.WriteAndReadAsync(packet);
+                myflag = true;
+            }, source.Token);
+
+            while(!myflag && !source.IsCancellationRequested)
+            {
+                await Task.Delay(100);
+            }
+
+            if (!myflag)
+            {
+                DeviceKnx.Close();
+                return;
+            }
 
             IsConnected = true;
             ConnectionChanged?.Invoke(true);
+
         }
 
         public async Task Disconnect()
@@ -102,7 +125,6 @@ namespace Kaenx.Konnect.Connections
             await DeviceKnx.WriteAsync(packet);
 
             DeviceKnx.Close();
-
 
             return true;
         }

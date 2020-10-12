@@ -53,6 +53,9 @@
     <Reference Include="Hid.Net.UWP">
       <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Hid.Net.UWP.dll</HintPath>
     </Reference>
+    <Reference Include="Usb.Net">
+      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Usb.Net.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
