@@ -5,13 +5,22 @@
 
 Kaenx.Konnect is a library to connect to a KNX IP Interface.
 
-### Connect to the Interface
+### Connect to the Interface via IP
 ```C#
-Connection _conn = new Connection(new IPEndPoint(IPAddress.Parse("192.168.0.108"), Convert.ToInt32(3671)));
-_conn.Connect();
+IKnxConnection _connIp = new KnxIpTunneling(new IPEndPoint(IPAddress.Parse("192.168.0.108"), Convert.ToInt32(3671)));
+await _connIp.Connect();
 await Task.Delay(5000);
-_conn.Disconnect();
+_connUsb.Disconnect();
 ```
+
+### Connect to the Interface via USB
+```C#
+IKnxConnection _connUsb = new KnxUsbTunneling(@"\\?\USB\VID_147B&PID_5120\6&16bfd654&0&20"); // USB Device Id
+await _connUsb.Connect();
+await Task.Delay(5000);
+_connUsb.Disconnect();
+```
+
 
 ### Connection Events
 There are three Events:
