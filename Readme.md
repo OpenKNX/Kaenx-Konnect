@@ -15,7 +15,7 @@ _connUsb.Disconnect();
 
 ### Connect to the Interface via USB
 ```C#
-IKnxConnection _connUsb = new KnxUsbTunneling(@"\\?\USB\VID_147B&PID_5120\6&16bfd654&0&20"); // USB Device Id
+IKnxConnection _connUsb = new KnxUsbTunneling(@"\\?\HID#VID_147B&PID_5120#7&25842fb1&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}"); // USB Device Id
 await _connUsb.Connect();
 await Task.Delay(5000);
 _connUsb.Disconnect();
