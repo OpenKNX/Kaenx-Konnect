@@ -1,6 +1,8 @@
 ﻿using Device.Net;
 using Hid.Net;
 using Kaenx.Konnect.Builders;
+using Kaenx.Konnect.Messages;
+using Kaenx.Konnect.Messages.Request;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,6 +24,7 @@ namespace Kaenx.Konnect.Connections
 
         private string DeviceId { get; }
         private IDevice DeviceKnx { get; }
+        private ProtocolTypes CurrentType { get; set; }
 
         public KnxUsbTunneling(string deviceId)
         {
@@ -92,9 +95,38 @@ namespace Kaenx.Konnect.Connections
             throw new NotImplementedException();
         }
 
-        public async Task<byte> Send(IRequestBuilder builder, bool ignoreConnected = false)
+        public async Task<byte> Send(IMessageRequest message, bool ignoreConnected = false)
         {
-            throw new NotImplementedException();
+            if (!ignoreConnected && !IsConnected)
+                throw new Exception("Roflkopter");
+
+            //var seq = _sequenceCounter;
+            //message.SetInfo(_communicationChannel, _sequenceCounter);
+            //_sequenceCounter++;
+
+            byte[] data;
+
+            switch (CurrentType)
+            {
+                case ProtocolTypes.Emi1:
+                    data = message.GetBytesEmi1();
+                    break;
+
+                case ProtocolTypes.Emi2:
+                    data = message.GetBytesEmi2();
+                    break;
+
+                case ProtocolTypes.cEmi:
+                    data = message.GetBytesCemi();
+                    break;
+
+                default:
+                    throw new Exception("Unbekanntes Protokoll");
+            }
+
+            await DeviceKnx.WriteAsync(data);
+
+            return 0x01; // return seq
         }
 
         public async Task<bool> SendStatusReq()

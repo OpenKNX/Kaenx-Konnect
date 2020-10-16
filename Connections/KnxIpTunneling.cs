@@ -1,6 +1,8 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Classes;
+using Kaenx.Konnect.Messages;
+using Kaenx.Konnect.Messages.Request;
 using Kaenx.Konnect.Parser;
 using Kaenx.Konnect.Responses;
 using System;
@@ -28,6 +30,7 @@ namespace Kaenx.Konnect.Connections
         public int Port;
         public bool IsConnected { get; set; }
 
+        private ProtocolTypes CurrentType { get; set; }
         private byte _communicationChannel;
         private bool StopProcessing = false;
         private byte _sequenceCounter = 0;
@@ -77,16 +80,34 @@ namespace Kaenx.Konnect.Connections
             return Task.CompletedTask;
         }
 
-        public Task<byte> Send(IRequestBuilder builder, bool ignoreConnected = false)
+        public Task<byte> Send(IMessageRequest message, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
                 throw new Exception("Roflkopter");
 
             var seq = _sequenceCounter;
-            builder.SetChannelId(_communicationChannel);
-            builder.SetSequence(_sequenceCounter);
+            message.SetInfo(_communicationChannel, _sequenceCounter);
             _sequenceCounter++;
-            byte[] data = builder.GetBytes();
+
+            byte[] data;
+
+            switch(CurrentType)
+            {
+                case ProtocolTypes.Emi1:
+                    data = message.GetBytesEmi1();
+                    break;
+
+                case ProtocolTypes.Emi2:
+                    data = message.GetBytesEmi2();
+                    break;
+
+                case ProtocolTypes.cEmi:
+                    data = message.GetBytesCemi();
+                    break;
+
+                default:
+                    throw new Exception("Unbekanntes Protokoll");
+            }
 
             _sendMessages.Add(data);
 

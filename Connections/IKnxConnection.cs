@@ -1,4 +1,6 @@
 ﻿using Kaenx.Konnect.Builders;
+using Kaenx.Konnect.Messages;
+using Kaenx.Konnect.Messages.Request;
 using Kaenx.Konnect.Responses;
 using System;
 using System.Collections.Generic;
@@ -20,6 +22,7 @@ namespace Kaenx.Konnect.Connections
 
         public delegate void ConnectionChangedHandler(bool isConnected);
         public event ConnectionChangedHandler ConnectionChanged;
+
 
         /// <summary>
         /// If you are connected to the Interface
@@ -55,9 +58,9 @@ namespace Kaenx.Konnect.Connections
         /// <summary>
         /// Sends the data to the bus.
         /// </summary>
-        /// <param name="builder">Telegram builder</param>
+        /// <param name="message">Telegram message</param>
         /// <param name="igoreConnected">If true the conected status will be ignored</param>
         /// <returns>Sequenz Counter as byte</returns>
-        Task<byte> Send(IRequestBuilder builder, bool igoreConnected = false);
+        Task<byte> Send(IMessageRequest message, bool ignoreConnected = false);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Connections;
+using Kaenx.Konnect.Messages.Request;
 using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
@@ -122,9 +123,8 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         public async Task Connect(bool onlyConnect = false)
         {
-            TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.Connect, 255);
-            _conn.Send(builder);
+            MsgConnect message = new MsgConnect(_address);
+            await _conn.Send(message);
             _connected = true;
 
             _conn.OnTunnelResponse += OnTunnelResponse;
@@ -142,13 +142,13 @@ namespace Kaenx.Konnect.Classes
         /// <summary>
         /// Startet das Gerät neu.
         /// </summary>
-        public void Restart()
+        public async Task Restart()
         {
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
-            TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.Restart, _currentSeqNum++);
-            _conn.Send(builder);
+            MsgRestart message = new MsgRestart(_address);
+            message.SetSequenzeNumb(_currentSeqNum++);
+            await _conn.Send(message);
         }
 
 
@@ -310,7 +310,7 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         /// <param name="address">Start Adresse</param>
         /// <param name="databytes">Daten zum Schreiben</param>
-        public void MemoryWrite(int address, byte[] databytes)
+        public async void MemoryWrite(int address, byte[] databytes)
         {
             List<byte> datalist = databytes.ToList();
             int currentPosition = address;
@@ -328,14 +328,10 @@ namespace Kaenx.Konnect.Classes
                     datalist.RemoveRange(0, datalist.Count);
                 }
 
-                TunnelRequest builder = new TunnelRequest();
-                List<byte> data = new List<byte> { Convert.ToByte(data_temp.Count) };
-                byte[] addr = BitConverter.GetBytes(Convert.ToInt16(currentPosition));
-                Array.Reverse(addr);
-                data.AddRange(addr);
-                data.AddRange(data_temp);
-                builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.MemoryWrite, _currentSeqNum++, data.ToArray());
-                _conn.Send(builder);
+                MsgMemoryWrite message = new MsgMemoryWrite(currentPosition, data_temp.ToArray(), _address);
+                message.SetSequenzeNumb(_currentSeqNum++);
+
+                await _conn.Send(message);
 
                 currentPosition += data_temp.Count;
             }
@@ -367,17 +363,11 @@ namespace Kaenx.Konnect.Classes
                     datalist.RemoveRange(0, datalist.Count);
                 }
 
-                TunnelRequest builder = new TunnelRequest();
-                List<byte> data = new List<byte> { Convert.ToByte(data_temp.Count) };
-                byte[] addr = BitConverter.GetBytes(Convert.ToInt16(currentPosition));
-                Array.Reverse(addr);
-                data.AddRange(addr);
-                data.AddRange(data_temp);
-
                 var seq = _currentSeqNum++;
-                builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryWrite, seq, data.ToArray());
+                MsgMemoryWrite message = new MsgMemoryWrite(currentPosition, data_temp.ToArray(), _address);
+                message.SetSequenzeNumb(_currentSeqNum++);
 
-                _conn.Send(builder);
+                await _conn.Send(message);
                 //Debug.WriteLine("Warten auf: " + seq);
                 CancellationTokenSource tokenS = new CancellationTokenSource(10000);
                 await WaitForAck(seq, tokenS.Token);
@@ -421,15 +411,13 @@ namespace Kaenx.Konnect.Classes
                 if(length > 12) toRead = 12;
                 else toRead = length;
 
-                List<byte> data = new List<byte> { BitConverter.GetBytes(toRead)[0] };
-                byte[] addr = BitConverter.GetBytes(currentPosition);
-                data.Add(addr[1]);
-                data.Add(addr[0]);
 
-                TunnelRequest builder = new TunnelRequest();
-                builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryRead, _currentSeqNum++, data.ToArray());
+                MsgMemoryRead msg = new MsgMemoryRead(currentPosition, toRead, _address);
+                msg.SetSequenzeNumb(_currentSeqNum++);
+
                 var seq = lastReceivedNumber;
-                _conn.Send(builder);
+                await _conn.Send(msg);
+
                 //Debug.WriteLine("Warten auf: " + seq);
                 CancellationTokenSource tokenS = new CancellationTokenSource(10000);
                 TunnelResponse resp = await WaitForData(seq, tokenS.Token);
