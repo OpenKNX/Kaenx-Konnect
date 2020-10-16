@@ -8,6 +8,9 @@ using System.Text;
 
 namespace Kaenx.Konnect.Messages.Request
 {
+    /// <summary>
+    /// Creates a telegram to write to memory
+    /// </summary>
     public class MsgMemoryWrite : IMessageRequest
     {
         private int Address { get; set; }
@@ -18,6 +21,13 @@ namespace Kaenx.Konnect.Messages.Request
         private byte _channelId;
         private byte _sequenzeCount;
 
+        /// <summary>
+        /// Creates a telegram to write to memory
+        /// </summary>
+        /// <param name="address">Memory Address</param>
+        /// <param name="data">Data to write</param>
+        /// <param name="uniAddr">Unicast Address from Device</param>
+        /// <exception cref="Exception">Thrown if data length is greater than 256 bytes</exception>
         public MsgMemoryWrite(int address, byte[] data, UnicastAddress uniAddr)
         {
             if (data.Length > 256)

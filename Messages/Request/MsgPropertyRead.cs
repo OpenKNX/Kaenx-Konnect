@@ -1,5 +1,6 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
+using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,28 +8,40 @@ using System.Text;
 namespace Kaenx.Konnect.Messages.Request
 {
     /// <summary>
-    /// Creates a telegram to disconnect from device
+    /// Creates a telegram to read a property
     /// </summary>
-    public class MsgDisconnect : IMessageRequest
+    public class MsgPropertyRead : IMessageRequest
     {
+        public byte ObjectIndex { get; set; }
+        public byte PropertyId { get; set; }
+
         private byte _channelId;
         private int _sequenzeNumb;
         private byte _sequenzeCount;
         private UnicastAddress _address;
 
         /// <summary>
-        /// Creates a telegram to disconnect from device
+        /// Creates a telegram to read a property
         /// </summary>
+        /// <param name="objIndex">Object Index</param>
+        /// <param name="propId">Property Id</param>
         /// <param name="address">Unicast Address from device</param>
-        public MsgDisconnect(UnicastAddress address)
+        public MsgPropertyRead(byte objIndex, byte propId, UnicastAddress address)
         {
+            ObjectIndex = objIndex;
+            PropertyId = propId;
             _address = address;
         }
 
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.Disconnect, 255);
+
+            byte[] data = { ObjectIndex, PropertyId, 0x10, 0x01 };
+
+            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.PropertyValueRead, _sequenzeNumb, data);
+            builder.SetChannelId(_channelId);
+            builder.SetSequence(_sequenzeCount);
             return builder.GetBytes();
         }
 

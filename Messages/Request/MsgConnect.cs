@@ -6,6 +6,9 @@ using System.Text;
 
 namespace Kaenx.Konnect.Messages.Request
 {
+    /// <summary>
+    /// Creates a telegram to connect to a device
+    /// </summary>
     public class MsgConnect : IMessageRequest
     {
         private byte _channelId;
@@ -13,7 +16,10 @@ namespace Kaenx.Konnect.Messages.Request
         private byte _sequenzeCount;
         private UnicastAddress _address;
 
-
+        /// <summary>
+        /// Creates a telegram to connect to a device
+        /// </summary>
+        /// <param name="address">Unicast Address from device</param>
         public MsgConnect(UnicastAddress address)
         {
             _address = address;
@@ -38,12 +44,13 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void SetInfo(byte channel, byte seqCounter)
         {
-            throw new NotImplementedException();
+            _channelId = channel;
+            _sequenzeCount = seqCounter;
         }
 
         public void SetSequenzeNumb(int seq)
         {
-            throw new NotImplementedException();
+            _sequenzeNumb = seq;
         }
     }
 }

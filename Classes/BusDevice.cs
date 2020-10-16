@@ -161,22 +161,14 @@ namespace Kaenx.Konnect.Classes
         /// <returns></returns>
         public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
         {
-            byte[] send_data = new byte[data.Length + 4];
 
-            send_data[0] = objIdx;
-            send_data[1] = propId;
-            send_data[2] = 0x10;
-            send_data[3] = 0x01;
-
-            for (int i = 0; i < data.Length; i++)
-                send_data[i + 4] = data[i];
-
-            TunnelRequest builder = new TunnelRequest();
             var seq1 = _currentSeqNum++;
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.PropertyValueWrite, seq1, send_data);
+
+            MsgPropertyWrite message = new MsgPropertyWrite(objIdx, propId, data, _address);
+            message.SetSequenzeNumb(seq1);
             var seq2 = lastReceivedNumber;
 
-            _conn.Send(builder);
+            await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
 
             if (waitForResp)
@@ -264,14 +256,12 @@ namespace Kaenx.Konnect.Classes
         {
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
-            TunnelRequest builder = new TunnelRequest();
 
-
-            byte[] data = { objIdx, propId, 0x10, 0x01 };
-
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.PropertyValueRead, _currentSeqNum++, data);
+            MsgPropertyRead message = new MsgPropertyRead(objIdx, propId, _address);
+            message.SetSequenzeNumb(_currentSeqNum++);
             var seq = lastReceivedNumber;
-            _conn.Send(builder);
+
+            await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
             TunnelResponse resp = await WaitForData(seq, tokenS.Token);
 
@@ -461,10 +451,10 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Maskenversion als HexString</returns>
         public async Task<string> DeviceDescriptorRead()
         {
-            TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.DeviceDescriptorRead, _currentSeqNum++);
+            MsgDescriptorRead message = new MsgDescriptorRead(_address);
+            message.SetSequenzeNumb(_currentSeqNum++);
             var seq = lastReceivedNumber;
-            _conn.Send(builder);
+            await _conn.Send(message);
             //Debug.WriteLine("Warten auf: " + seq);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
             TunnelResponse resp = await WaitForData(seq, tokenS.Token); 
@@ -478,10 +468,9 @@ namespace Kaenx.Konnect.Classes
         {
             _connected = false;
 
-            TunnelRequest builder = new TunnelRequest();
-            var seq = _currentSeqNum++;
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.Disconnect, seq);
-            _conn.Send(builder);
+            MsgDisconnect message = new MsgDisconnect(_address);
+            message.SetSequenzeNumb(_currentSeqNum++);
+            _conn.Send(message);
 
             _conn.OnTunnelResponse -= OnTunnelResponse;
             _conn.OnTunnelAck -= _conn_OnTunnelAck;
