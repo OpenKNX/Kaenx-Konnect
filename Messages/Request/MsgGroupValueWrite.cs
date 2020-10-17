@@ -1,6 +1,5 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
-using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -8,30 +7,34 @@ using System.Text;
 namespace Kaenx.Konnect.Messages.Request
 {
     /// <summary>
-    /// Creates a telegram to read the device descriptor
+    /// Creates a telegram to write a group value
     /// </summary>
-    public class MsgDescriptorRead : IMessageRequest
+    public class MsgGroupValueWrite : IMessageRequest
     {
-        private byte _channelId;
+        private MulticastAddress _addressTo { get; set; }
+        private UnicastAddress _addressFrom { get; set; }
         private int _sequenzeNumb;
+        private byte _channelId;
         private byte _sequenzeCount;
-        private UnicastAddress _address;
+        private byte[] _data;
 
         /// <summary>
-        /// Creates a telegram to read the device descriptor
+        /// Creates a telegram to write a group value
         /// </summary>
-        /// <param name="address">Unicast Address from device</param>
-        public MsgDescriptorRead(UnicastAddress address)
+        /// <param name="from">Unicast Address from sender</param>
+        /// <param name="to">Mulicast Address (GroupAddress)</param>
+        /// <param name="data">Data to write</param>
+        public MsgGroupValueWrite(UnicastAddress from, MulticastAddress to, byte[] data)
         {
-            _address = address;
+            _addressFrom = from;
+            _addressTo = to;
+            _data = data;
         }
 
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.DeviceDescriptorRead, _sequenzeNumb);
-            builder.SetChannelId(_channelId);
-            builder.SetSequence(_sequenzeCount);
+            builder.Build(_addressFrom, _addressTo, Parser.ApciTypes.GroupValueWrite, 255, _data);
             return builder.GetBytes();
         }
 

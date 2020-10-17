@@ -1,6 +1,7 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Connections;
+using Kaenx.Konnect.Messages.Request;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,51 +57,37 @@ namespace Kaenx.Konnect.Classes
 
 
 
-        public void IndividualAddressRead()
+        public async void IndividualAddressRead()
         {
-            TunnelRequest builder = new TunnelRequest();
-            builder.Build(from, to, Parser.ApciTypes.IndividualAddressRead);
-            _conn.Send(builder);
+            MsgIndividualAddressRead message = new MsgIndividualAddressRead();
+            await _conn.Send(message);
         }
 
-        public void IndividualAddressWrite(UnicastAddress newAddr)
+        public async  void IndividualAddressWrite(UnicastAddress newAddr)
         {
-            TunnelRequest builder = new TunnelRequest();
-            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressWrite, 255, newAddr.GetBytes());
-            builder.SetPriority(Prios.System);
-            _conn.Send(builder);
+            MsgIndividualAddressWrite message = new MsgIndividualAddressWrite(newAddr);
+            await _conn.Send(message);
         }
 
 
-        public void IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
+        public async void IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
         {
-            TunnelRequest builder = new TunnelRequest();
-
-            List<byte> data = new List<byte>();
-            data.AddRange(serialNumber);
-
-            data.AddRange(newAddr.GetBytes());
-            data.AddRange(new byte[] { 0, 0, 0, 0 });
-
-            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressSerialNumberWrite, 255, data.ToArray());
-            builder.SetPriority(Prios.System);
-            _conn.Send(builder);
+            MsgIndividualAddressSerialWrite message = new MsgIndividualAddressSerialWrite(newAddr, serialNumber);
+            await _conn.Send(message);
         }
 
 
 
-        public void GroupValueWrite(MulticastAddress ga, byte[] data)
+        public async void GroupValueWrite(MulticastAddress ga, byte[] data)
         {
-            TunnelRequest builder = new TunnelRequest();
-            builder.Build(from, ga, Parser.ApciTypes.GroupValueWrite, 255, data);
-            _conn.Send(builder);
+            MsgGroupValueWrite message = new MsgGroupValueWrite(from, ga, data);
+            await _conn.Send(message);
         }
 
         public async Task GroupValueRead(MulticastAddress ga)
         {
-            TunnelRequest builder = new TunnelRequest();
-            builder.Build(from, ga, Parser.ApciTypes.GroupValueRead);
-            _conn.Send(builder);
+            MsgGroupValueRead message = new MsgGroupValueRead(ga);
+            await _conn.Send(message);
             var x = await WaitForData(lastReceivedNumber);
         }
     }

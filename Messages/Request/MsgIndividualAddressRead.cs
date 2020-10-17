@@ -1,6 +1,5 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
-using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -8,30 +7,18 @@ using System.Text;
 namespace Kaenx.Konnect.Messages.Request
 {
     /// <summary>
-    /// Creates a telegram to read the device descriptor
+    /// Creates a telegram to read individual address from devices in programm mode
     /// </summary>
-    public class MsgDescriptorRead : IMessageRequest
+    public class MsgIndividualAddressRead : IMessageRequest
     {
-        private byte _channelId;
         private int _sequenzeNumb;
+        private byte _channelId;
         private byte _sequenzeCount;
-        private UnicastAddress _address;
-
-        /// <summary>
-        /// Creates a telegram to read the device descriptor
-        /// </summary>
-        /// <param name="address">Unicast Address from device</param>
-        public MsgDescriptorRead(UnicastAddress address)
-        {
-            _address = address;
-        }
 
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.DeviceDescriptorRead, _sequenzeNumb);
-            builder.SetChannelId(_channelId);
-            builder.SetSequence(_sequenzeCount);
+            builder.Build(UnicastAddress.FromString("0.0.0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressRead);
             return builder.GetBytes();
         }
 

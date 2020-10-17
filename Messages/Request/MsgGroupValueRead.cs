@@ -1,6 +1,5 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
-using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -8,20 +7,20 @@ using System.Text;
 namespace Kaenx.Konnect.Messages.Request
 {
     /// <summary>
-    /// Creates a telegram to read the device descriptor
+    /// Creates a telegram to read a group value
     /// </summary>
-    public class MsgDescriptorRead : IMessageRequest
+    public class MsgGroupValueRead : IMessageRequest
     {
-        private byte _channelId;
+        private MulticastAddress _address { get; set; }
         private int _sequenzeNumb;
+        private byte _channelId;
         private byte _sequenzeCount;
-        private UnicastAddress _address;
 
         /// <summary>
-        /// Creates a telegram to read the device descriptor
+        /// Creates a telegram to read a group value
         /// </summary>
-        /// <param name="address">Unicast Address from device</param>
-        public MsgDescriptorRead(UnicastAddress address)
+        /// <param name="address">Multicast Address (GroupAddress)</param>
+        public MsgGroupValueRead(MulticastAddress address)
         {
             _address = address;
         }
@@ -29,9 +28,7 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.DeviceDescriptorRead, _sequenzeNumb);
-            builder.SetChannelId(_channelId);
-            builder.SetSequence(_sequenzeCount);
+            builder.Build(UnicastAddress.FromString("0.0.0"), _address, Parser.ApciTypes.GroupValueRead);
             return builder.GetBytes();
         }
 
@@ -47,13 +44,12 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void SetInfo(byte channel, byte seqCounter)
         {
-            _channelId = channel;
-            _sequenzeCount = seqCounter;
+            throw new NotImplementedException();
         }
 
         public void SetSequenzeNumb(int seq)
         {
-            _sequenzeNumb = seq;
+            throw new NotImplementedException();
         }
     }
 }

@@ -30,7 +30,7 @@ namespace Kaenx.Konnect.Connections
         public int Port;
         public bool IsConnected { get; set; }
 
-        private ProtocolTypes CurrentType { get; set; }
+        private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
         private byte _communicationChannel;
         private bool StopProcessing = false;
         private byte _sequenceCounter = 0;
@@ -45,10 +45,21 @@ namespace Kaenx.Konnect.Connections
         public KnxIpTunneling(IPEndPoint sendEndPoint)
         {
             Port = GetFreePort();
-
             _sendEndPoint = sendEndPoint;
-            _receiveEndPoint = new IPEndPoint(IPAddress.Any, Port);
-            _udpClient = new UdpClient(_receiveEndPoint);
+            IPAddress ip = null;
+
+            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+            {
+                socket.Connect("8.8.8.8", 65530);
+                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                ip = endPoint.Address;
+            }
+
+            if (ip == null)
+                throw new Exception("Lokale Ip konnte nicht gefunden werden");
+
+            _receiveEndPoint = new IPEndPoint(ip, Port);
+            _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, Port));
             _receiveParserDispatcher = new ReceiverParserDispatcher();
             _sendMessages = new BlockingCollection<byte[]>();
 
@@ -86,6 +97,7 @@ namespace Kaenx.Konnect.Connections
                 throw new Exception("Roflkopter");
 
             var seq = _sequenceCounter;
+            Debug.WriteLine("Telegram Seq Counter: " + _sequenceCounter);
             message.SetInfo(_communicationChannel, _sequenceCounter);
             _sequenceCounter++;
 
@@ -117,13 +129,14 @@ namespace Kaenx.Konnect.Connections
 
 
 
-
-        public Task Connect()
+        public async Task Connect()
         {
             ConnectionRequest builder = new ConnectionRequest();
             builder.Build(_receiveEndPoint, 0x00);
-            _sendMessages.Add(builder.GetBytes());
-            return Task.CompletedTask;
+            await Send(builder.GetBytes(), true);
+            await Task.Delay(200);
+            await SendStatusReq();
+            await Task.Delay(200);
         }
 
         public Task Disconnect()
@@ -133,18 +146,19 @@ namespace Kaenx.Konnect.Connections
 
             DisconnectRequest builder = new DisconnectRequest();
             builder.Build(_receiveEndPoint, _communicationChannel);
-            _sendMessages.Add(builder.GetBytes());
+            Send(builder.GetBytes(), true);
 
             StopProcessing = true;
             return Task.CompletedTask;
         }
 
-        public Task<bool> SendStatusReq()
+        public async Task<bool> SendStatusReq()
         {
             ConnectionStatusRequest stat = new ConnectionStatusRequest();
             stat.Build(_receiveEndPoint, _communicationChannel);
-            Send(stat.GetBytes());
-            return Task.FromResult(false);
+            stat.SetChannelId(_communicationChannel);
+            await Send(stat.GetBytes());
+            return true;
         }
 
 
@@ -190,7 +204,10 @@ namespace Kaenx.Konnect.Connections
                                 {
                                     TunnelRequest builder = new TunnelRequest();
                                     builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, Parser.ApciTypes.Ack, tunnelResponse.SequenceNumber);
-                                    Send(builder);
+                                    builder.SetChannelId(_communicationChannel);
+                                    builder.SetSequence(_sequenceCounter);
+                                    Send(builder.GetBytes());
+                                    _sequenceCounter++;
                                     //Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
                                     OnTunnelResponse?.Invoke(tunnelResponse);
                                 }

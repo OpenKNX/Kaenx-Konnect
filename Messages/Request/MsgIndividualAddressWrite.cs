@@ -1,6 +1,5 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
-using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -8,30 +7,29 @@ using System.Text;
 namespace Kaenx.Konnect.Messages.Request
 {
     /// <summary>
-    /// Creates a telegram to read the device descriptor
+    /// Creates a telegram to write an individual addres via programm button
     /// </summary>
-    public class MsgDescriptorRead : IMessageRequest
+    public class MsgIndividualAddressWrite : IMessageRequest
     {
-        private byte _channelId;
+        private UnicastAddress _address { get; set; }
         private int _sequenzeNumb;
+        private byte _channelId;
         private byte _sequenzeCount;
-        private UnicastAddress _address;
 
         /// <summary>
-        /// Creates a telegram to read the device descriptor
+        /// Creates a telegram to write an individual addres via programm button
         /// </summary>
-        /// <param name="address">Unicast Address from device</param>
-        public MsgDescriptorRead(UnicastAddress address)
+        /// <param name="newAddress">New Unicast Address</param>
+        public MsgIndividualAddressWrite(UnicastAddress newAddress)
         {
-            _address = address;
+            _address = newAddress;
         }
 
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.DeviceDescriptorRead, _sequenzeNumb);
-            builder.SetChannelId(_channelId);
-            builder.SetSequence(_sequenzeCount);
+            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressWrite, 255, _address.GetBytes());
+            builder.SetPriority(Prios.System);
             return builder.GetBytes();
         }
 
