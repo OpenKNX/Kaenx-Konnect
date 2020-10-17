@@ -4,14 +4,14 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <NeutralLanguage>de</NeutralLanguage>
-    <AssemblyVersion>0.0.16.0</AssemblyVersion>
-    <FileVersion>0.0.16.0</FileVersion>
-    <Description>Bibliothek für den Zugriff auf den KNX Bus mittels IP.</Description>
-    <Version>0.0.16.0</Version>
+    <AssemblyVersion>0.0.17.0</AssemblyVersion>
+    <FileVersion>0.0.17.0</FileVersion>
+    <Description>Bibliothek für den Zugriff auf den KNX Bus mittels IP oder USB.</Description>
+    <Version>0.0.17.0</Version>
     <PackageIcon>Logo.png</PackageIcon>
     <PackageIconUrl />
     <PackageTags>knx, bus, communication</PackageTags>
-    <PackageReleaseNotes>Erster Release.</PackageReleaseNotes>
+    <PackageReleaseNotes>USB Verbindung wurde hinzugefügt</PackageReleaseNotes>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/thewhobox/Kaenx.Konnect</PackageProjectUrl>
     <RepositoryUrl>https://github.com/thewhobox/Kaenx.Konnect</RepositoryUrl>
@@ -19,6 +19,7 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <Copyright>2020 - Mike Gerst</Copyright>
     <LangVersion>8.0</LangVersion>
+    <ApplicationIcon>Logo.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
