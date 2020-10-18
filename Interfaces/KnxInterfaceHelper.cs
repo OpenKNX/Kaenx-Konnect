@@ -16,7 +16,7 @@ namespace Kaenx.Konnect.Interfaces
                     return new KnxUsbTunneling(interUsb.DeviceId);
 
                 case KnxInterfaceIp interIp:
-                    return new KnxIpTunneling(new IPEndPoint(IPAddress.Parse(interIp.IP), interIp.Port));
+                    return new KnxIpTunneling(interIp.Endpoint);
             }
 
             throw new Exception("Für das Interface gibt es keine Connection");

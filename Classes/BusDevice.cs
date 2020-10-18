@@ -256,7 +256,7 @@ namespace Kaenx.Konnect.Classes
         {
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
-
+            Debug.WriteLine("PropRead:" + _currentSeqNum);
             MsgPropertyRead message = new MsgPropertyRead(objIdx, propId, _address);
             message.SetSequenzeNumb(_currentSeqNum++);
             var seq = lastReceivedNumber;
@@ -318,6 +318,7 @@ namespace Kaenx.Konnect.Classes
                     datalist.RemoveRange(0, datalist.Count);
                 }
 
+                Debug.WriteLine("MesgWrite:" + _currentSeqNum);
                 MsgMemoryWrite message = new MsgMemoryWrite(currentPosition, data_temp.ToArray(), _address);
                 message.SetSequenzeNumb(_currentSeqNum++);
 
@@ -353,9 +354,10 @@ namespace Kaenx.Konnect.Classes
                     datalist.RemoveRange(0, datalist.Count);
                 }
 
+
                 var seq = _currentSeqNum++;
                 MsgMemoryWrite message = new MsgMemoryWrite(currentPosition, data_temp.ToArray(), _address);
-                message.SetSequenzeNumb(_currentSeqNum++);
+                message.SetSequenzeNumb(seq);
 
                 await _conn.Send(message);
                 //Debug.WriteLine("Warten auf: " + seq);

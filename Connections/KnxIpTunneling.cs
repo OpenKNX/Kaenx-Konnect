@@ -97,7 +97,6 @@ namespace Kaenx.Konnect.Connections
                 throw new Exception("Roflkopter");
 
             var seq = _sequenceCounter;
-            Debug.WriteLine("Telegram Seq Counter: " + _sequenceCounter);
             message.SetInfo(_communicationChannel, _sequenceCounter);
             _sequenceCounter++;
 
