@@ -40,6 +40,8 @@ namespace Kaenx.Konnect.Messages.Request
 
             builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressSerialNumberWrite, 255, data.ToArray());
             builder.SetPriority(Prios.System);
+            builder.SetChannelId(_channelId);
+            builder.SetSequence(_sequenzeCount);
             return builder.GetBytes();
         }
 

@@ -35,6 +35,8 @@ namespace Kaenx.Konnect.Messages.Request
         {
             TunnelRequest builder = new TunnelRequest();
             builder.Build(_addressFrom, _addressTo, Parser.ApciTypes.GroupValueWrite, 255, _data);
+            builder.SetChannelId(_channelId);
+            builder.SetSequence(_sequenzeCount);
             return builder.GetBytes();
         }
 

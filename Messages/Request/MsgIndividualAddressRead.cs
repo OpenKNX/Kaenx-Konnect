@@ -19,6 +19,8 @@ namespace Kaenx.Konnect.Messages.Request
         {
             TunnelRequest builder = new TunnelRequest();
             builder.Build(UnicastAddress.FromString("0.0.0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressRead);
+            builder.SetChannelId(_channelId);
+            builder.SetSequence(_sequenzeCount);
             return builder.GetBytes();
         }
 
