@@ -84,7 +84,7 @@ namespace Kaenx.Konnect.Connections
         public Task Send(byte[] data, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
-                throw new Exception("Roflkopter");
+                throw new Exception("Roflkopter 1");
 
             _sendMessages.Add(data);
 
@@ -94,7 +94,7 @@ namespace Kaenx.Konnect.Connections
         public Task<byte> Send(IMessageRequest message, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
-                throw new Exception("Roflkopter");
+                throw new Exception("Roflkopter 2");
 
             var seq = _sequenceCounter;
             message.SetInfo(_communicationChannel, _sequenceCounter);
@@ -134,6 +134,8 @@ namespace Kaenx.Konnect.Connections
             builder.Build(_receiveEndPoint, 0x00);
             await Send(builder.GetBytes(), true);
             await Task.Delay(200);
+            if (!IsConnected)
+                throw new Exception("Verbindung zur Schnittstelle konnte nicht hergestellt werden!");
             await SendStatusReq();
             await Task.Delay(200);
         }
