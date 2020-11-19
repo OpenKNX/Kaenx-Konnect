@@ -41,7 +41,7 @@ namespace Kaenx.Konnect.Parser
         {
             var enumerable = bytes as byte[] ?? bytes.ToArray();
             return new HostProtocolAddressInformation(enumerable.ElementAt(1),
-              new IPEndPoint(BitConverter.ToInt32(enumerable.Skip(2).Take(4).ToArray(), 0),
+              new IPEndPoint(new IPAddress(enumerable.Skip(2).Take(4).ToArray()),
                 BitConverter.ToInt16(enumerable.Skip(6).Take(2).Reverse().ToArray(), 0)));
         }
     }

@@ -188,16 +188,22 @@ namespace Kaenx.Konnect.Connections
                                     IsConnected = true;
                                     ConnectionChanged?.Invoke(IsConnected);
                                     SelfAddress = connectResponse.ConnectionResponseDataBlock.KnxAddress;
+                                    Debug.WriteLine("Connected: Eigene Adresse: " + SelfAddress.ToString());
                                 }
                                 else
                                 {
-
+                                    Debug.WriteLine("Connected: Fehler: " + connectResponse.Status.ToString());
                                 }
 
                                 break;
                             case Builders.TunnelResponse tunnelResponse:
                                 if (tunnelResponse.IsRequest && tunnelResponse.DestinationAddress != SelfAddress)
+                                {
+                                    Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
+                                    Debug.WriteLine("Typ: " + tunnelResponse.APCI);
+                                    Debug.WriteLine("Eigene Adresse: " + SelfAddress.ToString());
                                     break;
+                                }
 
                                 _sendMessages.Add(new Responses.TunnelResponse(0x06, 0x10, 0x0A, 0x04, _communicationChannel, tunnelResponse.SequenceCounter, 0x00).GetBytes());
 
