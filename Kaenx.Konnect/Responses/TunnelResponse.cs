@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    public class TunnelResponse : IResponse
+    class TunnelResponse : IResponse
     {
         public TunnelResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte structureLength,
           byte communicationChannel, byte sequenceCounter, byte status)
@@ -46,7 +46,7 @@ namespace Kaenx.Konnect.Responses
         }
     }
 
-    public static class ByteArrayExtensions
+    static class ByteArrayExtensions
     {
     }
 }

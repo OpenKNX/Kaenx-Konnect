@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Responses
 {
-    public class TunnelAckResponse : IResponse
+    class TunnelAckResponse : IResponse
     {
         public TunnelAckResponse(byte channel, byte sequenz, byte status)
         {

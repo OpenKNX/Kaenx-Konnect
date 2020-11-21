@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Classes
 {
-    public class ReceiverParserDispatcher
+    class ReceiverParserDispatcher
     {
         private readonly List<IReceiveParser> _responseParsers;
 

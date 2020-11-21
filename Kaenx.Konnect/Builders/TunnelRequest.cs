@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Builders
 {
-    public class TunnelRequest : IRequestBuilder
+    class TunnelRequest : IRequestBuilder
     {
         private List<byte> bytes = new List<byte>();
 
@@ -185,7 +185,7 @@ namespace Kaenx.Konnect.Builders
         }
     }
 
-    public enum Prios
+    enum Prios
     {
         System,
         Alarm,

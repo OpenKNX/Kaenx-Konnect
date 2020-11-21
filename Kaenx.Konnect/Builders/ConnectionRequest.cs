@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Builders
 {
-    public class ConnectionRequest : IRequestBuilder
+    class ConnectionRequest : IRequestBuilder
     {
         private List<byte> bytes = new List<byte>();
 

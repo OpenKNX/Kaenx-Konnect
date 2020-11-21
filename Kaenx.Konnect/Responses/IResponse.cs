@@ -4,7 +4,8 @@ using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    public interface IResponse
+    //Ist zwar leer, wird aber trotzdem benötigt
+    interface IResponse
     {
     }
 }

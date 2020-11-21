@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Parser
 {
-    public class SearchResponseParser : IReceiveParser
+    class SearchResponseParser : IReceiveParser
     {
         public ushort ServiceTypeIdentifier => 0x0202;
 

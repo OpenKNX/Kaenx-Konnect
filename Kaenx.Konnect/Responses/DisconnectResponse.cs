@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    public class DisconnectResponse : IResponse
+    class DisconnectResponse : IResponse
     {
         public DisconnectResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte communicationChannel,
       byte status)

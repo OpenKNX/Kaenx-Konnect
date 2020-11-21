@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Parser
 {
-    public class TunnelAckParser : IReceiveParser
+    class TunnelAckParser : IReceiveParser
     {
         public ushort ServiceTypeIdentifier => 0x0421;
 

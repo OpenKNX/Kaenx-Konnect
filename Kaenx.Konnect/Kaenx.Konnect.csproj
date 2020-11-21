@@ -43,19 +43,22 @@
 
   <ItemGroup>
     <Reference Include="Device.Net">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Device.Net.dll</HintPath>
+      <HintPath>..\Dlls\Device.Net.dll</HintPath>
     </Reference>
     <Reference Include="Device.Net.UWP">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Device.Net.UWP.dll</HintPath>
+      <HintPath>..\Dlls\Device.Net.UWP.dll</HintPath>
     </Reference>
     <Reference Include="Hid.Net">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Hid.Net.dll</HintPath>
+      <HintPath>..\Dlls\Hid.Net.dll</HintPath>
     </Reference>
     <Reference Include="Hid.Net.UWP">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Hid.Net.UWP.dll</HintPath>
+      <HintPath>..\Dlls\Hid.Net.UWP.dll</HintPath>
     </Reference>
     <Reference Include="Usb.Net">
-      <HintPath>..\..\..\OneDrive - Mike Gerst\Programmieren\Device.Net\Usb.Net.dll</HintPath>
+      <HintPath>..\Dlls\Usb.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Usb.Net.UWP">
+      <HintPath>..\Dlls\Usb.Net.UWP.dll</HintPath>
     </Reference>
   </ItemGroup>
 

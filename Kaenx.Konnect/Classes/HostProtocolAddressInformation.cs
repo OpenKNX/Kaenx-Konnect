@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Classes
 {
-    public class HostProtocolAddressInformation
+    class HostProtocolAddressInformation
     {
         public HostProtocolAddressInformation(byte hostProtocolCode, IPEndPoint ipEndPoint)
         {

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Parser
 {
-    public class DisconnectResponseParser : IReceiveParser
+    class DisconnectResponseParser : IReceiveParser
     {
         public ushort ServiceTypeIdentifier => 0x020a;
 

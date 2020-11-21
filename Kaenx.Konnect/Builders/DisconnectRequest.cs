@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Builders
 {
-    public class DisconnectRequest : IRequestBuilder
+    class DisconnectRequest : IRequestBuilder
     {
         private List<byte> bytes = new List<byte>();
 

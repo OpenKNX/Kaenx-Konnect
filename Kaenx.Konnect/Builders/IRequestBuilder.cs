@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Builders
 {
-    public interface IRequestBuilder
+    interface IRequestBuilder
     {
         byte[] GetBytes();
         void SetChannelId(byte channelId);
