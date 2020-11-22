@@ -4,6 +4,7 @@ using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 
 namespace Kaenx.Konnect.Messages.Request
@@ -86,5 +87,7 @@ namespace Kaenx.Konnect.Messages.Request
         {
             throw new NotImplementedException();
         }
+
+        public void SetEndpoint(IPEndPoint endpoint) { }
     }
 }

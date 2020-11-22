@@ -3,6 +3,7 @@ using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 
 namespace Kaenx.Konnect.Messages.Request
@@ -76,5 +77,7 @@ namespace Kaenx.Konnect.Messages.Request
         {
             _sequenzeNumb = seq;
         }
+
+        public void SetEndpoint(IPEndPoint endpoint) { }
     }
 }

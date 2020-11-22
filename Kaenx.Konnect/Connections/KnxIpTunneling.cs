@@ -9,7 +9,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -38,11 +40,11 @@ namespace Kaenx.Konnect.Connections
 
         private readonly IPEndPoint _receiveEndPoint;
         private readonly IPEndPoint _sendEndPoint;
-        private UdpClient _udpClient;
-        private readonly BlockingCollection<byte[]> _sendMessages;
+        private List<UdpClient> _udpList = new List<UdpClient>();
+        private readonly BlockingCollection<object> _sendMessages;
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
 
-        public KnxIpTunneling(IPEndPoint sendEndPoint)
+        public KnxIpTunneling(IPEndPoint sendEndPoint, bool sendToAll = false)
         {
             Port = GetFreePort();
             _sendEndPoint = sendEndPoint;
@@ -59,11 +61,50 @@ namespace Kaenx.Konnect.Connections
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
 
             _receiveEndPoint = new IPEndPoint(ip, Port);
-            _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, Port));
             _receiveParserDispatcher = new ReceiverParserDispatcher();
-            _sendMessages = new BlockingCollection<byte[]>();
+            _sendMessages = new BlockingCollection<object>();
+
+
+
+            if (sendToAll)
+            {
+                NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
+                foreach (NetworkInterface adapter in nics)
+                {
+                    IPInterfaceProperties ipprops = adapter.GetIPProperties();
+                    if (ipprops.MulticastAddresses.Count == 0 // most of VPN adapters will be skipped
+                        || !adapter.SupportsMulticast // multicast is meaningless for this type of connection
+                        || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
+                        continue; 
+                    IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
+                    if (null == p) continue; // IPv4 is not configured on this adapter
+                    int index = IPAddress.HostToNetworkOrder(p.Index);
+
+                    IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
+                    UdpClient _udpClient = new UdpClient(new IPEndPoint(addr, GetFreePort()));
+                    _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, index);
+                    _udpList.Add(_udpClient);
+
+                    Debug.WriteLine("Binded to " + adapter.Name);
+                }
+            } else
+            {
+                UdpClient _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, GetFreePort()));
+                _udpList.Add(_udpClient);
+                Debug.WriteLine("Binded to default");
+            }
+
+            
 
             ProcessSendMessages();
+            try
+            {
+                foreach (UdpClient client in _udpList)
+                    ProcessReceivingMessages(client);
+            } catch
+            {
+
+            }
         }
 
 
@@ -99,28 +140,7 @@ namespace Kaenx.Konnect.Connections
             var seq = _sequenceCounter;
             message.SetInfo(_communicationChannel, _sequenceCounter);
             _sequenceCounter++;
-
-            byte[] data;
-
-            switch(CurrentType)
-            {
-                case ProtocolTypes.Emi1:
-                    data = message.GetBytesEmi1();
-                    break;
-
-                case ProtocolTypes.Emi2:
-                    data = message.GetBytesEmi2();
-                    break;
-
-                case ProtocolTypes.cEmi:
-                    data = message.GetBytesCemi();
-                    break;
-
-                default:
-                    throw new Exception("Unbekanntes Protokoll");
-            }
-
-            _sendMessages.Add(data);
+            _sendMessages.Add(message);
 
             return Task.FromResult(seq);
         }
@@ -163,8 +183,7 @@ namespace Kaenx.Konnect.Connections
         }
 
 
-
-        private void ProcessSendMessages()
+        private void ProcessReceivingMessages(UdpClient _udpClient)
         {
             Task.Run(async () =>
             {
@@ -177,6 +196,9 @@ namespace Kaenx.Konnect.Connections
                         rofl++;
                         var result = await _udpClient.ReceiveAsync();
                         var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
+
+                        Debug.WriteLine("Telegram angekommen: " + knxResponse.ToString());
+
 
                         switch (knxResponse)
                         {
@@ -257,14 +279,54 @@ namespace Kaenx.Konnect.Connections
 
                 }
             });
+        }
 
+        private void ProcessSendMessages()
+        {
             Task.Run(() =>
             {
 
                 foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
                 {
+                    if(sendMessage is byte[])
+                    {
 
-                    _udpClient.SendAsync(sendMessage, sendMessage.Length, _sendEndPoint);
+                        byte[] data = sendMessage as byte[];
+                        foreach (UdpClient client in _udpList)
+                        {
+                            client.SendAsync(data, data.Length, _sendEndPoint);
+                        }
+
+                    } else if(sendMessage is IMessageRequest)
+                    {
+                        IMessageRequest message = sendMessage as IMessageRequest;
+                        byte[] tosend = null;
+
+                        foreach (UdpClient client in _udpList)
+                        {
+                            message.SetEndpoint(client.Client.LocalEndPoint as IPEndPoint);
+
+                            switch (CurrentType)
+                            {
+                                case ProtocolTypes.Emi1:
+                                    tosend = message.GetBytesEmi1();
+                                    break;
+
+                                case ProtocolTypes.Emi2:
+                                    tosend = message.GetBytesEmi2();
+                                    break;
+
+                                case ProtocolTypes.cEmi:
+                                    tosend = message.GetBytesCemi();
+                                    break;
+
+                                default:
+                                    throw new Exception("Unbekanntes Protokoll");
+                            }
+
+                            client.SendAsync(tosend, tosend.Length, _sendEndPoint);
+                        }
+                    }
                 }
             });
         }

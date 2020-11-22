@@ -5,7 +5,8 @@ using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    class ConnectionResponseDataBlock
+    //TODO: Make private
+    public class ConnectionResponseDataBlock
     {
         public ConnectionResponseDataBlock(byte structureLength, byte connectionType, UnicastAddress knxAddress)
         {

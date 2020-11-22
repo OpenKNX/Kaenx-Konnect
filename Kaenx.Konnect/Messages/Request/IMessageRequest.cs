@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 
 namespace Kaenx.Konnect.Messages.Request
@@ -11,5 +12,6 @@ namespace Kaenx.Konnect.Messages.Request
         byte[] GetBytesCemi();
         void SetSequenzeNumb(int seq);
         void SetInfo(byte channel, byte seqCounter);
+        void SetEndpoint(IPEndPoint endpoint);
     }
 }

@@ -9,7 +9,8 @@ using System.Text;
 
 namespace Kaenx.Konnect.Parser
 {
-    class ConnectResponseParser : IReceiveParser
+    //TODO: Make private
+    public class ConnectResponseParser : IReceiveParser
     {
         public ushort ServiceTypeIdentifier => 0x0206;
 
