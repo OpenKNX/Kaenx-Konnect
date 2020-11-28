@@ -9,35 +9,35 @@ using System.Text;
 namespace Kaenx.Konnect.Messages.Request
 {
     /// <summary>
-    /// Creates a telegram to read a group value
+    /// Creates a telegram to disconnect from device
     /// </summary>
-    public class MsgGroupValueRead : IMessageRequest
+    public class MsgDisconnectReq : IMessageRequest
     {
         public byte ChannelId { get; set; }
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
         public IKnxAddress SourceAddress { get; set; }
         public IKnxAddress DestinationAddress { get; set; }
-        public ApciTypes ApciType { get; } = ApciTypes.GroupValueRead;
+        public ApciTypes ApciType { get; } = ApciTypes.Disconnect;
         public byte[] Raw { get; set; }
 
         /// <summary>
-        /// Creates a telegram to read a group value
+        /// Creates a telegram to disconnect from device
         /// </summary>
-        /// <param name="address">Multicast Address (GroupAddress)</param>
-        public MsgGroupValueRead(MulticastAddress address)
+        /// <param name="address">Unicast Address from device</param>
+        public MsgDisconnectReq(UnicastAddress address)
         {
             DestinationAddress = address;
         }
 
-        public MsgGroupValueRead() { }
+        public MsgDisconnectReq() { }
 
 
 
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, Parser.ApciTypes.GroupValueRead);
+            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, Parser.ApciTypes.Disconnect, 255);
             builder.SetChannelId(ChannelId);
             builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
@@ -55,19 +55,16 @@ namespace Kaenx.Konnect.Messages.Request
 
 
 
-        public void ParseDataCemi()
-        {
-            throw new NotImplementedException("ParseDataCemi - MsgGroupValueRead");
-        }
+        public void ParseDataCemi() { }
 
         public void ParseDataEmi1()
         {
-            throw new NotImplementedException("ParseDataEmi1 - MsgGroupValueRead");
+            throw new NotImplementedException("ParseDataEmi1 - MsgDisconnectReq");
         }
 
         public void ParseDataEmi2()
         {
-            throw new NotImplementedException("ParseDataEmi2 - MsgGroupValueRead");
+            throw new NotImplementedException("ParseDataEmi2 - MsgDisconnectReq");
         }
     }
 }

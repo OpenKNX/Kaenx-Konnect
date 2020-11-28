@@ -1,6 +1,8 @@
-﻿using Kaenx.Konnect.Builders;
+﻿using Kaenx.Konnect.Addresses;
+using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Messages;
 using Kaenx.Konnect.Messages.Request;
+using Kaenx.Konnect.Messages.Response;
 using Kaenx.Konnect.Responses;
 using System;
 using System.Collections.Generic;
@@ -12,12 +14,14 @@ namespace Kaenx.Konnect.Connections
 {
     public interface IKnxConnection
     {
-        public delegate void TunnelRequestHandler(Builders.TunnelResponse response);
+        public delegate void TunnelRequestHandler(IMessageRequest message);
         public event TunnelRequestHandler OnTunnelRequest;
-        public event TunnelRequestHandler OnTunnelResponse;
-        public event TunnelRequestHandler OnTunnelAck;
+        public delegate void TunnelResponseHandler(IMessageResponse message);
+        public event TunnelResponseHandler OnTunnelResponse;
+        public delegate void TunnelAckHandler(MsgAckRes message);
+        public event TunnelAckHandler OnTunnelAck;
 
-        public delegate void SearchResponseHandler(SearchResponse response);
+        public delegate void SearchResponseHandler(MsgSearchRes message);
         public event SearchResponseHandler OnSearchResponse;
 
         public delegate void ConnectionChangedHandler(bool isConnected);
@@ -28,6 +32,16 @@ namespace Kaenx.Konnect.Connections
         /// If you are connected to the Interface
         /// </summary>
         public bool IsConnected { get; set; }
+        
+        /// <summary>
+        /// Returns Last Error
+        /// </summary>
+        public ConnectionErrors LastError { get; set; }
+
+        /// <summary>
+        /// Returns the Physical Address of the Interface
+        /// </summary>
+        public UnicastAddress PhysicalAddress { get; set; }
 
         /// <summary>
         /// Connects the interface to the bus.
@@ -62,5 +76,13 @@ namespace Kaenx.Konnect.Connections
         /// <param name="igoreConnected">If true the conected status will be ignored</param>
         /// <returns>Sequenz Counter as byte</returns>
         Task<byte> Send(IMessageRequest message, bool ignoreConnected = false);
+    }
+
+
+    public enum ConnectionErrors
+    {
+        Undefined = 1,
+        NoMoreConnections,
+        NotConnectedToBus
     }
 }

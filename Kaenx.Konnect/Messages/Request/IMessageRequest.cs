@@ -5,13 +5,17 @@ using System.Text;
 
 namespace Kaenx.Konnect.Messages.Request
 {
-    public interface IMessageRequest
+    public interface IMessageRequest : IMessage
     {
         byte[] GetBytesEmi1();
         byte[] GetBytesEmi2();
         byte[] GetBytesCemi();
-        void SetSequenzeNumb(int seq);
-        void SetInfo(byte channel, byte seqCounter);
-        void SetEndpoint(IPEndPoint endpoint);
+
+
+        //Todo implement it
+
+        //void ParseDataCemi();
+        //void ParseDataEmi1();
+        //void ParseDataEmi2();
     }
 }

@@ -2,6 +2,7 @@
 using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.Messages.Request;
+using Kaenx.Konnect.Messages.Response;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +16,7 @@ namespace Kaenx.Konnect.Classes
         private IKnxConnection _conn;
         private MulticastAddress to = MulticastAddress.FromString("0/0/0");
         private UnicastAddress from = UnicastAddress.FromString("0.0.0");
-        private Dictionary<int, TunnelResponse> responses = new Dictionary<int, TunnelResponse>();
+        private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
 
         private int _lastNumb = -1;
         private int lastReceivedNumber
@@ -31,7 +32,7 @@ namespace Kaenx.Konnect.Classes
             _conn.OnTunnelResponse += _conn_OnTunnelResponse;
         }
 
-        private void _conn_OnTunnelResponse(TunnelResponse response)
+        private void _conn_OnTunnelResponse(IMessageResponse response)
         {
             if (responses.ContainsKey(response.SequenceNumber))
                 responses[response.SequenceNumber] = response;
@@ -42,7 +43,7 @@ namespace Kaenx.Konnect.Classes
         }
 
 
-        private async Task<TunnelResponse> WaitForData(int seq)
+        private async Task<IMessageResponse> WaitForData(int seq)
         {
             if (responses.ContainsKey(seq))
                 responses.Remove(seq);
@@ -59,20 +60,20 @@ namespace Kaenx.Konnect.Classes
 
         public async void IndividualAddressRead()
         {
-            MsgIndividualAddressRead message = new MsgIndividualAddressRead();
+            MsgIndividualAddressReadReq message = new MsgIndividualAddressReadReq();
             await _conn.Send(message);
         }
 
         public async  void IndividualAddressWrite(UnicastAddress newAddr)
         {
-            MsgIndividualAddressWrite message = new MsgIndividualAddressWrite(newAddr);
+            MsgIndividualAddressWriteReq message = new MsgIndividualAddressWriteReq(newAddr);
             await _conn.Send(message);
         }
 
 
         public async void IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
         {
-            MsgIndividualAddressSerialWrite message = new MsgIndividualAddressSerialWrite(newAddr, serialNumber);
+            MsgIndividualAddressSerialWriteReq message = new MsgIndividualAddressSerialWriteReq(newAddr, serialNumber);
             await _conn.Send(message);
         }
 
@@ -80,7 +81,7 @@ namespace Kaenx.Konnect.Classes
 
         public async void GroupValueWrite(MulticastAddress ga, byte[] data)
         {
-            MsgGroupValueWrite message = new MsgGroupValueWrite(from, ga, data);
+            MsgGroupValueWriteReq message = new MsgGroupValueWriteReq(from, ga, data);
             await _conn.Send(message);
         }
 

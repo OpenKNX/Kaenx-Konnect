@@ -12,15 +12,19 @@ namespace Kaenx.Konnect.Messages.Request
     /// <summary>
     /// Creates a telegram to write to memory
     /// </summary>
-    public class MsgMemoryWrite : IMessageRequest
+    public class MsgMemoryWriteReq : IMessageRequest
     {
+        public byte ChannelId { get; set; }
+        public byte SequenceCounter { get; set; }
+        public int SequenceNumber { get; set; }
+        public IKnxAddress SourceAddress { get; set; }
+        public IKnxAddress DestinationAddress { get; set; }
+        public ApciTypes ApciType { get; } = ApciTypes.MemoryWrite;
+        public byte[] Raw { get; set; }
+
+
         private int Address { get; set; }
         private byte[] Data { get; set; }
-
-        private UnicastAddress _address { get; set; }
-        private int _sequenzeNumb;
-        private byte _channelId;
-        private byte _sequenzeCount;
 
         /// <summary>
         /// Creates a telegram to write to memory
@@ -29,29 +33,18 @@ namespace Kaenx.Konnect.Messages.Request
         /// <param name="data">Data to write</param>
         /// <param name="uniAddr">Unicast Address from Device</param>
         /// <exception cref="Exception">Thrown if data length is greater than 256 bytes</exception>
-        public MsgMemoryWrite(int address, byte[] data, UnicastAddress uniAddr)
+        public MsgMemoryWriteReq(int address, byte[] data, UnicastAddress uniAddr)
         {
             if (data.Length > 256)
                 throw new Exception("Es können maximal 256 Bytes geschrieben werden. (Angefordert waren " + data.Length + " bytes)");
 
             Address = address;
             Data = data;
-            _address = uniAddr;
+            DestinationAddress = uniAddr;
         }
 
+        public MsgMemoryWriteReq() { }
 
-
-
-        public void SetSequenzeNumb(int seq)
-        {
-            _sequenzeNumb = seq;
-        }
-
-        public void SetInfo(byte channel, byte seqCounter)
-        {
-            _channelId = channel;
-            _sequenzeCount = seqCounter;
-        }
 
 
 
@@ -64,9 +57,9 @@ namespace Kaenx.Konnect.Messages.Request
             data.AddRange(addr);
             data.AddRange(Data);
 
-            builder.Build(UnicastAddress.FromString("0.0.0"), _address, ApciTypes.MemoryWrite, _sequenzeNumb, data.ToArray());
-            builder.SetChannelId(_channelId);
-            builder.SetSequence(_sequenzeCount);
+            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.MemoryWrite, SequenceNumber, data.ToArray());
+            builder.SetChannelId(ChannelId);
+            builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
         }
 
@@ -88,6 +81,20 @@ namespace Kaenx.Konnect.Messages.Request
             throw new NotImplementedException();
         }
 
-        public void SetEndpoint(IPEndPoint endpoint) { }
+
+        public void ParseDataCemi()
+        {
+            throw new NotImplementedException("ParseDataCemi - MsgMemoryWriteReq");
+        }
+
+        public void ParseDataEmi1()
+        {
+            throw new NotImplementedException("ParseDataEmi1 - MsgMemoryWriteReq");
+        }
+
+        public void ParseDataEmi2()
+        {
+            throw new NotImplementedException("ParseDataEmi2 - MsgMemoryWriteReq");
+        }
     }
 }

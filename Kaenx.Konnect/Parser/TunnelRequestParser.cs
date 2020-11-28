@@ -162,10 +162,10 @@ namespace Kaenx.Konnect.Parser
                 }
             }
 
-            IKnxAddress destAddr = null;
-
             BitArray bitsCtrl1 = new BitArray(new[] { responseBytes[6] });
             BitArray bitsCtrl2 = new BitArray(new[] { responseBytes[7] });
+
+            IKnxAddress destAddr = null;
             if (bitsCtrl2.Get(7))
                 destAddr = MulticastAddress.FromByteArray(new[] { responseBytes[10], responseBytes[11] });
             else
@@ -173,6 +173,27 @@ namespace Kaenx.Konnect.Parser
 
             bool ackWanted = bitsCtrl1.Get(2);
             bool isRequest = ReqMC.Contains(responseBytes[4]);
+
+
+            switch (type)
+            {
+                case ApciTypes.MemoryWrite:
+                case ApciTypes.MemoryRead:
+                    byte[] data_temp = new byte[data.Length + 1];
+
+                    int restData = npdu[1] & 127;
+
+                    data_temp[0] = BitConverter.GetBytes(restData)[0];
+
+                    for (int i = 0; i < data.Length; i++)
+                    {
+                        data_temp[i + 1] = data[i];
+                    }
+                    data = data_temp;
+                    break;
+            }
+
+
 
             return new Builders.TunnelResponse(headerLength, protocolVersion, totalLength, structureLength, communicationChannel,
               sequenceCounter, messageCode, addInformationLength, isRequest, ackWanted, controlField, controlField2,

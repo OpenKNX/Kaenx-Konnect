@@ -1,5 +1,6 @@
 ﻿using Device.Net;
 using Hid.Net;
+using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Messages;
 using Kaenx.Konnect.Messages.Request;
@@ -9,6 +10,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using static Kaenx.Konnect.Connections.IKnxConnection;
 
 namespace Kaenx.Konnect.Connections
 {
@@ -16,15 +18,18 @@ namespace Kaenx.Konnect.Connections
     {
         public bool IsConnected { get; set; }
 
-        public event IKnxConnection.TunnelRequestHandler OnTunnelRequest;
-        public event IKnxConnection.TunnelRequestHandler OnTunnelResponse;
-        public event IKnxConnection.TunnelRequestHandler OnTunnelAck;
-        public event IKnxConnection.SearchResponseHandler OnSearchResponse;
-        public event IKnxConnection.ConnectionChangedHandler ConnectionChanged;
+        public event TunnelRequestHandler OnTunnelRequest;
+        public event TunnelResponseHandler OnTunnelResponse;
+        public event TunnelAckHandler OnTunnelAck;
+        public event SearchResponseHandler OnSearchResponse;
+        public event ConnectionChangedHandler ConnectionChanged;
 
         private string DeviceId { get; }
         private IDevice DeviceKnx { get; }
         private ProtocolTypes CurrentType { get; set; }
+        public ConnectionErrors LastError { get; set; }
+        public UnicastAddress PhysicalAddress { get; set; }
+
 
         public KnxUsbTunneling(string deviceId)
         {

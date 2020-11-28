@@ -1,5 +1,6 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
+using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -10,29 +11,39 @@ namespace Kaenx.Konnect.Messages.Request
     /// <summary>
     /// Creates a telegram to write an individual addres via programm button
     /// </summary>
-    public class MsgIndividualAddressWrite : IMessageRequest
+    public class MsgIndividualAddressWriteReq : IMessageRequest
     {
+        public byte ChannelId { get; set; }
+        public byte SequenceCounter { get; set; }
+        public int SequenceNumber { get; set; }
+        public IKnxAddress SourceAddress { get; set; }
+        public IKnxAddress DestinationAddress { get; set; }
+        public ApciTypes ApciType { get; } = ApciTypes.IndividualAddressWrite;
+        public byte[] Raw { get; set; }
+
+
         private UnicastAddress _address { get; set; }
-        private int _sequenzeNumb;
-        private byte _channelId;
-        private byte _sequenzeCount;
 
         /// <summary>
         /// Creates a telegram to write an individual addres via programm button
         /// </summary>
         /// <param name="newAddress">New Unicast Address</param>
-        public MsgIndividualAddressWrite(UnicastAddress newAddress)
+        public MsgIndividualAddressWriteReq(UnicastAddress newAddress)
         {
             _address = newAddress;
         }
+
+        public MsgIndividualAddressWriteReq() { }
+
+
 
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
             builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressWrite, 255, _address.GetBytes());
             builder.SetPriority(Prios.System);
-            builder.SetChannelId(_channelId);
-            builder.SetSequence(_sequenzeCount);
+            builder.SetChannelId(ChannelId);
+            builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
         }
 
@@ -46,17 +57,20 @@ namespace Kaenx.Konnect.Messages.Request
             throw new NotImplementedException();
         }
 
-        public void SetInfo(byte channel, byte seqCounter)
+
+        public void ParseDataCemi()
         {
-            _channelId = channel;
-            _sequenzeCount = seqCounter;
+            throw new NotImplementedException("ParseDataCemi - MsgIndividualAddressWriteReq");
         }
 
-        public void SetSequenzeNumb(int seq)
+        public void ParseDataEmi1()
         {
-            _sequenzeNumb = seq;
+            throw new NotImplementedException("ParseDataEmi1 - MsgIndividualAddressWriteReq");
         }
 
-        public void SetEndpoint(IPEndPoint endpoint) { }
+        public void ParseDataEmi2()
+        {
+            throw new NotImplementedException("ParseDataEmi2 - MsgIndividualAddressWriteReq");
+        }
     }
 }

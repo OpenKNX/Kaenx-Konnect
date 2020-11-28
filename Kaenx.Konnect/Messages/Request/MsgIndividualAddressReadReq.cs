@@ -9,35 +9,23 @@ using System.Text;
 namespace Kaenx.Konnect.Messages.Request
 {
     /// <summary>
-    /// Creates a telegram to read a group value
+    /// Creates a telegram to read individual address from devices in programm mode
     /// </summary>
-    public class MsgGroupValueRead : IMessageRequest
+    public class MsgIndividualAddressReadReq : IMessageRequest
     {
         public byte ChannelId { get; set; }
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
         public IKnxAddress SourceAddress { get; set; }
         public IKnxAddress DestinationAddress { get; set; }
-        public ApciTypes ApciType { get; } = ApciTypes.GroupValueRead;
+        public ApciTypes ApciType { get; } = ApciTypes.IndividualAddressRead;
         public byte[] Raw { get; set; }
-
-        /// <summary>
-        /// Creates a telegram to read a group value
-        /// </summary>
-        /// <param name="address">Multicast Address (GroupAddress)</param>
-        public MsgGroupValueRead(MulticastAddress address)
-        {
-            DestinationAddress = address;
-        }
-
-        public MsgGroupValueRead() { }
-
 
 
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, Parser.ApciTypes.GroupValueRead);
+            builder.Build(UnicastAddress.FromString("0.0.0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressRead);
             builder.SetChannelId(ChannelId);
             builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
@@ -54,20 +42,19 @@ namespace Kaenx.Konnect.Messages.Request
         }
 
 
-
         public void ParseDataCemi()
         {
-            throw new NotImplementedException("ParseDataCemi - MsgGroupValueRead");
+            throw new NotImplementedException("ParseDataCemi - MsgIndividualAddressReadReq");
         }
 
         public void ParseDataEmi1()
         {
-            throw new NotImplementedException("ParseDataEmi1 - MsgGroupValueRead");
+            throw new NotImplementedException("ParseDataEmi1 - MsgIndividualAddressReadReq");
         }
 
         public void ParseDataEmi2()
         {
-            throw new NotImplementedException("ParseDataEmi2 - MsgGroupValueRead");
+            throw new NotImplementedException("ParseDataEmi2 - MsgIndividualAddressReadReq");
         }
     }
 }

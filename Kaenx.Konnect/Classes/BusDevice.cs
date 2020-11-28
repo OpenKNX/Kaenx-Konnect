@@ -2,6 +2,7 @@
 using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.Messages.Request;
+using Kaenx.Konnect.Messages.Response;
 using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
@@ -22,7 +23,7 @@ namespace Kaenx.Konnect.Classes
 
         private UnicastAddress _address;
         private IKnxConnection _conn;
-        private Dictionary<int, TunnelResponse> responses = new Dictionary<int, TunnelResponse>();
+        private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
         private Dictionary<int, bool> acks = new Dictionary<int, bool>();
 
 
@@ -59,13 +60,13 @@ namespace Kaenx.Konnect.Classes
                 acks.Add(i, false);
         }
 
-        private void _conn_OnTunnelAck(TunnelResponse response)
+        private void _conn_OnTunnelAck(MsgAckRes response)
         {
             acks[response.SequenceNumber] = true;
             //Debug.WriteLine(response.SequenceNumber + ": ACK " + response.SequenceCounter);
         }
 
-        private void OnTunnelResponse(TunnelResponse response)
+        private void OnTunnelResponse(IMessageResponse response)
         {
             if (responses.ContainsKey(response.SequenceNumber))
                 responses[response.SequenceNumber] = response;
@@ -88,7 +89,7 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         /// <param name="seq">Sequenznummer</param>
         /// <returns>Daten als Byte Array</returns>
-        private async Task<TunnelResponse> WaitForData(int seq, CancellationToken token)
+        private async Task<IMessageResponse> WaitForData(int seq, CancellationToken token)
         {
             if (responses.ContainsKey(seq))
                 responses.Remove(seq);
@@ -123,7 +124,7 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         public async Task Connect(bool onlyConnect = false)
         {
-            MsgConnect message = new MsgConnect(_address);
+            MsgConnectReq message = new MsgConnectReq(_address);
             await _conn.Send(message);
             _connected = true;
 
@@ -146,8 +147,8 @@ namespace Kaenx.Konnect.Classes
         {
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
-            MsgRestart message = new MsgRestart(_address);
-            message.SetSequenzeNumb(_currentSeqNum++);
+            MsgRestartReq message = new MsgRestartReq(_address);
+            message.SequenceNumber = _currentSeqNum++;
             await _conn.Send(message);
         }
 
@@ -164,8 +165,8 @@ namespace Kaenx.Konnect.Classes
 
             var seq1 = _currentSeqNum++;
 
-            MsgPropertyWrite message = new MsgPropertyWrite(objIdx, propId, data, _address);
-            message.SetSequenzeNumb(seq1);
+            MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
+            message.SequenceNumber = seq1;
             var seq2 = lastReceivedNumber;
 
             await _conn.Send(message);
@@ -257,40 +258,15 @@ namespace Kaenx.Konnect.Classes
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
             Debug.WriteLine("PropRead:" + _currentSeqNum);
-            MsgPropertyRead message = new MsgPropertyRead(objIdx, propId, _address);
-            message.SetSequenzeNumb(_currentSeqNum++);
+            MsgPropertyReadReq message = new MsgPropertyReadReq(objIdx, propId, _address);
+            message.SequenceNumber = _currentSeqNum++;
             var seq = lastReceivedNumber;
 
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-            TunnelResponse resp = await WaitForData(seq, tokenS.Token);
+            MsgPropertyReadRes resp = (MsgPropertyReadRes) await WaitForData(seq, tokenS.Token);
 
-
-            switch(Type.GetTypeCode(typeof(T)))
-            {
-                case TypeCode.String:
-                    string datas = BitConverter.ToString(resp.Data.Skip(4).ToArray()).Replace("-", "");
-                    return (T)Convert.ChangeType(datas, typeof(T));
-
-                case TypeCode.Int32:
-                    byte[] datai = resp.Data.Skip(4).Reverse().ToArray();
-                    byte[] xint = new byte[4];
-
-                    for (int i = 0; i < datai.Length; i++)
-                    {
-                            xint[i] = datai[i];
-                    }
-                    return (T)Convert.ChangeType(BitConverter.ToUInt32(xint, 0), typeof(T));
-
-                default:
-                    try
-                    {
-                        return (T)Convert.ChangeType(resp.Data.Skip(4).ToArray(), typeof(T));
-                    } catch(Exception e)
-                    {
-                        throw new Exception("Data kann nicht in angegebenen Type konvertiert werden. " + typeof(T).ToString(), e);
-                    }
-            }
+            return resp.Get<T>();
         }
 
 
@@ -319,8 +295,8 @@ namespace Kaenx.Konnect.Classes
                 }
 
                 Debug.WriteLine("MesgWrite:" + _currentSeqNum);
-                MsgMemoryWrite message = new MsgMemoryWrite(currentPosition, data_temp.ToArray(), _address);
-                message.SetSequenzeNumb(_currentSeqNum++);
+                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
+                message.SequenceNumber = _currentSeqNum++;
 
                 await _conn.Send(message);
 
@@ -356,8 +332,8 @@ namespace Kaenx.Konnect.Classes
 
 
                 var seq = _currentSeqNum++;
-                MsgMemoryWrite message = new MsgMemoryWrite(currentPosition, data_temp.ToArray(), _address);
-                message.SetSequenzeNumb(seq);
+                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
+                message.SequenceNumber = seq;
 
                 await _conn.Send(message);
                 //Debug.WriteLine("Warten auf: " + seq);
@@ -404,20 +380,21 @@ namespace Kaenx.Konnect.Classes
                 else toRead = length;
 
 
-                MsgMemoryRead msg = new MsgMemoryRead(currentPosition, toRead, _address);
-                msg.SetSequenzeNumb(_currentSeqNum++);
+                MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address);
+                msg.SequenceNumber = _currentSeqNum++;
 
                 var seq = lastReceivedNumber;
                 await _conn.Send(msg);
 
                 //Debug.WriteLine("Warten auf: " + seq);
                 CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-                TunnelResponse resp = await WaitForData(seq, tokenS.Token);
-                readed.AddRange(resp.Data.Skip(2));
+                IMessageResponse resp = await WaitForData(seq, tokenS.Token);
+                readed.AddRange(resp.Raw.Skip(2));
                 currentPosition += toRead;
                 length -= toRead;
             }
 
+            //MsgMemoryReadRes Converter nutzen
             switch (Type.GetTypeCode(typeof(T)))
             {
                 case TypeCode.String:
@@ -453,14 +430,15 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Maskenversion als HexString</returns>
         public async Task<string> DeviceDescriptorRead()
         {
-            MsgDescriptorRead message = new MsgDescriptorRead(_address);
-            message.SetSequenzeNumb(_currentSeqNum++);
+            MsgDescriptorReadReq message = new MsgDescriptorReadReq(_address);
+            message.SequenceNumber = _currentSeqNum++;
             var seq = lastReceivedNumber;
             await _conn.Send(message);
             //Debug.WriteLine("Warten auf: " + seq);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-            TunnelResponse resp = await WaitForData(seq, tokenS.Token); 
-            return BitConverter.ToString(resp.Data).Replace("-", "");
+            //Todo MsgDeviceDescriptorReadRes convert benutzen
+            IMessageResponse resp = await WaitForData(seq, tokenS.Token); 
+            return BitConverter.ToString(resp.Raw).Replace("-", "");
         }
 
         /// <summary>
@@ -470,8 +448,8 @@ namespace Kaenx.Konnect.Classes
         {
             _connected = false;
 
-            MsgDisconnect message = new MsgDisconnect(_address);
-            message.SetSequenzeNumb(_currentSeqNum++);
+            MsgDisconnectReq message = new MsgDisconnectReq(_address);
+            message.SequenceNumber = _currentSeqNum++;
             _conn.Send(message);
 
             _conn.OnTunnelResponse -= OnTunnelResponse;

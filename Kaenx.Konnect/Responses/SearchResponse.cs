@@ -6,10 +6,8 @@ using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    public class SearchResponse :IResponse
+    class SearchResponse :IResponse
     {
-        public IPEndPoint endpoint;
-        public string FriendlyName;
-        public UnicastAddress PhAddr;
+        public byte[] responseBytes;
     }
 }
