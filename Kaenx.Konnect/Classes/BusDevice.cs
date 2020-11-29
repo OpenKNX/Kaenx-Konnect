@@ -63,7 +63,7 @@ namespace Kaenx.Konnect.Classes
         private void _conn_OnTunnelAck(MsgAckRes response)
         {
             acks[response.SequenceNumber] = true;
-            //Debug.WriteLine(response.SequenceNumber + ": ACK " + response.SequenceCounter);
+            Debug.WriteLine("Got Ack: " + response.SequenceNumber);
         }
 
         private void OnTunnelResponse(IMessageResponse response)
@@ -336,7 +336,7 @@ namespace Kaenx.Konnect.Classes
                 message.SequenceNumber = seq;
 
                 await _conn.Send(message);
-                //Debug.WriteLine("Warten auf: " + seq);
+                Debug.WriteLine("Warten auf: " + seq);
                 CancellationTokenSource tokenS = new CancellationTokenSource(10000);
                 await WaitForAck(seq, tokenS.Token);
 

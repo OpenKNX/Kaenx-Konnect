@@ -23,6 +23,7 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] Raw { get; set; }
 
 
+        private int Length { get; set; }
         private int Address { get; set; }
         private byte[] Data { get; set; }
 
@@ -82,9 +83,13 @@ namespace Kaenx.Konnect.Messages.Request
         }
 
 
+
+
         public void ParseDataCemi()
         {
-            throw new NotImplementedException("ParseDataCemi - MsgMemoryWriteReq");
+            Length = BitConverter.ToInt32(new byte[] { Raw[0], 0x00, 0x00, 0x00 }, 0);
+            Address = BitConverter.ToInt32(new byte[] { Raw[2], Raw[1], 0x00, 0x00 }, 0);
+            Data = Raw.Skip(2).ToArray();
         }
 
         public void ParseDataEmi1()

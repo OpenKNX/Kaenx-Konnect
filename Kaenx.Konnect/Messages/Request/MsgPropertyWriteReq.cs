@@ -83,7 +83,6 @@ namespace Kaenx.Konnect.Messages.Request
             ObjectIndex = Raw[0];
             PropertyId = Raw[1];
             Data = Raw.Skip(2).ToArray();
-            throw new NotImplementedException("ParseDataCemi - MsgPropertyWriteReq");
         }
 
         public void ParseDataEmi1()

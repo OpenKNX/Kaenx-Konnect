@@ -3,6 +3,7 @@ using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Text;
 
@@ -22,8 +23,8 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] Raw { get; set; }
 
 
-        private UnicastAddress _address { get; set; }
-        private byte[] _serial { get; set; }
+        public UnicastAddress NewAddress { get; set; }
+        public byte[] Serial { get; set; }
 
         /// <summary>
         /// Creates a telegram to write an individual address via serialnumber
@@ -32,8 +33,8 @@ namespace Kaenx.Konnect.Messages.Request
         /// <param name="serial">Serialnumber</param>
         public MsgIndividualAddressSerialWriteReq(UnicastAddress newAddr, byte[] serial)
         {
-            _address = newAddr;
-            _serial = serial;
+            NewAddress = newAddr;
+            Serial = serial;
         }
 
         public MsgIndividualAddressSerialWriteReq() { }
@@ -45,12 +46,12 @@ namespace Kaenx.Konnect.Messages.Request
             TunnelRequest builder = new TunnelRequest();
 
             List<byte> data = new List<byte>();
-            data.AddRange(_serial);
+            data.AddRange(Serial);
 
-            data.AddRange(_address.GetBytes());
+            data.AddRange(NewAddress.GetBytes());
             data.AddRange(new byte[] { 0, 0, 0, 0 });
 
-            builder.Build(SourceAddress, MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressSerialNumberWrite, 255, data.ToArray());
+            builder.Build(UnicastAddress.FromString("0.0.0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressSerialNumberWrite, 255, data.ToArray());
             builder.SetPriority(Prios.System);
             builder.SetChannelId(ChannelId);
             builder.SetSequence(SequenceCounter);
@@ -70,7 +71,8 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
-            throw new NotImplementedException("ParseDataCemi - MsgIndividualAddresSerialWriteReq");
+            Serial = Raw.Take(6).ToArray();
+            NewAddress = UnicastAddress.FromByteArray(Raw.Skip(4).Take(2).ToArray());
         }
 
         public void ParseDataEmi1()

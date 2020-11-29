@@ -284,7 +284,14 @@ namespace Kaenx.Konnect.Connections
                                 }
                                 else if (tunnelResponse.APCI == ApciTypes.Ack)
                                 {
-                                    OnTunnelAck?.Invoke(new MsgAckRes());
+                                    OnTunnelAck?.Invoke(new MsgAckRes()
+                                    {
+                                        ChannelId = tunnelResponse.CommunicationChannel,
+                                        SequenceCounter = tunnelResponse.SequenceCounter,
+                                        SequenceNumber = tunnelResponse.SequenceNumber,
+                                        SourceAddress = tunnelResponse.SourceAddress,
+                                        DestinationAddress = tunnelResponse.DestinationAddress
+                                    });
                                     break;
                                 }
 

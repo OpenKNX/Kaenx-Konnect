@@ -48,10 +48,7 @@ namespace Kaenx.Konnect.Messages.Request
         }
 
 
-        public void ParseDataCemi()
-        {
-            throw new NotImplementedException("ParseDataCemi - MsgRestartReq");
-        }
+        public void ParseDataCemi() { }
 
         public void ParseDataEmi1()
         {
