@@ -9,8 +9,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Parser
 {
-    //TODO: Make private
-    public class ConnectResponseParser : IReceiveParser
+    class ConnectResponseParser : IReceiveParser
     {
         public ushort ServiceTypeIdentifier => 0x0206;
 
@@ -33,6 +32,8 @@ namespace Kaenx.Konnect.Parser
 
         private static ConnectionResponseDataBlock ParseConnectionResponseDataBlock(IEnumerable<byte> bytes)
         {
+            if (bytes.Count() == 0) return new ConnectionResponseDataBlock(0x00, 0x01, UnicastAddress.FromString("0.0.0"));
+
             var enumerable = bytes as byte[] ?? bytes.ToArray();
             return new ConnectionResponseDataBlock(enumerable.ElementAt(0), enumerable.ElementAt(1),
               UnicastAddress.FromByteArray(enumerable.Skip(2).ToArray()));
@@ -40,6 +41,10 @@ namespace Kaenx.Konnect.Parser
 
         private static HostProtocolAddressInformation ParseEndpoint(IEnumerable<byte> bytes)
         {
+            if(bytes.Count() == 0) return new HostProtocolAddressInformation(0x01,
+              new IPEndPoint(IPAddress.Any, 0));
+
+
             var enumerable = bytes as byte[] ?? bytes.ToArray();
             return new HostProtocolAddressInformation(enumerable.ElementAt(1),
               new IPEndPoint(new IPAddress(enumerable.Skip(2).Take(4).ToArray()),

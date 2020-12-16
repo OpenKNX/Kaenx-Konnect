@@ -62,7 +62,8 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
-            throw new NotImplementedException("ParseDataCemi - MsgGroupValueWriteReq");
+            //TODO implement
+            //throw new NotImplementedException("ParseDataCemi - MsgGroupValueWriteReq");
         }
 
         public void ParseDataEmi1()

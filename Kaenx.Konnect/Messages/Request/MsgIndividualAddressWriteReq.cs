@@ -60,7 +60,7 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
-            throw new NotImplementedException("ParseDataCemi - MsgIndividualAddressWriteReq");
+            //TODO implement
         }
 
         public void ParseDataEmi1()

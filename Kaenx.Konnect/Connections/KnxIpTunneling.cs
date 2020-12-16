@@ -154,7 +154,7 @@ namespace Kaenx.Konnect.Connections
             ConnectionRequest builder = new ConnectionRequest();
             builder.Build(_receiveEndPoint, 0x00);
             await Send(builder.GetBytes(), true);
-            await Task.Delay(200);
+            await Task.Delay(1000);
 
             if (!_flagCRRecieved)
             {
@@ -171,8 +171,6 @@ namespace Kaenx.Konnect.Connections
             {
                 throw new Exception("Die Schnittstelle hat keine Verbindung zum Bus! Error: " + LastError);
             }
-
-            await Task.Delay(200);
         }
 
         public Task Disconnect()
@@ -221,6 +219,7 @@ namespace Kaenx.Konnect.Connections
                         switch (knxResponse)
                         {
                             case ConnectStateResponse connectStateResponse:
+                                Debug.WriteLine("Connection State Response: " + connectStateResponse.Status.ToString());
                                 switch (connectStateResponse.Status)
                                 {
                                     case 0x00:

@@ -133,6 +133,8 @@ namespace Kaenx.Konnect.Classes
 
             await Task.Delay(100);
 
+            ///TODO Property haben nicht alle. Nach max 2 Sekunden weiter machen
+            return;
             if (onlyConnect) return;
 
             MaxFrameLength = await PropertyRead<int>(0, 56);

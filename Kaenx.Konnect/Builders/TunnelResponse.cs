@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Builders
 {
-    public class TunnelResponse : IResponse
+    class TunnelResponse : IResponse
     {
         public TunnelResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte structureLength,
           byte communicationChannel, byte sequenceCounter, byte messageCode, byte addInformationLength, bool isRequest, bool ackWanted, byte controlField,

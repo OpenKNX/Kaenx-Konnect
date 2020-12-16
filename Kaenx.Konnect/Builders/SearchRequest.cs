@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Builders
 {
-    public class SearchRequest : IRequestBuilder
+    class SearchRequest : IRequestBuilder
     {
         private List<byte> bytes = new List<byte>();
 
