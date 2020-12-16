@@ -44,7 +44,7 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
-            throw new NotImplementedException("ParseDataCemi - MsgIndividualAddressReadReq");
+            //TODO implement
         }
 
         public void ParseDataEmi1()
