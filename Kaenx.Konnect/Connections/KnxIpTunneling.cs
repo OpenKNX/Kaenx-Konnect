@@ -344,7 +344,7 @@ namespace Kaenx.Konnect.Connections
                                         message.ParseDataEmi2();
                                         break;
                                     default:
-                                        throw new NotImplementedException("Unbekanntes Protokoll - SearchResponse KnxIpTunneling");
+                                        throw new NotImplementedException("Unbekanntes Protokoll - TunnelResponse KnxIpTunneling");
                                 }
 
 
