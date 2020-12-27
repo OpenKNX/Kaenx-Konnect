@@ -154,7 +154,7 @@ namespace Kaenx.Konnect.Connections
             ConnectionRequest builder = new ConnectionRequest();
             builder.Build(_receiveEndPoint, 0x00);
             await Send(builder.GetBytes(), true);
-            await Task.Delay(1000);
+            await Task.Delay(500);
 
             if (!_flagCRRecieved)
             {
@@ -272,7 +272,7 @@ namespace Kaenx.Konnect.Connections
                                 if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
                                     TunnelRequest builder = new TunnelRequest();
-                                    builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, Parser.ApciTypes.Ack, tunnelResponse.SequenceNumber);
+                                    builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
                                     builder.SetChannelId(_communicationChannel);
                                     builder.SetSequence(_sequenceCounter);
                                     _=Send(builder.GetBytes());

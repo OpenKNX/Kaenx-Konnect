@@ -73,7 +73,7 @@ namespace Kaenx.Konnect.Messages.Request
             data.Add(addr[0]);
 
             Builders.TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, Parser.ApciTypes.MemoryRead, SequenceNumber, data.ToArray());
+            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.MemoryRead, SequenceNumber, data.ToArray());
             builder.SetChannelId(ChannelId);
             builder.SetSequence(SequenceCounter);
 

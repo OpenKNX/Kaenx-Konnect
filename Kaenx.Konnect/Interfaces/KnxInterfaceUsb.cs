@@ -8,12 +8,14 @@ using System.Xml.Linq;
 
 namespace Kaenx.Konnect.Interfaces
 {
+    [Serializable]
     public class KnxInterfaceUsb : IKnxInterface
     {
         public string Name { get; set; }
         public string DeviceId { get; set; }
         public string Serial { get; set; }
         public DateTime LastFound { get; set; }
+        public bool IsRemote { get; set; } = false;
 
 
         public static KnxInterfaceUsb CheckHid(uint? vendorId, uint? productId, string deviceId)
@@ -60,7 +62,7 @@ namespace Kaenx.Konnect.Interfaces
         {
             get
             {
-                return "USB Gerät kommt hier ganz viel rein";
+                return "USB Gerät kommt hier ganz viel rein" + (IsRemote ? "Remote" : "");
             }
         }
 
@@ -68,7 +70,7 @@ namespace Kaenx.Konnect.Interfaces
         {
             get
             {
-                return Name + "#USB#" + Serial;
+                return Name + "#USB#" + Serial + (IsRemote ? " Remote" : "");
             }
         }
     }

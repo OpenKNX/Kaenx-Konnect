@@ -10,5 +10,6 @@ namespace Kaenx.Konnect.Interfaces
         string Name { get; set; }
         string Description { get; }
         DateTime LastFound { get; set; }
+        bool IsRemote { get; set; }
     }
 }

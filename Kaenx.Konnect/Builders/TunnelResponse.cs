@@ -1,4 +1,5 @@
 ﻿using Kaenx.Konnect.Addresses;
+using Kaenx.Konnect.Messages;
 using Kaenx.Konnect.Parser;
 using Kaenx.Konnect.Responses;
 using System;

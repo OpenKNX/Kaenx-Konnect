@@ -16,10 +16,10 @@ namespace Kaenx.Konnect.Interfaces
                     return new KnxUsbTunneling(interUsb.DeviceId);
 
                 case KnxInterfaceIp interIp:
-                    return new KnxIpTunneling(interIp.Endpoint);
+                    return new KnxIpTunneling(interIp.Endpoint); //TODO check for Routing
             }
 
-            throw new Exception("Für das Interface gibt es keine Connection");
+            throw new Exception("Für das Interface gibt es keine Connection " + inter.ToString());
         }
     }
 }

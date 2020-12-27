@@ -154,6 +154,48 @@ namespace Kaenx.Konnect.Classes
             await _conn.Send(message);
         }
 
+        /// <summary>
+        /// Schreibe den Wert in die Property des Gerätes
+        /// </summary>
+        /// <param name="maskId">Id der Maske (z.B. MV-0701)</param>
+        /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
+        /// <returns></returns>
+        public async Task PropertyWrite(string maskId, string resourceId, byte[] data)
+        {
+            XDocument master = GetKnxMaster();
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
+            XElement prop = null;
+            try
+            {
+                prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name").Value == resourceId);
+            }
+            catch
+            {
+                throw new Exception("Device does not support this Property");
+            }
+
+            XElement loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
+            int length = int.Parse(prop.Element(XName.Get("ResourceType", master.Root.Name.NamespaceName)).Attribute("Length").Value);
+            string start = loc.Attribute("StartAddress")?.Value;
+
+            switch (loc.Attribute("AddressSpace").Value)
+            {
+                case "SystemProperty":
+                    string obj = loc.Attribute("InterfaceObjectRef").Value;
+                    string pid = loc.Attribute("PropertyID").Value;
+                    await PropertyWrite(Convert.ToByte(obj), Convert.ToByte(pid), data);
+                    break;
+
+                case "StandardMemory":
+                    await MemoryWriteSync(int.Parse(start), data);
+                    break;
+
+                case "Pointer":
+                    string newProp = loc.Attribute("PtrResource").Value;
+                    await PropertyWrite(maskId, newProp, data);
+                    break;
+            }
+        }
 
         /// <summary>
         /// Schreibe den Wert in die Property des Gerätes

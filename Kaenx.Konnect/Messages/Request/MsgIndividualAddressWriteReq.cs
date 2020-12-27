@@ -40,7 +40,7 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), Parser.ApciTypes.IndividualAddressWrite, 255, _address.GetBytes());
+            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressWrite, 255, _address.GetBytes());
             builder.SetPriority(Prios.System);
             builder.SetChannelId(ChannelId);
             builder.SetSequence(SequenceCounter);
