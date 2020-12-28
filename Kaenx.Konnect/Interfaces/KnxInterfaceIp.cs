@@ -13,6 +13,7 @@ namespace Kaenx.Konnect.Interfaces
         public string IP { get; set; }
         public string Auth { get; set; }
         public DateTime LastFound { get; set; }
+        public bool IsRemote { get; } = false;
 
         [field:NonSerialized]
         public IPEndPoint Endpoint
@@ -20,13 +21,11 @@ namespace Kaenx.Konnect.Interfaces
             get { return new IPEndPoint(IPAddress.Parse(IP), Port); }
         }
 
-        public bool IsRemote { get; set; } = false;
-
         public string Hash
         {
             get
             {
-                return Name + "#IP#" + Endpoint + Auth + (IsRemote ? "Remote":"");
+                return Name + "#IP#" + Endpoint + Auth;
             }
         }
 
@@ -34,7 +33,7 @@ namespace Kaenx.Konnect.Interfaces
         {
             get
             {
-                return Endpoint.Address + ":" + Endpoint.Port + (IsRemote ? " Remote" : "");
+                return Endpoint.Address + ":" + Endpoint.Port;
             }
         }
     }

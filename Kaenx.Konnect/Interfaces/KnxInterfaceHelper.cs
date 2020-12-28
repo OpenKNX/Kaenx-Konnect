@@ -1,4 +1,5 @@
 ﻿using Kaenx.Konnect.Connections;
+using Kaenx.Konnect.Remote;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -8,7 +9,7 @@ namespace Kaenx.Konnect.Interfaces
 {
     public class KnxInterfaceHelper
     {
-        public static IKnxConnection GetConnection(IKnxInterface inter)
+        public static IKnxConnection GetConnection(IKnxInterface inter, RemoteConnection conn)
         {
             switch (inter)
             {
@@ -17,6 +18,9 @@ namespace Kaenx.Konnect.Interfaces
 
                 case KnxInterfaceIp interIp:
                     return new KnxIpTunneling(interIp.Endpoint); //TODO check for Routing
+
+                case KnxInterfaceRemote interRem:
+                    return new KnxRemote(interRem.RemoteHash, RemoteType.Ip, conn); // TODO check if needed
             }
 
             throw new Exception("Für das Interface gibt es keine Connection " + inter.ToString());

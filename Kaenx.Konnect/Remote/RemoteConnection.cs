@@ -1,6 +1,8 @@
-﻿using Kaenx.Konnect.Remote;
+﻿using Kaenx.Konnect.Connections;
+using Kaenx.Konnect.Remote;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
@@ -9,32 +11,48 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Kaenx.Konnect.Connections
+namespace Kaenx.Konnect.Remote
 {
-    public class RemoteToServer
+    public class RemoteConnection : INotifyPropertyChanged
     {
-        private ClientWebSocket socket { get; set; } = new ClientWebSocket();
-
-        public readonly string Hostname;
-        public readonly string Authentication;
-        public string Group { get; set; }
-
-
-
-        public delegate void MessageHandler(IRemoteMessage message);
-        public event MessageHandler OnResponse;
-        public event MessageHandler OnRequest;
-
+        public event PropertyChangedEventHandler PropertyChanged;
 
 
         private CancellationTokenSource source = new CancellationTokenSource();
         private CancellationTokenSource ReceiveTokenSource { get; set; }
         private Dictionary<int, IRemoteMessage> Responses { get; set; } = new Dictionary<int, IRemoteMessage>();
 
+        private ClientWebSocket socket { get; set; } = new ClientWebSocket();
+
+        public delegate void MessageHandler(IRemoteMessage message);
+        public event MessageHandler OnRequest;
+        public event MessageHandler OnResponse;
+
+
+        private bool _isActive = false;
+        public bool IsActive
+        {
+            get { return _isActive; }
+            set { _isActive = value; Changed("IsActive"); }
+        }
+
+        private bool _isConnected = false;
+        public bool IsConnected
+        {
+            get { return _isConnected; }
+            set { _isConnected = value; Changed("IsConnected"); }
+        }
+
+
+        private string _state = "Getrennt";
+        public string State
+        {
+            get { return _state; }
+            set { _state = value; Changed("State"); }
+        }
+
 
         private int _sequenceNumber = 0;
-        private byte _sequenceCounter = 0;
-        private byte _communicationChannel;
         public int SequenceNumber
         {
             get { return _sequenceNumber; }
@@ -46,11 +64,13 @@ namespace Kaenx.Konnect.Connections
             }
         }
         public int ChannelId { get; set; }
+        public string Group { get; set; }
+        public string Hostname { get; private set; }
+        public string Authentification { get; private set; }
 
-        public RemoteToServer(string hostname, string authentication)
+
+        public RemoteConnection()
         {
-            Hostname = hostname;
-            Authentication = authentication;
             socket.Options.AddSubProtocol("chat");
 
             for (int i = 0; i < 256; i++)
@@ -59,44 +79,61 @@ namespace Kaenx.Konnect.Connections
             }
         }
 
-        public async Task Connect()
+
+        public async Task Connect(string host, string auth)
         {
-            //IsActive = true;
+            Hostname = host;
+            Authentification = auth;
+            State = "Verbinde...";
+            IsActive = true;
 
-            await socket.ConnectAsync(new Uri("wss://" + Hostname), source.Token);
-            int seq = SequenceNumber++;
-            Debug.WriteLine("Sequenz: " + seq);
-            AuthRequest msg = new AuthRequest(Authentication, seq);
-            ReceiveTokenSource = new CancellationTokenSource();
-            ProcessReceivingMessages();
-            await socket.SendAsync(msg.GetBytes(), WebSocketMessageType.Binary, true, source.Token);
-            IRemoteMessage resp = await WaitForResponse(seq);
-
-            if(resp is StateMessage)
+            try
             {
-                StateMessage response = (StateMessage)resp;
-                switch (response.Code)
+                await socket.ConnectAsync(new Uri("wss://" + host), source.Token);
+                int seq = SequenceNumber++;
+                Debug.WriteLine("Sequenz: " + seq);
+                AuthRequest msg = new AuthRequest(auth, seq);
+                ReceiveTokenSource = new CancellationTokenSource();
+                ProcessReceivingMessages();
+                await socket.SendAsync(msg.GetBytes(), WebSocketMessageType.Binary, true, source.Token);
+                IRemoteMessage resp = await WaitForResponse(seq);
+
+                if (resp is StateMessage)
                 {
-                    case StateCodes.WrongKey:
-                        throw new Exception("Authentifizierung am Server fehlgeschlagen");
+                    StateMessage response = (StateMessage)resp;
+                    switch (response.Code)
+                    {
+                        case StateCodes.WrongKey:
+                            throw new Exception("Authentifizierung am Server fehlgeschlagen");
 
-                    case StateCodes.GroupNotFound:
-                        throw new Exception("Angegebene Gruppe ist nicht auf dem Server vorhanden");
+                        case StateCodes.GroupNotFound:
+                            throw new Exception("Angegebene Gruppe ist nicht auf dem Server vorhanden");
 
-                    case StateCodes.WrongGroupKey:
-                        throw new Exception("Authentifizierung in der Gruppe fehlgeschlagen");
+                        case StateCodes.WrongGroupKey:
+                            throw new Exception("Authentifizierung in der Gruppe fehlgeschlagen");
+                    }
                 }
-            } else if(resp is AuthResponse)
+                else if (resp is AuthResponse)
+                {
+                    AuthResponse response = (AuthResponse)resp;
+                    Group = response.Code;
+                }
+                State = "Verbunden (" + Group + ")";
+            } catch(Exception ex)
             {
-                AuthResponse response = (AuthResponse)resp;
-                Group = response.Code;
+                State = ex.Message;
+                IsActive = false;
+                IsConnected = false;
             }
-
-            
         }
 
         public async Task<IRemoteMessage> Send(IRemoteMessage message, bool waitForResponse = true)
         {
+            if (socket.State != WebSocketState.Open)
+            {
+                return null;
+            }
+
             message.SequenceNumber = SequenceNumber++;
             message.ChannelId = ChannelId;
             await socket.SendAsync(message.GetBytes(), WebSocketMessageType.Binary, true, source.Token);
@@ -104,10 +141,13 @@ namespace Kaenx.Konnect.Connections
             return mesg;
         }
 
-        public async void Disconnect()
+        public async Task Disconnect()
         {
-            if(socket.State == WebSocketState.Open)
+            if (socket.State == WebSocketState.Open)
                 await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Übertragung beendet", source.Token);
+
+            IsActive = false;
+            State = "Getrennt";
         }
 
 
@@ -169,7 +209,8 @@ namespace Kaenx.Konnect.Connections
                     try
                     {
                         message.Parse(buffer.Array.Take(result.Count).ToArray());
-                    }catch(Exception ex)
+                    }
+                    catch (Exception ex)
                     {
 
                     }
@@ -179,7 +220,8 @@ namespace Kaenx.Konnect.Connections
                     {
                         Responses[message.SequenceNumber] = message;
                         OnResponse?.Invoke(message);
-                    } else
+                    }
+                    else
                     {
                         OnRequest?.Invoke(message);
                     }
@@ -191,6 +233,13 @@ namespace Kaenx.Konnect.Connections
 
                 Debug.WriteLine("Verbindung abgebrochen");
             });
+        }
+
+
+
+        private void Changed(string name)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

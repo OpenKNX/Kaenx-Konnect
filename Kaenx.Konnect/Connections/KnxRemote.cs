@@ -13,7 +13,7 @@ using System.Diagnostics;
 
 namespace Kaenx.Konnect.Connections
 {
-    public class KnxIpRemote : IKnxConnection
+    public class KnxRemote : IKnxConnection
     {
         public bool IsConnected
         {
@@ -42,14 +42,19 @@ namespace Kaenx.Konnect.Connections
         private ClientWebSocket socket { get; set; } = new ClientWebSocket();
         private CancellationTokenSource ReceiveTokenSource { get; set; }
         private Dictionary<int, IRemoteMessage> Responses { get; set; } = new Dictionary<int, IRemoteMessage>();
-
+        
         private int _sequenceNumber = 0;
         private byte _sequenceCounter = 0;
         private byte _communicationChannel;
-    
+        private string Hash;
+        private RemoteType Type;
+        private RemoteConnection _conn;
 
-        public KnxIpRemote(string hostname, string authentication)
+        public KnxRemote(string hash, RemoteType type, RemoteConnection conn)
         {
+            Hash = hash;
+            Type = type;
+            _conn = conn;
 
             for(int i = 0; i <256; i++)
             {
@@ -60,7 +65,9 @@ namespace Kaenx.Konnect.Connections
 
         public async Task Connect()
         {
-            
+            TunnelRequest req = new TunnelRequest(Encoding.UTF8.GetBytes(Hash));
+            req.Type = TunnelTypes.Connect;
+            IRemoteMessage resp = await _conn.Send(req);
         }
 
         public async Task Disconnect()
@@ -97,5 +104,11 @@ namespace Kaenx.Konnect.Connections
 
 
         
+    }
+
+    public enum RemoteType
+    {
+        Ip,
+        Usb
     }
 }

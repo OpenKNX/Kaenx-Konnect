@@ -15,7 +15,7 @@ namespace Kaenx.Konnect.Interfaces
         public string DeviceId { get; set; }
         public string Serial { get; set; }
         public DateTime LastFound { get; set; }
-        public bool IsRemote { get; set; } = false;
+        public bool IsRemote { get; } = false;
 
 
         public static KnxInterfaceUsb CheckHid(uint? vendorId, uint? productId, string deviceId)

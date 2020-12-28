@@ -23,6 +23,8 @@ namespace Kaenx.Konnect.Remote
         ConnectResponse,
         SearchRequest,
         SearchResponse,
+        TunnelRequest,
+        TunnelResponse,
 
         State = 0xff
     }
