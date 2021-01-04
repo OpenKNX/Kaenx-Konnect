@@ -5,18 +5,18 @@ using System.Text;
 
 namespace Kaenx.Konnect.Remote
 {
-    public class TunnelRequest : IRemoteMessage
+    public class TunnelResponse : IRemoteMessage
     {
-        public MessageCodes MessageCode { get; } = MessageCodes.TunnelRequest;
+        public MessageCodes MessageCode { get; } = MessageCodes.TunnelResponse;
         public int SequenceNumber { get; set; } = -1;
         public int ChannelId { get; set; } = 0;
         public int ConnId { get; set; } = 0;
         public string Group { get; set; } = "";
         public TunnelTypes Type { get; set; }
-        public byte[] Data;
+        public byte[] Data = new byte[0];
 
-        public TunnelRequest() { }
-        public TunnelRequest(byte[] data)
+        public TunnelResponse() { }
+        public TunnelResponse(byte[] data)
         {
             Data = data;
         }
@@ -51,14 +51,5 @@ namespace Kaenx.Konnect.Remote
 
             return new ArraySegment<byte>(bytes);
         }
-    }
-
-    public enum TunnelTypes
-    {
-        Connect,
-        Disconnect,
-        State,
-        Tunnel,
-        Response
     }
 }

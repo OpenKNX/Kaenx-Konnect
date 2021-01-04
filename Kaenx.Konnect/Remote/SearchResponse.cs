@@ -14,6 +14,7 @@ namespace Kaenx.Konnect.Remote
 
         public MessageCodes MessageCode { get; } = MessageCodes.SearchResponse;
         public int ChannelId { get; set; }
+        public string Group { get; set; } = "";
 
         public List<IKnxInterface> Interfaces { get; set; } = new List<IKnxInterface>();
 

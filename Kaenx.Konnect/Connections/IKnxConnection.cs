@@ -75,7 +75,7 @@ namespace Kaenx.Konnect.Connections
         /// <param name="message">Telegram message</param>
         /// <param name="igoreConnected">If true the conected status will be ignored</param>
         /// <returns>Sequenz Counter as byte</returns>
-        Task<byte> Send(IMessageRequest message, bool ignoreConnected = false);
+        Task<byte> Send(IMessage message, bool ignoreConnected = false);
     }
 
 

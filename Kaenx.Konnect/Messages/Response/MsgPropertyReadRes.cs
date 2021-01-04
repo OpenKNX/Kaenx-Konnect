@@ -78,5 +78,20 @@ namespace Kaenx.Konnect.Messages.Response
         {
             throw new NotImplementedException("ParseDataEmi2 - MsgSearchRes");
         }
+
+        public byte[] GetBytesEmi1()
+        {
+            throw new NotImplementedException();
+        }
+
+        public byte[] GetBytesEmi2()
+        {
+            throw new NotImplementedException();
+        }
+
+        public byte[] GetBytesCemi()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

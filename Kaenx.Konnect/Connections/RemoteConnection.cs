@@ -1,4 +1,5 @@
 ﻿using Kaenx.Konnect.Connections;
+using Kaenx.Konnect.Interfaces;
 using Kaenx.Konnect.Remote;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Kaenx.Konnect.Remote
+namespace Kaenx.Konnect.Connections
 {
     public class RemoteConnection : INotifyPropertyChanged
     {
@@ -27,6 +28,10 @@ namespace Kaenx.Konnect.Remote
         public delegate void MessageHandler(IRemoteMessage message);
         public event MessageHandler OnRequest;
         public event MessageHandler OnResponse;
+
+
+        public delegate IKnxInterface RequestHandler(string hash);
+        public event RequestHandler OnRequestInterface;
 
 
         private bool _isActive = false;
@@ -65,6 +70,7 @@ namespace Kaenx.Konnect.Remote
         }
         public int ChannelId { get; set; }
         public string Group { get; set; }
+        public string GroupOut { get; set; }
         public string Hostname { get; private set; }
         public string Authentification { get; private set; }
 
@@ -80,7 +86,7 @@ namespace Kaenx.Konnect.Remote
         }
 
 
-        public async Task Connect(string host, string auth)
+        public async Task Connect(string host, string auth, bool isSecure, string group = null, string code = null)
         {
             Hostname = host;
             Authentification = auth;
@@ -89,18 +95,19 @@ namespace Kaenx.Konnect.Remote
 
             try
             {
-                await socket.ConnectAsync(new Uri("wss://" + host), source.Token);
+                socket = new ClientWebSocket();
+                socket.Options.AddSubProtocol("chat");
+                await socket.ConnectAsync(new Uri((isSecure ? "wss://":"ws://") + host), source.Token);
                 int seq = SequenceNumber++;
-                Debug.WriteLine("Sequenz: " + seq);
-                AuthRequest msg = new AuthRequest(auth, seq);
+                AuthRequest msg = new AuthRequest(auth, seq, group, code);
                 ReceiveTokenSource = new CancellationTokenSource();
                 ProcessReceivingMessages();
                 await socket.SendAsync(msg.GetBytes(), WebSocketMessageType.Binary, true, source.Token);
                 IRemoteMessage resp = await WaitForResponse(seq);
 
-                if (resp is StateMessage)
+                if (resp is StateResponse)
                 {
-                    StateMessage response = (StateMessage)resp;
+                    StateResponse response = (StateResponse)resp;
                     switch (response.Code)
                     {
                         case StateCodes.WrongKey:
@@ -116,7 +123,7 @@ namespace Kaenx.Konnect.Remote
                 else if (resp is AuthResponse)
                 {
                     AuthResponse response = (AuthResponse)resp;
-                    Group = response.Code;
+                    Group = response.Group;
                 }
                 State = "Verbunden (" + Group + ")";
             } catch(Exception ex)
@@ -129,21 +136,39 @@ namespace Kaenx.Konnect.Remote
 
         public async Task<IRemoteMessage> Send(IRemoteMessage message, bool waitForResponse = true)
         {
-            if (socket.State != WebSocketState.Open)
+            if (socket == null || socket.State != WebSocketState.Open)
             {
                 return null;
             }
+            IRemoteMessage mesg = null;
 
-            message.SequenceNumber = SequenceNumber++;
-            message.ChannelId = ChannelId;
-            await socket.SendAsync(message.GetBytes(), WebSocketMessageType.Binary, true, source.Token);
-            IRemoteMessage mesg = await WaitForResponse(message.SequenceNumber);
+            try
+            {
+                if(message.SequenceNumber == -1) message.SequenceNumber = SequenceNumber++;
+                if(message.ChannelId == 0) message.ChannelId = ChannelId;
+                if (message is TunnelRequest)
+                {
+                    TunnelRequest req = message as TunnelRequest;
+                    if (req.Group == "") req.Group = GroupOut;
+                }
+                if (message is TunnelResponse)
+                {
+                    TunnelResponse res = message as TunnelResponse;
+                    if (res.Group == "") res.Group = GroupOut;
+                }
+                await socket.SendAsync(message.GetBytes(), WebSocketMessageType.Binary, true, source.Token);
+                mesg = await WaitForResponse(message.SequenceNumber);
+            }catch(Exception ex)
+            {
+
+            }
+
             return mesg;
         }
 
         public async Task Disconnect()
         {
-            if (socket.State == WebSocketState.Open)
+            if ( socket != null && socket.State == WebSocketState.Open)
                 await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Übertragung beendet", source.Token);
 
             IsActive = false;
@@ -154,9 +179,10 @@ namespace Kaenx.Konnect.Remote
         private async Task<IRemoteMessage> WaitForResponse(int seq)
         {
             Responses[seq] = null;
+            Debug.WriteLine("Waiting for " + seq);
             CancellationTokenSource source = new CancellationTokenSource(10000);
             while (Responses[seq] == null && !source.Token.IsCancellationRequested)
-                await Task.Delay(10);
+                await Task.Delay(1000);
 
             return Responses[seq];
         }
@@ -177,7 +203,10 @@ namespace Kaenx.Konnect.Remote
                     }
                     catch (Exception ex)
                     {
-
+                        socket = null;
+                        IsActive = false;
+                        IsConnected = false;
+                        return;
                     }
 
                     if (result == null || result.Count == 0) continue;
@@ -186,6 +215,7 @@ namespace Kaenx.Konnect.Remote
 
                     Debug.WriteLine("Typ: " + code);
 
+                    //Check if assemby from this genügt
                     var q = from t in Assembly.LoadFrom("Kaenx.Konnect.dll").GetTypes()
                             where t.IsClass && t.IsNested == false && t.Namespace == "Kaenx.Konnect.Remote"
                             select t;
@@ -195,7 +225,7 @@ namespace Kaenx.Konnect.Remote
                     foreach (Type t in q.ToList())
                     {
                         IRemoteMessage down = (IRemoteMessage)Activator.CreateInstance(t);
-                        if (code == down.MessageCode)
+                        if (down != null && code == down.MessageCode)
                         {
                             message = down;
                             break;
@@ -215,10 +245,16 @@ namespace Kaenx.Konnect.Remote
 
                     }
 
+                    if(message is TunnelResponse)
+                    {
+
+                    }
+
 
                     if (message.ToString().EndsWith("Response"))
                     {
                         Responses[message.SequenceNumber] = message;
+                        Debug.WriteLine("Got Response: " + message.SequenceNumber);
                         OnResponse?.Invoke(message);
                     }
                     else
@@ -233,6 +269,13 @@ namespace Kaenx.Konnect.Remote
 
                 Debug.WriteLine("Verbindung abgebrochen");
             });
+        }
+
+
+        public IKnxInterface GetInterface(string hash)
+        {
+            IKnxInterface inter = OnRequestInterface?.Invoke(hash);
+            return inter;
         }
 
 

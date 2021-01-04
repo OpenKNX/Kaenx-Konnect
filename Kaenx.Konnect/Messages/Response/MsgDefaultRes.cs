@@ -16,8 +16,20 @@ namespace Kaenx.Konnect.Messages.Response
         public ApciTypes ApciType { get; set; }
         public byte[] Raw { get; set; }
 
+        public byte[] GetBytesCemi()
+        {
+            throw new NotImplementedException();
+        }
 
+        public byte[] GetBytesEmi1()
+        {
+            throw new NotImplementedException();
+        }
 
+        public byte[] GetBytesEmi2()
+        {
+            throw new NotImplementedException();
+        }
 
         public void ParseDataCemi() { }
 

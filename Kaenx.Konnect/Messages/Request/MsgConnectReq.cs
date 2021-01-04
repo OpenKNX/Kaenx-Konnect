@@ -11,6 +11,7 @@ namespace Kaenx.Konnect.Messages.Request
     /// <summary>
     /// Creates a telegram to connect to a device
     /// </summary>
+ 
     public class MsgConnectReq : IMessageRequest
     {
         public byte ChannelId { get; set; }

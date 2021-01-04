@@ -42,6 +42,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Device.Net">
       <HintPath>..\Dlls\Device.Net.dll</HintPath>
     </Reference>

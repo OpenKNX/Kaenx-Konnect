@@ -100,7 +100,7 @@ namespace Kaenx.Konnect.Connections
             throw new NotImplementedException();
         }
 
-        public async Task<byte> Send(IMessageRequest message, bool ignoreConnected = false)
+        public async Task<byte> Send(IMessage message, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
                 throw new Exception("Roflkopter");

@@ -8,7 +8,7 @@ namespace Kaenx.Konnect.Remote
     public class AuthResponse : IRemoteMessage
     {
         public MessageCodes MessageCode { get; } = MessageCodes.AuthResponse;
-        public string Code { get; set; }
+        public string Group { get; set; }
         public int SequenceNumber { get; set; } = -1;
         public int ChannelId { get; set; } = 0;
 
@@ -16,20 +16,20 @@ namespace Kaenx.Konnect.Remote
         public AuthResponse() { }
         public AuthResponse(string code)
         {
-            Code = code;
+            Group = code;
         }
 
 
         public void Parse(byte[] buffer)
         {
             SequenceNumber = buffer[1];
-            Code = Encoding.UTF8.GetString(buffer.Skip(2).ToArray());
+            Group = Encoding.UTF8.GetString(buffer.Skip(2).ToArray());
         }
 
 
         public ArraySegment<byte> GetBytes()
         {
-            byte[] text = Encoding.UTF8.GetBytes(Code);
+            byte[] text = Encoding.UTF8.GetBytes(Group);
             byte[] bytes = new byte[text.Length + 2];
             text.CopyTo(bytes, 2);
             bytes[0] = Convert.ToByte(MessageCode);

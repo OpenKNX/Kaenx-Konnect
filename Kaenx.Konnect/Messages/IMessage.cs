@@ -18,6 +18,11 @@ namespace Kaenx.Konnect.Messages
 
 
 
+        byte[] GetBytesEmi1();
+        byte[] GetBytesEmi2();
+        byte[] GetBytesCemi();
+
+
         void ParseDataCemi();
         void ParseDataEmi1();
         void ParseDataEmi2();

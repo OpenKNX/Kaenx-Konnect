@@ -5,19 +5,20 @@ using System.Text;
 
 namespace Kaenx.Konnect.Remote
 {
-    public class StateMessage : IRemoteMessage
+    public class StateResponse : IRemoteMessage
     {
         public MessageCodes MessageCode { get; } = MessageCodes.State;
         public StateCodes Code { get; set; }
         public int SequenceNumber { get; set; } = -1;
         public int ChannelId { get; set; } = 0;
+        public string Group { get; set; } = "";
 
         public string _key;
         public string _group;
         public string _code;
 
-        public StateMessage() { }
-        public StateMessage(StateCodes code, int sequence)
+        public StateResponse() { }
+        public StateResponse(StateCodes code, int sequence)
         {
             Code = code;
             SequenceNumber = sequence;

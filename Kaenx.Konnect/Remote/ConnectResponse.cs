@@ -11,6 +11,7 @@ namespace Kaenx.Konnect.Remote
 
         public MessageCodes MessageCode { get; } = MessageCodes.ConnectResponse;
         public int ChannelId { get; set; }
+        public string Group { get; set; }
 
 
 
@@ -20,7 +21,6 @@ namespace Kaenx.Konnect.Remote
             bytes[0] = Convert.ToByte(MessageCode);
             bytes[1] = Convert.ToByte(SequenceNumber);
             bytes[2] = Convert.ToByte(ChannelId);
-
             return new ArraySegment<byte>(bytes);
         }
 

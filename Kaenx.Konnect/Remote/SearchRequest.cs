@@ -11,6 +11,7 @@ namespace Kaenx.Konnect.Remote
 
         public MessageCodes MessageCode { get; } = MessageCodes.SearchRequest;
         public int ChannelId { get; set; }
+        public string Group { get; set; } = "";
 
 
 

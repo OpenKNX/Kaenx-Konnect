@@ -131,7 +131,7 @@ namespace Kaenx.Konnect.Connections
             return Task.CompletedTask;
         }
 
-        public Task<byte> Send(IMessageRequest message, bool ignoreConnected = false)
+        public Task<byte> Send(IMessage message, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
                 throw new Exception("Roflkopter 2");

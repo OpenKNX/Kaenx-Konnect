@@ -1,4 +1,5 @@
 ﻿using Kaenx.Konnect.Addresses;
+using Kaenx.Konnect.Messages;
 using Kaenx.Konnect.Messages.Request;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,7 @@ namespace Kaenx.Konnect.Connections
             throw new NotImplementedException();
         }
 
-        public Task<byte> Send(IMessageRequest message, bool ignoreConnected = false)
+        public Task<byte> Send(IMessage message, bool ignoreConnected = false)
         {
             throw new NotImplementedException();
         }
