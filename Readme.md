@@ -1,5 +1,5 @@
 
-![Logo](Assets/Logo.png)
+![Logo](Kaenx.Konnect/Assets/Logo.png)
 # Kaenx.Konnect
 =================
 
@@ -10,7 +10,7 @@ Kaenx.Konnect is a library to connect to a KNX IP Interface.
 IKnxConnection _connIp = new KnxIpTunneling(new IPEndPoint(IPAddress.Parse("192.168.0.108"), Convert.ToInt32(3671)));
 await _connIp.Connect();
 await Task.Delay(5000);
-_connUsb.Disconnect();
+_connIp.Disconnect();
 ```
 
 ### Connect to the Interface via USB
