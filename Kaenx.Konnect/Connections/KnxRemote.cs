@@ -15,6 +15,8 @@ namespace Kaenx.Konnect.Connections
 {
     public class KnxRemote : IKnxConnection
     {
+        public string Group { get; set; }
+        public int ChannelId { get; set; }
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
         public UnicastAddress PhysicalAddress { get; set; } = UnicastAddress.FromString("1.1.255");
@@ -42,14 +44,12 @@ namespace Kaenx.Konnect.Connections
         private int _sequenceNumber = 0;
         private int _connId = 0;
         private string Hash;
-        private RemoteType Type;
         private RemoteConnection _conn;
         private IKnxConnection _knxConn;
 
-        public KnxRemote(string hash, RemoteType type, RemoteConnection conn)
+        public KnxRemote(string hash, RemoteConnection conn)
         {
             Hash = hash;
-            Type = type;
             _conn = conn;
 
             _conn.OnRequest += _conn_OnRequest;
@@ -58,6 +58,43 @@ namespace Kaenx.Konnect.Connections
             {
                 Responses.Add(i, null);
             }
+
+            IKnxInterface inter = _conn.GetInterface(hash);
+            Debug.WriteLine("Request to Connect to: " + inter.Name);
+
+
+            _knxConn = KnxInterfaceHelper.GetConnection(inter, _conn);
+            _knxConn.OnTunnelResponse += OnTunnelActivity;
+            _knxConn.OnTunnelRequest += OnTunnelActivity;
+
+        }
+
+        public async Task<int> ConnectToInterface(TunnelRequest req)
+        {
+            try
+            {
+                _connId = new Random().Next(1, 255);
+                await _knxConn.Connect();
+                TunnelResponse res = new TunnelResponse();
+                res.SequenceNumber = req.SequenceNumber;
+                res.Group = req.Group;
+                res.ChannelId = req.ChannelId;
+                res.ConnId = _connId;
+                Group = req.Group;
+                ChannelId = req.ChannelId;
+                _ = _conn.Send(res, false);
+            }
+            catch (Exception ex)
+            {
+                TunnelResponse res = new TunnelResponse();
+                res.Group = req.Group;
+                res.ChannelId = req.ChannelId;
+                res.ConnId = 0;
+                res.Data = Encoding.UTF8.GetBytes(ex.Message);
+                _ = _conn.Send(res, false);
+            }
+
+            return _connId;
         }
 
         private async void _conn_OnRequest(IRemoteMessage message)
@@ -69,39 +106,6 @@ namespace Kaenx.Konnect.Connections
 
                 switch (req.Type)
                 {
-                    case TunnelTypes.Connect:
-                        string hash = Encoding.UTF8.GetString(req.Data);
-                        IKnxInterface inter = _conn.GetInterface(hash);
-                        Debug.WriteLine("Request to Connect to: " + inter.Name);
-
-
-                        _knxConn = KnxInterfaceHelper.GetConnection(inter, _conn);
-                        _knxConn.OnTunnelResponse += OnTunnelActivity;
-                        _knxConn.OnTunnelRequest += OnTunnelActivity;
-
-
-                        try
-                        {
-                            _connId = new Random().Next(1, 255);
-                            await _knxConn.Connect();
-                            TunnelResponse res = new TunnelResponse();
-                            res.SequenceNumber = req.SequenceNumber;
-                            res.Group = req.Group;
-                            res.ChannelId = req.ChannelId;
-                            res.ConnId = _connId;
-                            _ = _conn.Send(res, false);
-                        }
-                        catch (Exception ex)
-                        {
-                            TunnelResponse res = new TunnelResponse();
-                            res.Group = req.Group;
-                            res.ChannelId = req.ChannelId;
-                            res.ConnId = 0;
-                            res.Data = Encoding.UTF8.GetBytes(ex.Message);
-                            _ = _conn.Send(res, false);
-                        }
-                        break;
-
                     case TunnelTypes.Tunnel:
                         IMessage msg = (IMessage)JsonConvert.DeserializeObject(Encoding.UTF8.GetString(req.Data), new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Auto });
                         Debug.WriteLine("Tunnel: " + msg);
@@ -151,6 +155,8 @@ namespace Kaenx.Konnect.Connections
 
 
             IsConnected = false;
+
+            _conn.RemoveInterface(_connId);
         }
 
         public Task Send(byte[] data, bool ignoreConnected = false)
@@ -188,15 +194,5 @@ namespace Kaenx.Konnect.Connections
         }
 
 
-
-
-
-
-    }
-
-    public enum RemoteType
-    {
-        Ip,
-        Usb
     }
 }

@@ -22,6 +22,8 @@ namespace Kaenx.Konnect.Connections
         private CancellationTokenSource source = new CancellationTokenSource();
         private CancellationTokenSource ReceiveTokenSource { get; set; }
         private Dictionary<int, IRemoteMessage> Responses { get; set; } = new Dictionary<int, IRemoteMessage>();
+        private Dictionary<int, KnxRemote> Remotes { get; set; } = new Dictionary<int, KnxRemote>();
+
 
         private ClientWebSocket socket { get; set; } = new ClientWebSocket();
 
@@ -68,9 +70,7 @@ namespace Kaenx.Konnect.Connections
                     _sequenceNumber = 0;
             }
         }
-        public int ChannelId { get; set; }
         public string Group { get; set; }
-        public string GroupOut { get; set; }
         public string Hostname { get; private set; }
         public string Authentification { get; private set; }
 
@@ -145,16 +145,17 @@ namespace Kaenx.Konnect.Connections
             try
             {
                 if(message.SequenceNumber == -1) message.SequenceNumber = SequenceNumber++;
-                if(message.ChannelId == 0) message.ChannelId = ChannelId;
                 if (message is TunnelRequest)
                 {
                     TunnelRequest req = message as TunnelRequest;
-                    if (req.Group == "") req.Group = GroupOut;
+                    if (req.ChannelId == 0) req.ChannelId = Remotes[req.ConnId].ChannelId;
+                    if (req.Group == "") req.Group = Remotes[req.ConnId].Group;
                 }
                 if (message is TunnelResponse)
                 {
                     TunnelResponse res = message as TunnelResponse;
-                    if (res.Group == "") res.Group = GroupOut;
+                    if (res.ChannelId == 0) res.ChannelId = Remotes[res.ConnId].ChannelId;
+                    if (res.Group == "") res.Group = Remotes[res.ConnId].Group;
                 }
                 await socket.SendAsync(message.GetBytes(), WebSocketMessageType.Binary, true, source.Token);
                 mesg = await WaitForResponse(message.SequenceNumber);
@@ -245,9 +246,13 @@ namespace Kaenx.Konnect.Connections
 
                     }
 
-                    if(message is TunnelResponse)
+                    if(message is TunnelRequest && (message as TunnelRequest).Type == TunnelTypes.Connect)
                     {
-
+                        TunnelRequest req = message as TunnelRequest;
+                        KnxRemote rem = new KnxRemote(Encoding.UTF8.GetString(req.Data), this);
+                        int connId = await rem.ConnectToInterface(req);
+                        Remotes.Add(connId, rem);
+                        continue;
                     }
 
 
@@ -276,6 +281,11 @@ namespace Kaenx.Konnect.Connections
         {
             IKnxInterface inter = OnRequestInterface?.Invoke(hash);
             return inter;
+        }
+
+        public void RemoveInterface(int connId)
+        {
+            Remotes.Remove(connId);
         }
 
 

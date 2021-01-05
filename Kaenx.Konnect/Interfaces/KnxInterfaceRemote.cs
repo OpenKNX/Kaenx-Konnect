@@ -17,7 +17,6 @@ namespace Kaenx.Konnect.Interfaces
         public string Serial { get; set; }
         public DateTime LastFound { get; set; }
         public bool IsRemote { get; } = true;
-        public RemoteType Type { get; set; }
         public string RemoteHash { get; }
 
 

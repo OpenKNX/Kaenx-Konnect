@@ -20,7 +20,7 @@ namespace Kaenx.Konnect.Interfaces
                     return new KnxIpTunneling(interIp.Endpoint); //TODO check for Routing
 
                 case KnxInterfaceRemote interRem:
-                    return new KnxRemote(interRem.RemoteHash, RemoteType.Ip, conn); // TODO check if needed
+                    return new KnxRemote(interRem.RemoteHash, conn); // TODO check if needed
             }
 
             throw new Exception("Für das Interface gibt es keine Connection " + inter.ToString());
