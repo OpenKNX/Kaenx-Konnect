@@ -180,7 +180,6 @@ namespace Kaenx.Konnect.Connections
         private async Task<IRemoteMessage> WaitForResponse(int seq)
         {
             Responses[seq] = null;
-            Debug.WriteLine("Waiting for " + seq);
             CancellationTokenSource source = new CancellationTokenSource(10000);
             while (Responses[seq] == null && !source.Token.IsCancellationRequested)
                 await Task.Delay(1000);
@@ -214,7 +213,7 @@ namespace Kaenx.Konnect.Connections
 
                     Kaenx.Konnect.Remote.MessageCodes code = (Konnect.Remote.MessageCodes)buffer.Array[0];
 
-                    Debug.WriteLine("Typ: " + code);
+                    Debug.WriteLine("Got Remote Message: " + code);
 
                     //Check if assemby from this genügt
                     var q = from t in Assembly.LoadFrom("Kaenx.Konnect.dll").GetTypes()
@@ -259,17 +258,12 @@ namespace Kaenx.Konnect.Connections
                     if (message.ToString().EndsWith("Response"))
                     {
                         Responses[message.SequenceNumber] = message;
-                        Debug.WriteLine("Got Response: " + message.SequenceNumber);
                         OnResponse?.Invoke(message);
                     }
                     else
                     {
                         OnRequest?.Invoke(message);
                     }
-
-
-
-                    Debug.WriteLine("Neue Nachricht: " + message + " / " + message.SequenceNumber);
                 }
 
                 Debug.WriteLine("Verbindung abgebrochen");

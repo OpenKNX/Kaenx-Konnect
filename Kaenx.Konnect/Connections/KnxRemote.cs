@@ -1,6 +1,8 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Interfaces;
 using Kaenx.Konnect.Messages;
+using Kaenx.Konnect.Messages.Request;
+using Kaenx.Konnect.Messages.Response;
 using Kaenx.Konnect.Remote;
 using Newtonsoft.Json;
 using System;
@@ -53,11 +55,41 @@ namespace Kaenx.Konnect.Connections
             _conn = conn;
 
             _conn.OnRequest += _conn_OnRequest;
+            _conn.OnResponse += _conn_OnResponse;
 
             for (int i = 0; i < 256; i++)
             {
                 Responses.Add(i, null);
             }
+        }
+
+        private void _conn_OnResponse(IRemoteMessage message)
+        {
+            if (!(message is TunnelResponse)) return;
+            TunnelResponse req = message as TunnelResponse;
+            if (req.Type != TunnelTypes.Tunnel) return;
+
+            IMessage msg = (IMessage)JsonConvert.DeserializeObject(Encoding.UTF8.GetString(req.Data), new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Auto });
+
+            if(msg is IMessageRequest)
+            {
+                OnTunnelRequest?.Invoke(msg as IMessageRequest);
+            }
+            else
+            {
+                if (msg is MsgAckRes)
+                    OnTunnelAck?.Invoke(msg as MsgAckRes);
+                else
+                    OnTunnelResponse?.Invoke(msg as IMessageResponse);
+            }
+        }
+
+        private async void _conn_OnRequest(IRemoteMessage message)
+        {
+            if (!(message is TunnelRequest)) return;
+
+            TunnelRequest req = message as TunnelRequest;
+            if (req.ConnId != 0 && req.ConnId != _connId) return;
 
             IKnxInterface inter = _conn.GetInterface(hash);
             Debug.WriteLine("Request to Connect to: " + inter.Name);
@@ -110,19 +142,22 @@ namespace Kaenx.Konnect.Connections
                         IMessage msg = (IMessage)JsonConvert.DeserializeObject(Encoding.UTF8.GetString(req.Data), new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Auto });
                         Debug.WriteLine("Tunnel: " + msg);
                         byte seq = await _knxConn.Send(msg);
+                case TunnelTypes.Tunnel:
+                    IMessage msg = (IMessage)JsonConvert.DeserializeObject(Encoding.UTF8.GetString(req.Data), new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Auto });
+                    byte seq = await _knxConn.Send(msg);
 
-                        TunnelResponse req2 = new TunnelResponse(new byte[] { seq });
-                        req2.Type = TunnelTypes.Response;
-                        req2.ConnId = req.ConnId;
-                        req2.SequenceNumber = req.SequenceNumber;
-                        _ = _conn.Send(req2, false);
-                        break;
-                }
+                    TunnelResponse req2 = new TunnelResponse(new byte[] { seq });
+                    req2.Type = TunnelTypes.Response;
+                    req2.ConnId = req.ConnId;
+                    req2.SequenceNumber = req.SequenceNumber;
+                    _ = _conn.Send(req2, false);
+                    break;
             }
         }
 
         private void OnTunnelActivity(IMessage message)
         {
+            Debug.WriteLine("Neue Tunnel Activity " + message.ApciType + "/" + BitConverter.ToString(message.Raw));
             TunnelResponse req = new TunnelResponse();
             req.Type = TunnelTypes.Tunnel;
             req.ConnId = _connId;
@@ -146,8 +181,6 @@ namespace Kaenx.Konnect.Connections
 
             IsConnected = true;
             _connId = response.ConnId;
-            Debug.WriteLine(DateTime.Now);
-            Debug.WriteLine("Verbunden");
         }
 
         public async Task Disconnect()
@@ -168,10 +201,6 @@ namespace Kaenx.Konnect.Connections
         {
             if (!ignoreConnected && !IsConnected)
                 throw new Exception("Roflkopter 2");
-
-
-            Debug.WriteLine("Sende nun einen normalen Request");
-            Debug.WriteLine("------------------------------------------------------------------------------------");
 
             TunnelRequest req = new TunnelRequest();
             req.Type = TunnelTypes.Tunnel;
