@@ -74,7 +74,7 @@ namespace Kaenx.Konnect.Classes
                 responses.Add(response.SequenceNumber, response);
 
             lastReceivedNumber = response.SequenceNumber;
-            //Debug.WriteLine(response.SequenceNumber + ": " + response.APCI + " - " + response.Data.Length);
+            Debug.WriteLine("Got Response: " + response.ApciType + "/" + response.SequenceNumber);
         }
 
         public BusDevice(UnicastAddress address, IKnxConnection conn)
@@ -91,11 +91,9 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Daten als Byte Array</returns>
         private async Task<IMessageResponse> WaitForData(int seq, CancellationToken token)
         {
-            if (responses.ContainsKey(seq))
-                responses.Remove(seq);
-
             while (!responses.ContainsKey(seq) && !token.IsCancellationRequested)
                 await Task.Delay(10); // TODO maybe erhöhen
+
 
             token.ThrowIfCancellationRequested();
 
@@ -106,11 +104,10 @@ namespace Kaenx.Konnect.Classes
 
         private async Task WaitForAck(int seq, CancellationToken token)
         {
-            acks[seq] = false;
-
             while (!acks[seq] && !token.IsCancellationRequested)
                 await Task.Delay(10); // TODO maybe erhöhen
 
+            acks[seq] = false;
             token.ThrowIfCancellationRequested();
 
             acks.Remove(seq);
@@ -308,8 +305,9 @@ namespace Kaenx.Konnect.Classes
 
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + seq);
             MsgPropertyReadRes resp = (MsgPropertyReadRes) await WaitForData(seq, tokenS.Token);
-
+            Debug.WriteLine("Ended waiting");
             return resp.Get<T>();
         }
 
@@ -481,6 +479,7 @@ namespace Kaenx.Konnect.Classes
             //Debug.WriteLine("Warten auf: " + seq);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
             //Todo MsgDeviceDescriptorReadRes convert benutzen
+            Debug.WriteLine("Warte auf Descriptor " + seq);
             IMessageResponse resp = await WaitForData(seq, tokenS.Token); 
             return BitConverter.ToString(resp.Raw).Replace("-", "");
         }

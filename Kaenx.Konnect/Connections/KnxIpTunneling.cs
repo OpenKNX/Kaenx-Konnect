@@ -212,8 +212,8 @@ namespace Kaenx.Konnect.Connections
                         var result = await _udpClient.ReceiveAsync();
                         var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
 
-                        if(!(knxResponse is SearchResponse))
-                            Debug.WriteLine("Telegram angekommen: " + knxResponse?.ToString());
+                        //if(!(knxResponse is SearchResponse))
+                        //    Debug.WriteLine("Telegram angekommen: " + knxResponse?.ToString());
 
 
                         switch (knxResponse)
@@ -267,7 +267,7 @@ namespace Kaenx.Konnect.Connections
 
                                 _sendMessages.Add(new Responses.TunnelResponse(0x06, 0x10, 0x0A, 0x04, _communicationChannel, tunnelResponse.SequenceCounter, 0x00).GetBytes());
 
-                                Debug.WriteLine("Telegram APCI: " + tunnelResponse.APCI.ToString());
+                                //Debug.WriteLine("Telegram APCI: " + tunnelResponse.APCI.ToString());
 
                                 if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
