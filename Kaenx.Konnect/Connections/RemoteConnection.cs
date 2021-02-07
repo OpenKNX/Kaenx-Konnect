@@ -71,6 +71,7 @@ namespace Kaenx.Konnect.Connections
             }
         }
         public string Group { get; set; }
+        public int ChannelId { get; set; }
         public string Hostname { get; private set; }
         public string Authentification { get; private set; }
 

@@ -26,6 +26,7 @@ namespace Kaenx.Konnect.Classes
         private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
         private Dictionary<int, bool> acks = new Dictionary<int, bool>();
 
+        bool alreadyTurned = false;
 
         private int _seqNum = 0;
         private int _currentSeqNum
@@ -34,7 +35,22 @@ namespace Kaenx.Konnect.Classes
             set
             {
                 _seqNum = value;
-                if (_seqNum > 15) _seqNum = 0;
+                if (_seqNum > 15)
+                {
+                    alreadyTurned = true;
+                    _seqNum = 0;
+                }
+
+                int x = _seqNum;
+                x -= 5;
+
+                for (int i = 0; i < 5; i++)
+                {
+                    int y = x - i;
+                    if (y < 0) y += 15;
+
+                    acks[y] = false;
+                }
             }
         }
 
@@ -92,8 +108,7 @@ namespace Kaenx.Konnect.Classes
         private async Task<IMessageResponse> WaitForData(int seq, CancellationToken token)
         {
             while (!responses.ContainsKey(seq) && !token.IsCancellationRequested)
-                await Task.Delay(10); // TODO maybe erhöhen
-
+                await Task.Delay(5); // TODO maybe erhöhen
 
             token.ThrowIfCancellationRequested();
 
@@ -104,13 +119,13 @@ namespace Kaenx.Konnect.Classes
 
         private async Task WaitForAck(int seq, CancellationToken token)
         {
+
+
             while (!acks[seq] && !token.IsCancellationRequested)
                 await Task.Delay(10); // TODO maybe erhöhen
 
             acks[seq] = false;
             token.ThrowIfCancellationRequested();
-
-            acks.Remove(seq);
         }
 
 
