@@ -3,6 +3,8 @@
 # Kaenx.Konnect
 =================
 
+[Nuget Package](https://www.nuget.org/packages/Kaenx.Konnect/) is availible.
+
 Kaenx.Konnect is a library to connect to a KNX IP Interface.
 
 ### Connect to the Interface via IP
@@ -13,6 +15,14 @@ await _connIp.Connect();
 await Task.Delay(5000);
 _connIp.Disconnect();
 ```
+
+
+### Search for KNX IP Interfaces
+```C#
+IKnxConnection _connIp = new KnxIpTunneling("192.168.0.108", 3671, true); //Use sendBroadcast to send Searchrequest to all Network Interfaces on the PC
+_connIp.Send(new MsgSearchReq(), true);
+```
+
 
 ### Connect to the Interface via USB
 ```C#
