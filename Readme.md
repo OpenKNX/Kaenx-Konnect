@@ -8,6 +8,7 @@ Kaenx.Konnect is a library to connect to a KNX IP Interface.
 ### Connect to the Interface via IP
 ```C#
 IKnxConnection _connIp = new KnxIpTunneling(new IPEndPoint(IPAddress.Parse("192.168.0.108"), Convert.ToInt32(3671)));
+_connIp = new KnxIpTunneling("192.168.0.108", 3671);
 await _connIp.Connect();
 await Task.Delay(5000);
 _connIp.Disconnect();
@@ -20,6 +21,7 @@ await _connUsb.Connect();
 await Task.Delay(5000);
 _connUsb.Disconnect();
 ```
+Connection via USB is not widly implemented yet.
 
 
 ### Connection Events

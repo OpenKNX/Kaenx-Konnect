@@ -48,6 +48,29 @@ namespace Kaenx.Konnect.Connections
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
         private bool _flagCRRecieved = false;
 
+        public KnxIpTunneling(string ip, int port, bool sendBroadcast = false)
+        {
+            Port = GetFreePort();
+            _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+            IPAddress IP = null;
+
+            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+            {
+                socket.Connect("8.8.8.8", 65530);
+                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                IP = endPoint.Address;
+            }
+
+            if (IP == null)
+                throw new Exception("Lokale Ip konnte nicht gefunden werden");
+
+            _receiveEndPoint = new IPEndPoint(IP, Port);
+            _receiveParserDispatcher = new ReceiverParserDispatcher();
+            _sendMessages = new BlockingCollection<object>();
+
+            Init(sendBroadcast);
+        }
+
         public KnxIpTunneling(IPEndPoint sendEndPoint, bool sendBroadcast = false)
         {
             Port = GetFreePort();
@@ -68,8 +91,12 @@ namespace Kaenx.Konnect.Connections
             _receiveParserDispatcher = new ReceiverParserDispatcher();
             _sendMessages = new BlockingCollection<object>();
 
+            Init(sendBroadcast);
+        }
 
 
+        private void Init(bool sendBroadcast = false)
+        {
             if (sendBroadcast)
             {
                 NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
@@ -79,7 +106,7 @@ namespace Kaenx.Konnect.Connections
                     if (ipprops.MulticastAddresses.Count == 0 // most of VPN adapters will be skipped
                         || !adapter.SupportsMulticast // multicast is meaningless for this type of connection
                         || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
-                        continue; 
+                        continue;
                     IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
                     if (null == p) continue; // IPv4 is not configured on this adapter
                     int index = IPAddress.HostToNetworkOrder(p.Index);
@@ -91,21 +118,21 @@ namespace Kaenx.Konnect.Connections
 
                     Debug.WriteLine("Binded to " + adapter.Name);
                 }
-            } else
+            }
+            else
             {
                 UdpClient _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, Port));
                 _udpList.Add(_udpClient);
                 Debug.WriteLine("Binded to default");
             }
 
-            
+
 
             ProcessSendMessages();
 
             foreach (UdpClient client in _udpList)
                 ProcessReceivingMessages(client);
         }
-
 
 
 

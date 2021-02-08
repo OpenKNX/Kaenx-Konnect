@@ -75,6 +75,17 @@ namespace Kaenx.Konnect.Classes
             for (int i = 0; i <= 15; i++)
                 acks.Add(i, false);
         }
+        public BusDevice(UnicastAddress address, IKnxConnection conn)
+        {
+            _address = address;
+            _conn = conn;
+
+            for (int i = 0; i <= 15; i++)
+                acks.Add(i, false);
+        }
+
+
+
 
         private void _conn_OnTunnelAck(MsgAckRes response)
         {
@@ -91,12 +102,6 @@ namespace Kaenx.Konnect.Classes
 
             lastReceivedNumber = response.SequenceNumber;
             Debug.WriteLine("Got Response: " + response.ApciType + "/" + response.SequenceNumber);
-        }
-
-        public BusDevice(UnicastAddress address, IKnxConnection conn)
-        {
-            _address = address;
-            _conn = conn;
         }
 
 
@@ -166,6 +171,23 @@ namespace Kaenx.Konnect.Classes
             await _conn.Send(message);
         }
 
+
+        public bool HasResource(string maskId, string resourceId)
+        {
+            XDocument master = GetKnxMaster();
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
+            XElement prop = null;
+            try
+            {
+                prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name").Value == resourceId);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         /// <summary>
         /// Schreibe den Wert in die Property des Gerätes
         /// </summary>
@@ -189,6 +211,12 @@ namespace Kaenx.Konnect.Classes
             XElement loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
             int length = int.Parse(prop.Element(XName.Get("ResourceType", master.Root.Name.NamespaceName)).Attribute("Length").Value);
             string start = loc.Attribute("StartAddress")?.Value;
+
+            if(data.Length > length)
+            {
+                data = data.Skip(data.Length - length).ToArray();
+            }
+
 
             switch (loc.Attribute("AddressSpace").Value)
             {
