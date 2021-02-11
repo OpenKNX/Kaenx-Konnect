@@ -58,15 +58,15 @@ namespace Kaenx.Konnect.Connections
             {
                 Responses.Add(i, null);
             }
+        }
 
-            IKnxInterface inter = _conn.GetInterface(hash);
+        public async Task Init(KnxInterfaceHelper.GetUsbDeviceHandler getDevice)
+        {
+            IKnxInterface inter = _conn.GetInterface(Hash);
             Debug.WriteLine("Request to Connect to: " + inter.Name);
-
-
-            _knxConn = KnxInterfaceHelper.GetConnection(inter, _conn);
+            _knxConn = await KnxInterfaceHelper.GetConnection(inter, _conn, getDevice);
             _knxConn.OnTunnelResponse += OnTunnelActivity;
             _knxConn.OnTunnelRequest += OnTunnelActivity;
-
         }
 
         public async Task<int> ConnectToInterface(TunnelRequest req)

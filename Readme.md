@@ -1,4 +1,3 @@
-
 ![Logo](Kaenx.Konnect/Assets/Logo.png)
 # Kaenx.Konnect
 =================
@@ -19,14 +18,15 @@ _connIp.Disconnect();
 
 ### Search for KNX IP Interfaces
 ```C#
-IKnxConnection _connIp = new KnxIpTunneling("192.168.0.108", 3671, true); //Use sendBroadcast to send Searchrequest to all Network Interfaces on the PC
+IKnxConnection _connIp = new KnxIpTunneling("224.0.23.12", 3671, true); //Use sendBroadcast to send Searchrequest to all Network Interfaces on the PC
 _connIp.Send(new MsgSearchReq(), true);
 ```
 
 
 ### Connect to the Interface via USB
 ```C#
-IKnxConnection _connUsb = new KnxUsbTunneling(@"\\?\HID#VID_147B&PID_5120#7&25842fb1&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}"); // USB Device Id
+ConnectedDeviceDefinition def; //See Device.Net on how to get ConnectedDeviceDefinition
+IKnxConnection _connUsb = new KnxUsbTunneling(def); // USB Device Id
 await _connUsb.Connect();
 await Task.Delay(5000);
 _connUsb.Disconnect();

@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using static Kaenx.Konnect.Interfaces.KnxInterfaceHelper;
 
 namespace Kaenx.Konnect.Connections
 {
@@ -76,8 +77,14 @@ namespace Kaenx.Konnect.Connections
         public string Authentification { get; private set; }
 
 
-        public RemoteConnection()
+        private GetUsbDeviceHandler getUsbHandler;
+
+        
+
+
+        public RemoteConnection(GetUsbDeviceHandler getDevice)
         {
+            getUsbHandler = getDevice;
             socket.Options.AddSubProtocol("chat");
 
             for (int i = 0; i < 256; i++)
@@ -250,6 +257,7 @@ namespace Kaenx.Konnect.Connections
                     {
                         TunnelRequest req = message as TunnelRequest;
                         KnxRemote rem = new KnxRemote(Encoding.UTF8.GetString(req.Data), this);
+                        await rem.Init(getUsbHandler);
                         int connId = await rem.ConnectToInterface(req);
                         Remotes.Add(connId, rem);
                         continue;

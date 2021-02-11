@@ -1,10 +1,15 @@
-﻿using System;
+﻿using Device.Net;
+using Hid.Net.Windows;
+using Usb.Net.Windows;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Kaenx.Konnect.Interfaces
 {
@@ -12,13 +17,13 @@ namespace Kaenx.Konnect.Interfaces
     public class KnxInterfaceUsb : IKnxInterface
     {
         public string Name { get; set; }
-        public string DeviceId { get; set; }
+        public ConnectedDeviceDefinition ConnDefinition { get; set; }
         public string Serial { get; set; }
         public DateTime LastFound { get; set; }
         public bool IsRemote { get; } = false;
 
 
-        public static KnxInterfaceUsb CheckHid(uint? vendorId, uint? productId, string deviceId)
+        public static KnxInterfaceUsb CheckHid(ConnectedDeviceDefinition def)
         {
             var assembly = Assembly.GetExecutingAssembly();
             string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith("knx_interfaces.xml"));
@@ -30,10 +35,10 @@ namespace Kaenx.Konnect.Interfaces
                 XDocument doc = XDocument.Parse(result);
                 var inters = doc.Descendants(XName.Get("Interface"));
 
-                if (!inters.Any(inter => inter.Attribute("VendorID").Value == Convert.ToInt32(vendorId).ToString("X") && inter.Attribute("ProductID").Value == Convert.ToInt32(productId).ToString("X")))
+                if (!inters.Any(inter => inter.Attribute("VendorID").Value == Convert.ToInt32(def.VendorId).ToString("X") && inter.Attribute("ProductID").Value == Convert.ToInt32(def.ProductId).ToString("X")))
                     return null;
 
-                XElement xinter = inters.Single(inter => inter.Attribute("VendorID").Value == Convert.ToInt32(vendorId).ToString("X") && inter.Attribute("ProductID").Value == Convert.ToInt32(productId).ToString("X"));
+                XElement xinter = inters.Single(inter => inter.Attribute("VendorID").Value == Convert.ToInt32(def.VendorId).ToString("X") && inter.Attribute("ProductID").Value == Convert.ToInt32(def.ProductId).ToString("X"));
                 IEnumerable<XElement> trans = xinter.Descendants(XName.Get("Translation"));
 
                 string name = xinter.Attribute("DefaultDisplayText").Value;
@@ -52,7 +57,7 @@ namespace Kaenx.Konnect.Interfaces
                 return new KnxInterfaceUsb()
                 {
                     Name = name,
-                    DeviceId = deviceId
+                    ConnDefinition = def
                 };
             }
         }

@@ -1,5 +1,4 @@
 ﻿using Device.Net;
-using Hid.Net;
 using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Messages;
@@ -7,6 +6,7 @@ using Kaenx.Konnect.Messages.Request;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,17 +24,15 @@ namespace Kaenx.Konnect.Connections
         public event SearchResponseHandler OnSearchResponse;
         public event ConnectionChangedHandler ConnectionChanged;
 
-        private string DeviceId { get; }
         private IDevice DeviceKnx { get; }
         private ProtocolTypes CurrentType { get; set; }
         public ConnectionErrors LastError { get; set; }
         public UnicastAddress PhysicalAddress { get; set; }
 
 
-        public KnxUsbTunneling(string deviceId)
+        public KnxUsbTunneling(IDevice device)
         {
-            DeviceId = deviceId;
-            DeviceKnx = DeviceManager.Current.GetDevice(new ConnectedDeviceDefinition(deviceId));
+            DeviceKnx = device;
         }
 
 
@@ -42,39 +40,36 @@ namespace Kaenx.Konnect.Connections
 
         public async Task Connect()
         {
-            byte[] packet = new byte[63]; //Create packet which will be fixed 64 bytes long
+            byte[] packet = new byte[64]; //Create packet which will be fixed 64 bytes long
 
             //Report Header
-            packet[0] = 0x13; // First Packet with start and end
-            packet[1] = 9; // Data length
+            packet[0] = 1;
+            packet[1] = 0x13; // First Packet with start and end
+            packet[2] = 9; // Data length
 
 
             //Transfer Header
-            packet[2] = 0; // Version fixed 0
-            packet[3] = 8; // Header length
-            packet[4] = 0; // Body length
-            packet[5] = 1; // Body length
-            packet[6] = 0x0F; // Protocol ID
-            packet[7] = 0x01; // Service Identifier
-            packet[8] = 0; // Manufacturer Code
+            packet[3] = 0; // Version fixed 0
+            packet[4] = 8; // Header length
+            packet[5] = 0; // Body length
+            packet[6] = 1; // Body length
+            packet[7] = 0x0F; // Protocol ID
+            packet[8] = 0x01; // Service Identifier
             packet[9] = 0; // Manufacturer Code
+            packet[10] = 0; // Manufacturer Code
 
             // Body
-            packet[10] = 1; // Bus Status
+            packet[11] = 1; // Bus Status
 
             await DeviceKnx.InitializeAsync();
 
             bool myflag = false;
             CancellationTokenSource source = new CancellationTokenSource(1000);
 
+            TransferResult read = await DeviceKnx.WriteAndReadAsync(packet, source.Token);
+            myflag = true;
 
-            _ = Task.Run(async () =>
-            {
-                Device.Net.ReadResult read = await DeviceKnx.WriteAndReadAsync(packet);
-                myflag = true;
-            }, source.Token);
-
-            while(!myflag && !source.IsCancellationRequested)
+            while (!myflag && !source.IsCancellationRequested)
             {
                 await Task.Delay(100);
             }
@@ -92,6 +87,7 @@ namespace Kaenx.Konnect.Connections
 
         public async Task Disconnect()
         {
+            DeviceKnx.Close();
             DeviceKnx.Dispose();
         }
 

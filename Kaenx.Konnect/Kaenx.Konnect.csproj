@@ -42,29 +42,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Device.Net" Version="4.0.0" />
+    <PackageReference Include="Hid.Net" Version="4.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Device.Net">
-      <HintPath>..\Dlls\Device.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="Device.Net.UWP">
-      <HintPath>..\Dlls\Device.Net.UWP.dll</HintPath>
-    </Reference>
-    <Reference Include="Hid.Net">
-      <HintPath>..\Dlls\Hid.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="Hid.Net.UWP">
-      <HintPath>..\Dlls\Hid.Net.UWP.dll</HintPath>
-    </Reference>
-    <Reference Include="Usb.Net">
-      <HintPath>..\Dlls\Usb.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="Usb.Net.UWP">
-      <HintPath>..\Dlls\Usb.Net.UWP.dll</HintPath>
-    </Reference>
+    <PackageReference Include="Usb.Net" Version="4.0.0" />
   </ItemGroup>
 
 </Project>
