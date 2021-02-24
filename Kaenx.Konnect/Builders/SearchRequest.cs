@@ -6,6 +6,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Builders
 {
+    [Obsolete]
     class SearchRequest : IRequestBuilder
     {
         private List<byte> bytes = new List<byte>();
@@ -16,7 +17,6 @@ namespace Kaenx.Konnect.Builders
             byte[] header = { 0x06, 0x10, 0x02, 0x01, 0x00, 0x0e }; // Length, Version, Descriptor 2x, Total length 2x
             bytes.AddRange(header);
 
-            bytes.AddRange(new HostProtocolAddressInformation(0x01, source).GetBytes());
         }
 
         public byte[] GetBytes()

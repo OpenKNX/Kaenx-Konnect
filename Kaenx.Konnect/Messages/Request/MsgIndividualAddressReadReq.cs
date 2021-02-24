@@ -24,16 +24,18 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            TunnelRequest builder = new TunnelRequest();
+            TunnelCemiRequest builder = new TunnelCemiRequest();
             builder.Build(UnicastAddress.FromString("0.0.0"), MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressRead);
-            builder.SetChannelId(ChannelId);
-            builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
         }
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            TunnelEmi1Request builder = new TunnelEmi1Request();
+            builder.Build(UnicastAddress.FromString("0.0.0"), MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressRead);
+            builder.SetChannelId(ChannelId);
+            builder.SetSequence(SequenceCounter);
+            return builder.GetBytes();
         }
 
         public byte[] GetBytesEmi2()

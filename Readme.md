@@ -19,14 +19,14 @@ _connIp.Disconnect();
 ### Search for KNX IP Interfaces
 ```C#
 IKnxConnection _connIp = new KnxIpTunneling("224.0.23.12", 3671, true); //Use sendBroadcast to send Searchrequest to all Network Interfaces on the PC
-_connIp.Send(new MsgSearchReq(), true);
+_connIp.Send(new MsgSearchReq(), true); // true to ignore if connection ist connected
 ```
 
 
 ### Connect to the Interface via USB
 ```C#
 ConnectedDeviceDefinition def; //See Device.Net on how to get ConnectedDeviceDefinition
-IKnxConnection _connUsb = new KnxUsbTunneling(def); // USB Device Id
+IKnxConnection _connUsb = new KnxUsbTunneling(def);
 await _connUsb.Connect();
 await Task.Delay(5000);
 _connUsb.Disconnect();
@@ -48,9 +48,11 @@ There are three Events:
 Create a Bus Device to read Property or Memory from it. Also you can restart it.
 ```C#
 BusDevice dev = new BusDevice("1.1.2", _conn);
-dev.Connect();
-byte[] data = dev.MemoryRead(16495, 255);
-dev.Restart();
+await dev.Connect();
+byte[] data = await dev.MemoryRead(16495, 255);
+string mask = await dev.DeviceDescriptorRead(); //Returns Mask Version like 0701, 07B0, ...
+string serial = await dev.PropertyRead<string>("MV-" + mask, "DeviceSerialNumber"); //Returns SerialNumber of Device
+await dev.Restart();
 dev.Disconnect();
 ```
 

@@ -43,7 +43,7 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            TunnelRequest builder = new TunnelRequest();
+            TunnelCemiRequest builder = new TunnelCemiRequest();
 
             List<byte> data = new List<byte>();
             data.AddRange(Serial);
@@ -53,8 +53,6 @@ namespace Kaenx.Konnect.Messages.Request
 
             builder.Build(UnicastAddress.FromString("0.0.0"), MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressSerialNumberWrite, 255, data.ToArray());
             builder.SetPriority(Prios.System);
-            builder.SetChannelId(ChannelId);
-            builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
         }
 

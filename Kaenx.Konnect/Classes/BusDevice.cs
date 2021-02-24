@@ -115,7 +115,8 @@ namespace Kaenx.Konnect.Classes
             while (!responses.ContainsKey(seq) && !token.IsCancellationRequested)
                 await Task.Delay(5); // TODO maybe erhöhen
 
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+                throw new TimeoutException("Zeitüberschreitung beim Warten auf antwort");
 
             var resp = responses[seq];
             responses.Remove(seq);
@@ -124,13 +125,13 @@ namespace Kaenx.Konnect.Classes
 
         private async Task WaitForAck(int seq, CancellationToken token)
         {
-
-
             while (!acks[seq] && !token.IsCancellationRequested)
                 await Task.Delay(10); // TODO maybe erhöhen
 
+            if (token.IsCancellationRequested)
+                throw new TimeoutException("Zeitüberschreitung beim Warten auf Ack");
+
             acks[seq] = false;
-            token.ThrowIfCancellationRequested();
         }
 
 
@@ -171,7 +172,12 @@ namespace Kaenx.Konnect.Classes
             await _conn.Send(message);
         }
 
-
+        /// <summary>
+        /// Gibt True zurück, wenn das Gerät die angegebene Ressource unterstützt
+        /// </summary>
+        /// <param name="maskId"></param>
+        /// <param name="resourceId"></param>
+        /// <returns></returns>
         public bool HasResource(string maskId, string resourceId)
         {
             XDocument master = GetKnxMaster();
@@ -194,6 +200,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="maskId">Id der Maske (z.B. MV-0701)</param>
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
         /// <returns></returns>
+        /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
         public async Task PropertyWrite(string maskId, string resourceId, byte[] data)
         {
             XDocument master = GetKnxMaster();
@@ -244,6 +251,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="propId">PropertyId</param>
         /// <param name="data">Daten die geschrieben werden sollen</param>
         /// <returns></returns>
+        /// <exception cref="System.TimeoutException" />
         public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
         {
 
@@ -267,7 +275,9 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         /// <param name="maskId">Id der Maske (z.B. MV-0701)</param>
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
-        /// <returns>Property Wert</returns>
+        /// <returns>Property Wert as Byte Array</returns>
+        /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
+        /// <exception cref="System.TimeoutException">Wenn Gerät Ressource nicht in angemessener Zeit antwortet</exception>
         public async Task<byte[]> PropertyRead(string maskId, string resourceId)
         {
             return await PropertyRead<byte[]>(maskId, resourceId);
@@ -278,7 +288,8 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         /// <param name="maskId">Id der Maske (z.B. MV-0701)</param>
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
-        /// <returns>Property Wert</returns>
+        /// <returns>Property Wert </returns>
+        /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
         public async Task<T> PropertyRead<T>(string maskId, string resourceId)
         {
             XDocument master = GetKnxMaster();
@@ -289,7 +300,7 @@ namespace Kaenx.Konnect.Classes
                 prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name").Value == resourceId);
             } catch
             {
-                throw new Exception("Device does not support this Property");
+                throw new NotSupportedException("Mask '" + maskId + "' does not support this Ressource: " + resourceId);
             }
 
             XElement loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
@@ -337,6 +348,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="length">Anzahl der zu lesenden Bytes</param>
         /// <param name="start">Startindex</param>
         /// <returns>Property Wert</returns>
+        /// <exception cref="System.TimeoutException" />
         public async Task<T> PropertyRead<T>(byte objIdx, byte propId)
         {
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
@@ -396,6 +408,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="address"></param>
         /// <param name="databytes"></param>
         /// <returns></returns>
+        /// <exception cref="System.TimeoutException" />
         public async Task MemoryWriteSync(int address, byte[] databytes)
         {
             List<byte> datalist = databytes.ToList();
@@ -450,6 +463,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="address">Start Adresse</param>
         /// <param name="length">Anzahl der Bytes die gelesen werden sollen</param>
         /// <returns>Daten aus Speicher</returns>
+        /// <exception cref="System.TimeoutException" />
         public async Task<T> MemoryRead<T>(int address, int length)
         {
             List<byte> readed = new List<byte>();
@@ -513,6 +527,7 @@ namespace Kaenx.Konnect.Classes
         /// Liest die Maskenversion des Gerätes aus
         /// </summary>
         /// <returns>Maskenversion als HexString</returns>
+        /// <exception cref="System.TimeoutException" />
         public async Task<string> DeviceDescriptorRead()
         {
             MsgDescriptorReadReq message = new MsgDescriptorReadReq(_address);

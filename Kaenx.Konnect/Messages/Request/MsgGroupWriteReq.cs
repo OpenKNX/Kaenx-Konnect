@@ -11,7 +11,7 @@ namespace Kaenx.Konnect.Messages.Request
     /// <summary>
     /// Creates a telegram to write a group value
     /// </summary>
-    public class MsgGroupValueWriteReq : IMessageRequest
+    public class MsgGroupWriteReq : IMessageRequest
     {
         public byte ChannelId { get; set; }
         public byte SequenceCounter { get; set; }
@@ -29,23 +29,21 @@ namespace Kaenx.Konnect.Messages.Request
         /// <param name="from">Unicast Address from sender</param>
         /// <param name="to">Mulicast Address (GroupAddress)</param>
         /// <param name="data">Data to write</param>
-        public MsgGroupValueWriteReq(UnicastAddress from, MulticastAddress to, byte[] data)
+        public MsgGroupWriteReq(UnicastAddress from, MulticastAddress to, byte[] data)
         {
             SourceAddress = from;
             DestinationAddress = to;
             _data = data;
         }
 
-        public MsgGroupValueWriteReq() { }
+        public MsgGroupWriteReq() { }
 
 
 
         public byte[] GetBytesCemi()
         {
-            TunnelRequest builder = new TunnelRequest();
+            TunnelCemiRequest builder = new TunnelCemiRequest();
             builder.Build(SourceAddress, DestinationAddress, ApciTypes.GroupValueWrite, 255, _data);
-            builder.SetChannelId(ChannelId);
-            builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
         }
 

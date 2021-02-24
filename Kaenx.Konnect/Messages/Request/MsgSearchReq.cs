@@ -1,5 +1,6 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
+using Kaenx.Konnect.Classes;
 using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
@@ -32,9 +33,9 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            SearchRequest builder = new SearchRequest();
-            builder.Build(Endpoint);
-            return builder.GetBytes();
+            List<byte> bytes = new List<byte>() { 0x06, 0x10, 0x02, 0x01, 0x00, 0x0e }; // Length, Version, Descriptor 2x, Total length 2x
+            bytes.AddRange(new HostProtocolAddressInformation(0x01, Endpoint).GetBytes());
+            return bytes.ToArray();
         }
 
         public byte[] GetBytesEmi1()

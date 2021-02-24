@@ -11,7 +11,7 @@ namespace Kaenx.Konnect.Messages.Request
     /// <summary>
     /// Creates a telegram to read a group value
     /// </summary>
-    public class MsgGroupValueRead : IMessageRequest
+    public class MsgGroupReadReq : IMessageRequest
     {
         public byte ChannelId { get; set; }
         public byte SequenceCounter { get; set; }
@@ -25,21 +25,19 @@ namespace Kaenx.Konnect.Messages.Request
         /// Creates a telegram to read a group value
         /// </summary>
         /// <param name="address">Multicast Address (GroupAddress)</param>
-        public MsgGroupValueRead(MulticastAddress address)
+        public MsgGroupReadReq(MulticastAddress address)
         {
             DestinationAddress = address;
         }
 
-        public MsgGroupValueRead() { }
+        public MsgGroupReadReq() { }
 
 
 
         public byte[] GetBytesCemi()
         {
-            TunnelRequest builder = new TunnelRequest();
+            TunnelCemiRequest builder = new TunnelCemiRequest();
             builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.GroupValueRead);
-            builder.SetChannelId(ChannelId);
-            builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
         }
 

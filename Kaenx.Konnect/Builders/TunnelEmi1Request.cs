@@ -10,47 +10,33 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Builders
 {
-    class TunnelRequest : IRequestBuilder
+    class TunnelEmi1Request : IRequestBuilder
     {
         private List<byte> bytes = new List<byte>();
 
         private BitArray ctrlByte = new BitArray(new byte[] { 0xb0 });
         private BitArray drlByte = new BitArray(new byte[] { 0xe0 });
 
-        public void Build(IKnxAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apciType, int sCounter = 255, byte[] data = null)
-        {
-            Build(sourceAddress, destinationAddress, apciType, 0, sCounter, data);
-        }
-
-
             //TODO sequenz obsolet machen!!
-         public void Build(IKnxAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apciType, byte sequence, int sCounter, byte[] data = null)
+         public void Build(IKnxAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apciType, int sCounter = 255, byte[] data = null)
         {
-            byte[] header = { 0x06, 0x10, 0x04, 0x20 };
-            bytes.AddRange(header);
+            bytes.Add(0x11); //Message Code
+            bytes.Add(0x00); //Manufacturer Code
 
-            // Connection HPAI
-            bytes.Add(0x04); // Body Structure Length
-            bytes.Add(0x1f); // Channel Id -> Placeholder
-            bytes.Add(0x1f); // Sequenz Counter -> Placeholder
-            bytes.Add(0x00); // Reserved
-
-            bytes.Add(0x11); // cEMI Message Code
-            bytes.Add(0x00); // Additional Info Length
 
             bytes.Add(bitToByte(ctrlByte)); // Control Byte
-
-
 
             drlByte.Set(7, destinationAddress is MulticastAddress);
 
             bytes.Add(bitToByte(drlByte)); // DRL Byte
 
-            bytes.AddRange(sourceAddress.GetBytes()); // Source Address
+            bytes.AddRange(new byte[] { 0x00, 0x00 }); // Source Address Unused
             bytes.AddRange(destinationAddress.GetBytes()); // Destination Address
 
             byte lengthData = 0x01;
 
+
+            //TODO when apci first 4 bites is  lower than 1111 thenlength++ or shift data to left in npdu byte
             if(data != null)
             {
                 lengthData = BitConverter.GetBytes((ushort)(data.Count() + 1))[0];
@@ -123,10 +109,6 @@ namespace Kaenx.Konnect.Builders
 
             if(data != null)
                 bytes.AddRange(data);
-
-            byte[] length = BitConverter.GetBytes((ushort)(bytes.Count + 2));
-            Array.Reverse(length);
-            bytes.InsertRange(4, length);
         }
 
         public byte[] GetBytes()
@@ -185,13 +167,4 @@ namespace Kaenx.Konnect.Builders
             return byteOut;
         }
     }
-
-    enum Prios
-    {
-        System,
-        Alarm,
-        High,
-        Low
-    }
-
 }

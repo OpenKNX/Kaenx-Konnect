@@ -51,7 +51,7 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            TunnelRequest builder = new TunnelRequest();
+            TunnelCemiRequest builder = new TunnelCemiRequest();
             List<byte> data = new List<byte> { Convert.ToByte(Data.Length) };
             byte[] addr = BitConverter.GetBytes(Convert.ToInt16(Address));
             Array.Reverse(addr);
@@ -59,8 +59,6 @@ namespace Kaenx.Konnect.Messages.Request
             data.AddRange(Data);
 
             builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.MemoryWrite, SequenceNumber, data.ToArray());
-            builder.SetChannelId(ChannelId);
-            builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
         }
 

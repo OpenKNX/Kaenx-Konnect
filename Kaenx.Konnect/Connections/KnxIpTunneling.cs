@@ -147,6 +147,29 @@ namespace Kaenx.Konnect.Connections
         }
 
 
+        public Task Send(byte[] data, byte sequence)
+        {
+            List<byte> xdata = new List<byte>();
+
+            //KNX/IP Header
+            xdata.Add(0x06); //Header Length
+            xdata.Add(0x10); //Protokoll Version 1.0
+            xdata.Add(0x04); //Service Identifier Family: Tunneling
+            xdata.Add(0x20); //Service Identifier Type: Request
+            xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
+
+            //Connection header
+            xdata.Add(0x04); // Body Structure Length
+            xdata.Add(_communicationChannel); // Channel Id
+            xdata.Add(sequence); // Sequenz Counter
+            xdata.Add(0x00); // Reserved
+            xdata.AddRange(data);
+
+            _sendMessages.Add(xdata.ToArray());
+
+            return Task.CompletedTask;
+        }
+
 
         public Task Send(byte[] data, bool ignoreConnected = false)
         {
@@ -163,10 +186,8 @@ namespace Kaenx.Konnect.Connections
             if (!ignoreConnected && !IsConnected)
                 throw new Exception("Roflkopter 2");
 
-            var seq = _sequenceCounter;
-            message.SequenceCounter = _sequenceCounter;
-            message.ChannelId = _communicationChannel;
-            _sequenceCounter++;
+            byte seq = _sequenceCounter++;
+            message.SequenceCounter = seq;
             _sendMessages.Add(message);
 
             return Task.FromResult(seq);
@@ -298,11 +319,9 @@ namespace Kaenx.Konnect.Connections
 
                                 if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
-                                    TunnelRequest builder = new TunnelRequest();
+                                    TunnelCemiRequest builder = new TunnelCemiRequest();
                                     builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
-                                    builder.SetChannelId(_communicationChannel);
-                                    builder.SetSequence(_sequenceCounter);
-                                    _=Send(builder.GetBytes());
+                                    _=Send(builder.GetBytes(), _sequenceCounter);
                                     _sequenceCounter++;
                                     //Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
 
@@ -430,7 +449,7 @@ namespace Kaenx.Konnect.Connections
 
                 foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
                 {
-                    if(sendMessage is byte[])
+                    if (sendMessage is byte[])
                     {
 
                         byte[] data = sendMessage as byte[];
@@ -439,38 +458,87 @@ namespace Kaenx.Konnect.Connections
                             client.SendAsync(data, data.Length, _sendEndPoint);
                         }
 
-                    } else if(sendMessage is IMessageRequest)
+                    }
+                    else if (sendMessage is MsgSearchReq)
                     {
-                        IMessageRequest message = sendMessage as IMessageRequest;
-                        byte[] tosend = null;
+                        MsgSearchReq message = sendMessage as MsgSearchReq;
 
                         foreach (UdpClient client in _udpList)
                         {
-                            if(message is MsgSearchReq)
-                            {
-                                (message as MsgSearchReq).Endpoint = client.Client.LocalEndPoint as IPEndPoint;
-                            }
+                            message.Endpoint = client.Client.LocalEndPoint as IPEndPoint;
+                            byte[] xdata;
 
                             switch (CurrentType)
                             {
                                 case ProtocolTypes.Emi1:
-                                    tosend = message.GetBytesEmi1();
+                                    xdata = message.GetBytesEmi1();
                                     break;
 
                                 case ProtocolTypes.Emi2:
-                                    tosend = message.GetBytesEmi2();
+                                    xdata = message.GetBytesEmi1(); //Todo check diffrences to emi1
+                                    //xdata.AddRange(message.GetBytesEmi2());
                                     break;
 
                                 case ProtocolTypes.cEmi:
-                                    tosend = message.GetBytesCemi();
+                                    xdata = message.GetBytesCemi();
                                     break;
 
                                 default:
                                     throw new Exception("Unbekanntes Protokoll");
                             }
 
-                            client.SendAsync(tosend, tosend.Length, _sendEndPoint);
+                            client.SendAsync(xdata, xdata.Length, _sendEndPoint);
                         }
+                    } else if(sendMessage is IMessage) { 
+                        IMessage message = sendMessage as IMessage;
+                        List<byte> xdata = new List<byte>();
+
+                        //KNX/IP Header
+                        xdata.Add(0x06); //Header Length
+                        xdata.Add(0x10); //Protokoll Version 1.0
+                        xdata.Add(0x04); //Service Identifier Family: Tunneling
+                        xdata.Add(0x20); //Service Identifier Type: Request
+                        xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
+
+                        //Connection header
+                        xdata.Add(0x04); // Body Structure Length
+                        xdata.Add(_communicationChannel); // Channel Id
+                        xdata.Add(message.SequenceCounter); // Sequenz Counter
+                        xdata.Add(0x00); // Reserved
+
+
+                        switch (CurrentType)
+                        {
+                            case ProtocolTypes.Emi1:
+                                xdata.AddRange(message.GetBytesEmi1());
+                                break;
+
+                            case ProtocolTypes.Emi2:
+                                xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
+                                                                        //xdata.AddRange(message.GetBytesEmi2());
+                                break;
+
+                            case ProtocolTypes.cEmi:
+                                xdata.AddRange(message.GetBytesCemi());
+                                break;
+
+                            default:
+                                throw new Exception("Unbekanntes Protokoll");
+                        }
+
+                        byte[] length = BitConverter.GetBytes((ushort)(xdata.Count));
+                        Array.Reverse(length);
+                        xdata[4] = length[0];
+                        xdata[5] = length[1];
+
+                        foreach (UdpClient client in _udpList)
+                        {
+                            client.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception("Unbekanntes Element in SendQueue! " + sendMessage.GetType().FullName);
                     }
                 }
             });

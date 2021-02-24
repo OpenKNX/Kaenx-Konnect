@@ -46,13 +46,11 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            TunnelRequest builder = new TunnelRequest();
+            TunnelCemiRequest builder = new TunnelCemiRequest();
 
             byte[] data = { ObjectIndex, PropertyId, 0x10, 0x01 };
 
             builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.PropertyValueRead, SequenceNumber, data);
-            builder.SetChannelId(ChannelId);
-            builder.SetSequence(SequenceCounter);
             return builder.GetBytes();
         }
 

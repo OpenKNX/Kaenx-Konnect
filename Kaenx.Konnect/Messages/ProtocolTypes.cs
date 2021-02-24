@@ -6,7 +6,7 @@ namespace Kaenx.Konnect.Messages
 {
     public enum ProtocolTypes
     {
-        Emi1,
+        Emi1 = 1,
         Emi2,
         cEmi
     }
