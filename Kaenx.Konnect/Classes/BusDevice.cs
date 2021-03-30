@@ -152,12 +152,13 @@ namespace Kaenx.Konnect.Classes
             await Task.Delay(100);
 
             ///TODO Property haben nicht alle. Nach max 2 Sekunden weiter machen
-            return;
+            //return;
             if (onlyConnect) return;
 
             MaxFrameLength = await PropertyRead<int>(0, 56);
             Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
             if (MaxFrameLength > 15) SupportsExtendedFrames = true;
+            MaxFrameLength -= 2;
         }
 
         /// <summary>
@@ -377,14 +378,19 @@ namespace Kaenx.Konnect.Classes
         {
             List<byte> datalist = databytes.ToList();
             int currentPosition = address;
+            int maxCount = 12;
+
+            if(SupportsExtendedFrames){
+                maxCount = 254;
+            }
 
             while (datalist.Count != 0)
             {
                 List<byte> data_temp = new List<byte>();
-                if (datalist.Count >= 14)
+                if (datalist.Count >= maxCount)
                 {
-                    data_temp.AddRange(datalist.Take(14));
-                    datalist.RemoveRange(0, 14);
+                    data_temp.AddRange(datalist.Take(maxCount));
+                    datalist.RemoveRange(0, maxCount);
                 } else
                 {
                     data_temp.AddRange(datalist.Take(datalist.Count));
@@ -392,7 +398,7 @@ namespace Kaenx.Konnect.Classes
                 }
 
                 Debug.WriteLine("MesgWrite:" + _currentSeqNum);
-                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
+                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, SupportsExtendedFrames);
                 message.SequenceNumber = _currentSeqNum++;
 
                 await _conn.Send(message);
@@ -413,14 +419,19 @@ namespace Kaenx.Konnect.Classes
         {
             List<byte> datalist = databytes.ToList();
             int currentPosition = address;
+            int maxCount = 12;
+
+            if(SupportsExtendedFrames) {
+                maxCount = 254;
+            }
 
             while (datalist.Count != 0)
             {
                 List<byte> data_temp = new List<byte>();
-                if (datalist.Count >= 12)
+                if (datalist.Count >= maxCount)
                 {
-                    data_temp.AddRange(datalist.Take(12));
-                    datalist.RemoveRange(0, 12);
+                    data_temp.AddRange(datalist.Take(maxCount));
+                    datalist.RemoveRange(0, maxCount);
                 }
                 else
                 {
@@ -430,7 +441,7 @@ namespace Kaenx.Konnect.Classes
 
 
                 var seq = _currentSeqNum++;
-                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
+                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, SupportsExtendedFrames);
                 message.SequenceNumber = seq;
 
                 await _conn.Send(message);

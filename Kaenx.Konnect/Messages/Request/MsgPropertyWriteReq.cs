@@ -60,9 +60,11 @@ namespace Kaenx.Konnect.Messages.Request
             for (int i = 0; i < Data.Length; i++)
                 send_data[i + 4] = Data[i];
 
-            TunnelCemiRequest builder = new TunnelCemiRequest();
+            List<byte> data = new List<byte>() { 0x11, 0x00 };
+            TunnelRequest builder = new TunnelRequest();
             builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.PropertyValueWrite, SequenceNumber, send_data);
-            return builder.GetBytes();
+            data.AddRange(builder.GetBytes());
+            return data.ToArray();
         }
 
         public byte[] GetBytesEmi1()
