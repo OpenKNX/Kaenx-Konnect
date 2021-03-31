@@ -77,12 +77,15 @@ namespace Kaenx.Konnect.Connections
             _sendEndPoint = sendEndPoint;
             IPAddress ip = null;
 
-            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+            try
             {
-                socket.Connect("8.8.8.8", 65530);
-                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-                ip = endPoint.Address;
-            }
+                using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                {
+                    socket.Connect("8.8.8.8", 65530);
+                    IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                    ip = endPoint.Address;
+                }
+            } catch { }
 
             if (ip == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
@@ -156,7 +159,7 @@ namespace Kaenx.Konnect.Connections
             xdata.Add(0x10); //Protokoll Version 1.0
             xdata.Add(0x04); //Service Identifier Family: Tunneling
             xdata.Add(0x20); //Service Identifier Type: Request
-            xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
+            xdata.AddRange(BitConverter.GetBytes(Convert.ToInt16(data.Length + 10)).Reverse()); //Total length. Set later
 
             //Connection header
             xdata.Add(0x04); // Body Structure Length

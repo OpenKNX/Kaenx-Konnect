@@ -50,16 +50,13 @@ namespace Kaenx.Konnect.Builders
 
             List<ApciTypes> withData = new List<ApciTypes>() {
                 ApciTypes.GroupValueRead, ApciTypes.GroupValueResponse, ApciTypes.GroupValueWrite,
-                ApciTypes.IndividualAddressWrite, ApciTypes.IndividualAddressRead, ApciTypes.IndividualAddressResponse,
                 ApciTypes.ADCRead, ApciTypes.ADCResponse,
                 ApciTypes.MemoryRead, ApciTypes.MemoryResponse, ApciTypes.MemoryWrite,
                 ApciTypes.DeviceDescriptorRead, ApciTypes.DeviceDescriptorResponse, ApciTypes.Restart
             };
 
-            if (withData.Contains(apciType))
+            if (withData.Contains(apciType) && data != null)
             {
-                if (data != null)
-                {
                     byte first = data[0];
                     if(first < 64)
                     {
@@ -68,7 +65,6 @@ namespace Kaenx.Konnect.Builders
                         data = data.Skip(1).ToArray();
                         lengthData--;
                     }
-                }
             }
 
 

@@ -535,7 +535,7 @@ namespace Kaenx.Konnect.Classes
             var seq = lastReceivedNumber;
             await _conn.Send(message);
             //Debug.WriteLine("Warten auf: " + seq);
-            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            CancellationTokenSource tokenS = new CancellationTokenSource(2000);
             //Todo MsgDeviceDescriptorReadRes convert benutzen
             Debug.WriteLine("Warte auf Descriptor " + seq);
             IMessageResponse resp = await WaitForData(seq, tokenS.Token); 
