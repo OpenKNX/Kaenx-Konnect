@@ -19,7 +19,9 @@ namespace Kaenx.Konnect.Classes
     public class BusDevice
     {
         public bool SupportsExtendedFrames { get; set; } = false;
-        private int MaxFrameLength { get; set; }
+        private int MaxFrameLength { get; set; } = 15;
+        public ushort? MaskVersion { get; private set; } = null;
+        public XElement MaskXML { get; private set; }
 
         private UnicastAddress _address;
         private IKnxConnection _conn;
@@ -150,14 +152,6 @@ namespace Kaenx.Konnect.Classes
             _conn.OnTunnelAck += _conn_OnTunnelAck;
 
             await Task.Delay(100);
-
-            ///TODO Property haben nicht alle. Nach max 2 Sekunden weiter machen
-            return;
-            if (onlyConnect) return;
-
-            MaxFrameLength = await PropertyRead<int>(0, 56);
-            Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
-            if (MaxFrameLength > 15) SupportsExtendedFrames = true;
         }
 
         /// <summary>
@@ -219,7 +213,7 @@ namespace Kaenx.Konnect.Classes
             int length = int.Parse(prop.Element(XName.Get("ResourceType", master.Root.Name.NamespaceName)).Attribute("Length").Value);
             string start = loc.Attribute("StartAddress")?.Value;
 
-            if(data.Length > length)
+            if (data.Length > length)
             {
                 data = data.Skip(data.Length - length).ToArray();
             }
@@ -298,7 +292,8 @@ namespace Kaenx.Konnect.Classes
             try
             {
                 prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name").Value == resourceId);
-            } catch
+            }
+            catch
             {
                 throw new NotSupportedException("Mask '" + maskId + "' does not support this Ressource: " + resourceId);
             }
@@ -361,7 +356,7 @@ namespace Kaenx.Konnect.Classes
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
             Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + seq);
-            MsgPropertyReadRes resp = (MsgPropertyReadRes) await WaitForData(seq, tokenS.Token);
+            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(seq, tokenS.Token);
             Debug.WriteLine("Ended waiting");
             return resp.Get<T>();
         }
@@ -385,7 +380,8 @@ namespace Kaenx.Konnect.Classes
                 {
                     data_temp.AddRange(datalist.Take(14));
                     datalist.RemoveRange(0, 14);
-                } else
+                }
+                else
                 {
                     data_temp.AddRange(datalist.Take(datalist.Count));
                     datalist.RemoveRange(0, datalist.Count);
@@ -475,7 +471,7 @@ namespace Kaenx.Konnect.Classes
             {
                 if (length == 0) break;
 
-                if(length > 12) toRead = 12;
+                if (length > 12) toRead = 12;
                 else toRead = length;
 
 
@@ -504,7 +500,7 @@ namespace Kaenx.Konnect.Classes
                     byte[] datai = readed.ToArray();
                     byte[] xint = new byte[4];
 
-                    for(int i = 0; i < datai.Length; i++)
+                    for (int i = 0; i < datai.Length; i++)
                     {
                         xint[i] = datai[i];
                     }
@@ -538,8 +534,47 @@ namespace Kaenx.Konnect.Classes
             CancellationTokenSource tokenS = new CancellationTokenSource(2000);
             //Todo MsgDeviceDescriptorReadRes convert benutzen
             Debug.WriteLine("Warte auf Descriptor " + seq);
-            IMessageResponse resp = await WaitForData(seq, tokenS.Token); 
+            IMessageResponse resp = await WaitForData(seq, tokenS.Token);
+            MaskVersion = (ushort)(resp.Raw[0] << 8 | resp.Raw[1]);
             return BitConverter.ToString(resp.Raw).Replace("-", "");
+        }
+
+        /// <summary>
+        /// Liest die Maskenversion des Gerätes aus und setzt MaskVersion und MaskXML
+        /// </summary>
+        /// <param name="masterXml">parsed knx_master.xml</param>
+        public async Task DeviceDescriptorRead(XElement masterXml)
+        {
+            MsgDescriptorReadReq message = new MsgDescriptorReadReq(_address);
+            message.SequenceNumber = _currentSeqNum++;
+            var seq = lastReceivedNumber;
+            await _conn.Send(message);
+            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            //Todo MsgDeviceDescriptorReadRes convert benutzen
+            Debug.WriteLine("Warte auf Descriptor " + seq);
+            IMessageResponse resp = await WaitForData(seq, tokenS.Token);
+            MaskVersion = (ushort)(resp.Raw[0] << 8 | resp.Raw[1]);
+            string MaskVersionId = $"MV-{MaskVersion:X4}";
+
+            XNamespace ns = masterXml.GetDefaultNamespace();
+            XElement maskVersions = masterXml.Element(ns + "MasterData").Element(ns + "MaskVersions");
+            MaskXML = maskVersions.Elements().Where(x => x.Attribute("Id").Value == MaskVersionId).Single();
+        }
+
+        public async Task<int> ReadMaxAPDULength()
+        {
+            ushort mediumIndependent = (ushort)(MaskVersion & 0x0fff);
+            switch (mediumIndependent)
+            {
+                case 0x07B0:
+                case 0x0920:
+                    MaxFrameLength = await PropertyRead<int>(0, 56);
+                    break;
+            }
+
+            Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
+            if (MaxFrameLength > 15) SupportsExtendedFrames = true;
+            return MaxFrameLength;
         }
 
         /// <summary>
