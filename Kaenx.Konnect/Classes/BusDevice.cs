@@ -265,6 +265,40 @@ namespace Kaenx.Konnect.Classes
         }
 
         /// <summary>
+        /// Schreibe den Wert in die Property des Gerätes und gibt die Antwort zurück
+        /// </summary>
+        /// <param name="objIdx">ObjektIndex</param>
+        /// <param name="propId">PropertyId</param>
+        /// <param name="data">Daten die geschrieben werden sollen</param>
+        /// <returns>Property Wert</returns>
+        /// <exception cref="System.TimeoutException" />
+        public Task<byte[]> PropertyWriteResponse(byte objIdx, byte propId, byte[] data)
+        {
+            return PropertyWriteResponse<byte[]>(objIdx, propId, data);
+        }
+
+        /// <summary>
+        /// Schreibe den Wert in die Property des Gerätes und gibt die Antwort zurück
+        /// </summary>
+        /// <param name="objIdx">ObjektIndex</param>
+        /// <param name="propId">PropertyId</param>
+        /// <param name="data">Daten die geschrieben werden sollen</param>
+        /// <returns>Property Wert</returns>
+        /// <exception cref="System.TimeoutException" />
+        public async Task<T> PropertyWriteResponse<T>(byte objIdx, byte propId, byte[] data)
+        {
+            MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
+            message.SequenceNumber = _currentSeqNum++;
+            var seq = lastReceivedNumber;
+            await _conn.Send(message);
+
+            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(seq, tokenS.Token);
+            return resp.Get<T>();
+        }
+
+
+        /// <summary>
         /// Liest Property vom Gerät aus.
         /// </summary>
         /// <param name="maskId">Id der Maske (z.B. MV-0701)</param>
