@@ -361,6 +361,28 @@ namespace Kaenx.Konnect.Classes
             return resp.Get<T>();
         }
 
+        /// <summary>
+        /// Liest Property Description vom Gerät aus.
+        /// </summary>
+        /// <param name="objIdx">Objekt Index</param>
+        /// <param name="propId">Property Id</param>
+        /// <returns>Direkte Antwort vom Gerät</returns>
+        /// <exception cref="System.TimeoutException" />
+        public async Task<MsgPropertyDescriptionRes> PropertyDescriptionRead(byte objIdx, byte propId)
+        {
+            Debug.WriteLine("PropDescriptionRead:" + _currentSeqNum);
+            MsgPropertyDescriptionReq message = new MsgPropertyDescriptionReq(objIdx, propId, 0, _address);
+            message.SequenceNumber = _currentSeqNum++;
+            var seq = lastReceivedNumber;
+
+            await _conn.Send(message);
+            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            Debug.WriteLine("Wating for Description " + objIdx + "/" + propId + ": " + seq);
+            MsgPropertyDescriptionRes resp = (MsgPropertyDescriptionRes)await WaitForData(seq, tokenS.Token);
+            Debug.WriteLine("Ended waiting");
+            return resp;
+        }
+
 
 
         /// <summary>
