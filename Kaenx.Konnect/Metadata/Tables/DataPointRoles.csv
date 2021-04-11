@@ -1,0 +1,17 @@
+﻿1;SwitchOnOff
+2;InfoOnOff
+3;DimmingControl
+4;InfoDimmingValue
+5;MoveUpDown
+6;StopStepUpDown
+7;WindAlarm
+8;RainAlarm
+9;TempRoom
+10;TempRoomSetpoint
+11;ValvePosition
+12;HVACMode
+13;WindowStatus
+14;DimmingValue
+15;CurrentAbsolutePositionBlindsPercentage
+16;CurrentAbsolutePositionSlatPercentage
+17;ValveSwitch
