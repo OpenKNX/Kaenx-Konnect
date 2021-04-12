@@ -18,6 +18,8 @@ namespace Kaenx.Konnect.Classes
 {
     public class BusDevice
     {
+        private string _mask = "";
+
         public bool SupportsExtendedFrames { get; set; } = false;
         private int MaxFrameLength { get; set; }
 
@@ -25,8 +27,6 @@ namespace Kaenx.Konnect.Classes
         private IKnxConnection _conn;
         private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
         private Dictionary<int, bool> acks = new Dictionary<int, bool>();
-
-        bool alreadyTurned = false;
 
         private int _seqNum = 0;
         private int _currentSeqNum
@@ -37,7 +37,6 @@ namespace Kaenx.Konnect.Classes
                 _seqNum = value;
                 if (_seqNum > 15)
                 {
-                    alreadyTurned = true;
                     _seqNum = 0;
                 }
 
@@ -135,6 +134,15 @@ namespace Kaenx.Konnect.Classes
         }
 
 
+        private async Task<string> GetMaskVersion()
+        {
+            if (_mask != "") return _mask;
+
+            _mask = "MV-" + await DeviceDescriptorRead();
+            return _mask;
+        }
+
+
 
         /// <summary>
         /// Stellt eine Verbindung mit dem Gerät her.
@@ -178,8 +186,9 @@ namespace Kaenx.Konnect.Classes
         /// <param name="maskId"></param>
         /// <param name="resourceId"></param>
         /// <returns></returns>
-        public bool HasResource(string maskId, string resourceId)
+        public async Task<bool> HasResource(string resourceId)
         {
+            string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
             XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
             XElement prop = null;
@@ -201,10 +210,11 @@ namespace Kaenx.Konnect.Classes
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
         /// <returns></returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
-        public async Task PropertyWrite(string maskId, string resourceId, byte[] data)
+        public async Task RessourceWrite(string resourceId, byte[] data)
         {
+            string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
-            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId.Substring(3));
             XElement prop = null;
             try
             {
@@ -234,12 +244,19 @@ namespace Kaenx.Konnect.Classes
                     break;
 
                 case "StandardMemory":
-                    await MemoryWriteSync(int.Parse(start), data);
+                    await MemoryWrite(int.Parse(start), data);
                     break;
 
                 case "Pointer":
                     string newProp = loc.Attribute("PtrResource").Value;
-                    await PropertyWrite(maskId, newProp, data);
+                    await RessourceWrite(newProp, data);
+                    break;
+
+                case "RelativeMemory":
+                    obj = loc.Attribute("InterfaceObjectRef").Value;
+                    pid = loc.Attribute("PropertyID").Value;
+                    int addr = await PropertyRead<int>(Convert.ToByte(obj), Convert.ToByte(pid));
+                    await MemoryWrite(addr, data);
                     break;
             }
         }
@@ -278,9 +295,9 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Property Wert as Byte Array</returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
         /// <exception cref="System.TimeoutException">Wenn Gerät Ressource nicht in angemessener Zeit antwortet</exception>
-        public async Task<byte[]> PropertyRead(string maskId, string resourceId)
+        public async Task<byte[]> RessourceRead(string resourceId)
         {
-            return await PropertyRead<byte[]>(maskId, resourceId);
+            return await RessourceRead<byte[]>(resourceId);
         }
 
         /// <summary>
@@ -290,10 +307,11 @@ namespace Kaenx.Konnect.Classes
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
         /// <returns>Property Wert </returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
-        public async Task<T> PropertyRead<T>(string maskId, string resourceId)
+        public async Task<T> RessourceRead<T>(string resourceId)
         {
+            string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
-            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId.Substring(3));
             XElement prop = null;
             try
             {
@@ -306,12 +324,13 @@ namespace Kaenx.Konnect.Classes
             XElement loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
             int length = int.Parse(prop.Element(XName.Get("ResourceType", master.Root.Name.NamespaceName)).Attribute("Length").Value);
             string start = loc.Attribute("StartAddress")?.Value;
+            string obj, pid;
 
             switch (loc.Attribute("AddressSpace").Value)
             {
                 case "SystemProperty":
-                    string obj = loc.Attribute("InterfaceObjectRef").Value;
-                    string pid = loc.Attribute("PropertyID").Value;
+                    obj = loc.Attribute("InterfaceObjectRef").Value;
+                    pid = loc.Attribute("PropertyID").Value;
                     return await PropertyRead<T>(Convert.ToByte(obj), Convert.ToByte(pid));
 
                 case "StandardMemory":
@@ -319,7 +338,14 @@ namespace Kaenx.Konnect.Classes
 
                 case "Pointer":
                     string newProp = loc.Attribute("PtrResource").Value;
-                    return await PropertyRead<T>(maskId, newProp);
+                    return await RessourceRead<T>(newProp);
+
+                case "RelativeMemory":
+                    obj = loc.Attribute("InterfaceObjectRef").Value;
+                    pid = loc.Attribute("PropertyID").Value;
+                    int addr = await PropertyRead<int>(Convert.ToByte(obj), Convert.ToByte(pid));
+                    byte[] data = await MemoryRead(addr, length);
+                    return (T)Convert.ChangeType(data, typeof(T));
             }
 
             //TODO property aus knx_master auslesen
@@ -368,7 +394,7 @@ namespace Kaenx.Konnect.Classes
 
 
 
-        /// <summary>
+        /*/// <summary>
         /// Schreibt die Daten in den Speicher des Gerätes.
         /// </summary>
         /// <param name="address">Start Adresse</param>
@@ -400,7 +426,7 @@ namespace Kaenx.Konnect.Classes
                 currentPosition += data_temp.Count;
             }
 
-        }
+        }*/
 
         /// <summary>
         /// Schreibt Daten in den Speicher und wartet auf RÜckmeldung vom Interface
@@ -409,7 +435,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="databytes"></param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task MemoryWriteSync(int address, byte[] databytes)
+        public async Task MemoryWrite(int address, byte[] databytes)
         {
             List<byte> datalist = databytes.ToList();
             int currentPosition = address;
@@ -538,8 +564,9 @@ namespace Kaenx.Konnect.Classes
             CancellationTokenSource tokenS = new CancellationTokenSource(2000);
             //Todo MsgDeviceDescriptorReadRes convert benutzen
             Debug.WriteLine("Warte auf Descriptor " + seq);
-            IMessageResponse resp = await WaitForData(seq, tokenS.Token); 
-            return BitConverter.ToString(resp.Raw).Replace("-", "");
+            IMessageResponse resp = await WaitForData(seq, tokenS.Token);
+            _mask = "MV-" + BitConverter.ToString(resp.Raw).Replace("-", "");
+            return _mask;
         }
 
         /// <summary>
