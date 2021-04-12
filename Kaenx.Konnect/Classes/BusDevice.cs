@@ -574,6 +574,22 @@ namespace Kaenx.Konnect.Classes
             }
         }
 
+        /// <summary>
+        /// Autorisiert sich mit angegebenen key
+        /// </summary>
+        /// <param name="key">Schlüssel</param>
+        /// <returns>Zugriffslevel</returns>
+        public async Task<byte> Authorize(uint key)
+        {
+            MsgAuthorizeReq message = new MsgAuthorizeReq(key, _address);
+            message.SequenceNumber = _currentSeqNum++;
+            var seq = lastReceivedNumber;
+            await _conn.Send(message);
+            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            MsgAuthorizeRes resp = (MsgAuthorizeRes)await WaitForData(seq, tokenS.Token);
+            return resp.Level;
+        }
+
 
         /// <summary>
         /// Liest die Maskenversion des Gerätes aus
