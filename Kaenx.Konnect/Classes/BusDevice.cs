@@ -311,7 +311,7 @@ namespace Kaenx.Konnect.Classes
         {
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
-            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId.Substring(3));
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
             XElement prop = null;
             try
             {
