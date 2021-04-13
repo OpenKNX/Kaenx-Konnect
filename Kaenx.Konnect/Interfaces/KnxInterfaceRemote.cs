@@ -18,6 +18,13 @@ namespace Kaenx.Konnect.Interfaces
         public DateTime LastFound { get; set; }
         public bool IsRemote { get; } = true;
         public string RemoteHash { get; }
+        public Type InterfaceType
+        {
+            get
+            {
+                return this.GetType();
+            }
+        }
 
 
 
