@@ -157,10 +157,10 @@ namespace Kaenx.Konnect.Classes
             _conn.OnTunnelResponse += OnTunnelResponse;
             _conn.OnTunnelAck += _conn_OnTunnelAck;
 
-            await Task.Delay(100);
+            await Task.Delay(300);
 
             ///TODO Property haben nicht alle. Nach max 2 Sekunden weiter machen
-            return;
+            //return;
             if (onlyConnect) return;
 
             MaxFrameLength = await PropertyRead<int>(0, 56);
@@ -214,7 +214,7 @@ namespace Kaenx.Konnect.Classes
         {
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
-            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId.Substring(3));
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
             XElement prop = null;
             try
             {
@@ -572,13 +572,18 @@ namespace Kaenx.Konnect.Classes
         /// <summary>
         /// Trennt die Verbindung zum Gerät
         /// </summary>
-        public void Disconnect()
+        public async Task Disconnect()
         {
             _connected = false;
 
             MsgDisconnectReq message = new MsgDisconnectReq(_address);
-            message.SequenceNumber = _currentSeqNum++;
-            _conn.Send(message);
+            var seq = _currentSeqNum++;
+            message.SequenceNumber = seq;
+            await _conn.Send(message);
+            await Task.Delay(300);
+
+            _currentSeqNum = 0;
+            _lastNumb = -1;
 
             _conn.OnTunnelResponse -= OnTunnelResponse;
             _conn.OnTunnelAck -= _conn_OnTunnelAck;
