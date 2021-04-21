@@ -7,5 +7,6 @@ namespace Kaenx.Konnect.Addresses
     public interface IKnxAddress
     {
         byte[] GetBytes();
+        int AsUInt16();
     }
 }

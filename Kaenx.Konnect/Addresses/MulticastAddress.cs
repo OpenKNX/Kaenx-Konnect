@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Kaenx.Konnect.Addresses
@@ -20,6 +21,12 @@ namespace Kaenx.Konnect.Addresses
         public byte[] GetBytes()
         {
             return new[] { (byte)((MainGroup << 3) | MiddleGroup), SubGroup };
+        }
+
+        public int AsUInt16()
+        {
+            byte[] bytes = GetBytes();
+            return BitConverter.ToUInt16( new byte[] { bytes[1], bytes[0] }, 0);
         }
 
         public static MulticastAddress FromByteArray(byte[] bytes)
