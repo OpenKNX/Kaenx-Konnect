@@ -138,7 +138,7 @@ namespace Kaenx.Konnect.Classes
         {
             if (_mask != "") return _mask;
 
-            _mask = "MV-" + await DeviceDescriptorRead();
+            _mask = await DeviceDescriptorRead();
             return _mask;
         }
 
