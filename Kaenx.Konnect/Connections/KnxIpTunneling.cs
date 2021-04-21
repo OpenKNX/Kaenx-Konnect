@@ -52,14 +52,8 @@ namespace Kaenx.Konnect.Connections
         {
             Port = GetFreePort();
             _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-            IPAddress IP = null;
 
-            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
-            {
-                socket.Connect("8.8.8.8", 65530);
-                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-                IP = endPoint.Address;
-            }
+            IPAddress IP = GetIpAddress(ip);
 
             if (IP == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
@@ -75,17 +69,7 @@ namespace Kaenx.Konnect.Connections
         {
             Port = GetFreePort();
             _sendEndPoint = sendEndPoint;
-            IPAddress ip = null;
-
-            try
-            {
-                using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
-                {
-                    socket.Connect("8.8.8.8", 65530);
-                    IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-                    ip = endPoint.Address;
-                }
-            } catch { }
+            IPAddress ip = GetIpAddress(sendEndPoint.Address.ToString());
 
             if (ip == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
@@ -95,6 +79,54 @@ namespace Kaenx.Konnect.Connections
             _sendMessages = new BlockingCollection<object>();
 
             Init(sendBroadcast);
+        }
+
+
+
+        private IPAddress GetIpAddress(string receiver)
+        {
+            IPAddress IP = null;
+            int mostipcount = 0;
+            string[] ipParts = receiver.Split('.');
+
+            foreach (IPAddress addr in Dns.GetHostAddresses(Dns.GetHostName()))
+            {
+                if (addr.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    int sameCount = 0;
+                    string[] hostParts = addr.ToString().Split('.');
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (ipParts[i] != hostParts[i])
+                        {
+                            if (sameCount > mostipcount)
+                            {
+                                IP = addr;
+                                mostipcount = sameCount;
+                            }
+                            break;
+                        }
+                        sameCount++;
+                    }
+                }
+            }
+
+            if(IP == null)
+            {
+                try
+                {
+                    using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                    {
+                        socket.Connect("8.8.8.8", 65530);
+                        IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                        IP = endPoint.Address;
+                    }
+                }
+                catch { }
+            }
+
+
+            return IP;
         }
 
 
