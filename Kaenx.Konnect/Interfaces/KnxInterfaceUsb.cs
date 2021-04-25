@@ -21,6 +21,13 @@ namespace Kaenx.Konnect.Interfaces
         public string Serial { get; set; }
         public DateTime LastFound { get; set; }
         public bool IsRemote { get; } = false;
+        public Type InterfaceType
+        {
+            get
+            {
+                return this.GetType();
+            }
+        }
 
 
         public static KnxInterfaceUsb CheckHid(ConnectedDeviceDefinition def)

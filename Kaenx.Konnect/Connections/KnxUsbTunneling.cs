@@ -66,15 +66,23 @@ namespace Kaenx.Konnect.Connections
 
             bool isInited = DeviceKnx.IsInitialized;
 
-            await DeviceKnx.InitializeAsync();
+            if (!isInited)
+            {
+                try
+                {
+                    await DeviceKnx.InitializeAsync();
+                }
+                catch
+                {
+                    throw new Exception("Es konnte keine Verbindung mit dem USB Gerät hergestellt werden.");
+                }
+            }
 
             CancellationTokenSource source = new CancellationTokenSource(1000);
 
             TransferResult read = await DeviceKnx.WriteAndReadAsync(packet, source.Token);
 
             BitArray emis = new BitArray(new byte[] { read.Data[13] });
-
-            byte setEmi = 0;
 
             if (emis.Get(2))
             {

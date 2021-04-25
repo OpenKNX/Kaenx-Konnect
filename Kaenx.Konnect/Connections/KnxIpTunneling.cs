@@ -52,14 +52,8 @@ namespace Kaenx.Konnect.Connections
         {
             Port = GetFreePort();
             _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-            IPAddress IP = null;
 
-            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
-            {
-                socket.Connect("8.8.8.8", 65530);
-                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-                IP = endPoint.Address;
-            }
+            IPAddress IP = GetIpAddress(ip);
 
             if (IP == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
@@ -75,14 +69,7 @@ namespace Kaenx.Konnect.Connections
         {
             Port = GetFreePort();
             _sendEndPoint = sendEndPoint;
-            IPAddress ip = null;
-
-            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
-            {
-                socket.Connect("8.8.8.8", 65530);
-                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-                ip = endPoint.Address;
-            }
+            IPAddress ip = GetIpAddress(sendEndPoint.Address.ToString());
 
             if (ip == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
@@ -92,6 +79,54 @@ namespace Kaenx.Konnect.Connections
             _sendMessages = new BlockingCollection<object>();
 
             Init(sendBroadcast);
+        }
+
+
+
+        private IPAddress GetIpAddress(string receiver)
+        {
+            IPAddress IP = null;
+            int mostipcount = 0;
+            string[] ipParts = receiver.Split('.');
+
+            foreach (IPAddress addr in Dns.GetHostAddresses(Dns.GetHostName()))
+            {
+                if (addr.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    int sameCount = 0;
+                    string[] hostParts = addr.ToString().Split('.');
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (ipParts[i] != hostParts[i])
+                        {
+                            if (sameCount > mostipcount)
+                            {
+                                IP = addr;
+                                mostipcount = sameCount;
+                            }
+                            break;
+                        }
+                        sameCount++;
+                    }
+                }
+            }
+
+            if(IP == null)
+            {
+                try
+                {
+                    using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                    {
+                        socket.Connect("8.8.8.8", 65530);
+                        IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                        IP = endPoint.Address;
+                    }
+                }
+                catch { }
+            }
+
+
+            return IP;
         }
 
 
@@ -156,7 +191,7 @@ namespace Kaenx.Konnect.Connections
             xdata.Add(0x10); //Protokoll Version 1.0
             xdata.Add(0x04); //Service Identifier Family: Tunneling
             xdata.Add(0x20); //Service Identifier Type: Request
-            xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
+            xdata.AddRange(BitConverter.GetBytes(Convert.ToInt16(data.Length + 10)).Reverse()); //Total length. Set later
 
             //Connection header
             xdata.Add(0x04); // Body Structure Length

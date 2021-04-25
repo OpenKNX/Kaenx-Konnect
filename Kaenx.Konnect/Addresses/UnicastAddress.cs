@@ -22,6 +22,13 @@ namespace Kaenx.Konnect.Addresses
             return new[] { (byte)((Area << 4) | Line), DeviceAddress };
         }
 
+        public int AsUInt16()
+        {
+            byte[] bytes = GetBytes();
+            return BitConverter.ToUInt16(new byte[] { bytes[1], bytes[0] }, 0);
+        }
+
+
         public static UnicastAddress FromByteArray(byte[] bytes)
         {
             return new UnicastAddress((byte)(bytes[0] >> 4), (byte)(bytes[0] & 0x0F), bytes[1]);
