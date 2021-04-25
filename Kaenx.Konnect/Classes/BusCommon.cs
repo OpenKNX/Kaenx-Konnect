@@ -71,10 +71,11 @@ namespace Kaenx.Konnect.Classes
         }
 
 
-        public async void IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
+        public async Task IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
         {
             MsgIndividualAddressSerialWriteReq message = new MsgIndividualAddressSerialWriteReq(newAddr, serialNumber);
             await _conn.Send(message);
+            await Task.Delay(200);
         }
 
 

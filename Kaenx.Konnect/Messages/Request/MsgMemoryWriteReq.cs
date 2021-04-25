@@ -39,7 +39,7 @@ namespace Kaenx.Konnect.Messages.Request
         {
             if (isExtended && data.Length > 256)
                 throw new Exception("Es können maximal 256 Bytes geschrieben werden. (Angefordert waren " + data.Length + " bytes)[ExtendedFrame]");
-            if (isExtended && data.Length > 13)
+            if (!isExtended && data.Length > 13)
                 throw new Exception("Es können maximal 13 Bytes geschrieben werden. (Angefordert waren " + data.Length + " bytes)[StandardFrame]");
 
             Address = address;

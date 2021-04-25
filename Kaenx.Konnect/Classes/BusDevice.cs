@@ -159,14 +159,23 @@ namespace Kaenx.Konnect.Classes
 
             await Task.Delay(100);
 
-            ///TODO Property haben nicht alle. Nach max 2 Sekunden weiter machen
             //return;
             if (onlyConnect) return;
 
-            MaxFrameLength = await PropertyRead<int>(0, 56);
-            Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
-            if (MaxFrameLength > 15) SupportsExtendedFrames = true;
-            MaxFrameLength -= 2;
+            try
+            {
+                MaxFrameLength = await PropertyRead<int>(0, 56);
+                Debug.WriteLine("Maximale Länge:  " + MaxFrameLength);
+                if (MaxFrameLength > 15) SupportsExtendedFrames = true;
+                if (MaxFrameLength < 15) MaxFrameLength = 15;
+                MaxFrameLength -= 3;
+                Debug.WriteLine("Maximale Länge*: " + MaxFrameLength);
+            }
+            catch
+            {
+                MaxFrameLength = 12;
+                Debug.WriteLine("Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
+            }
         }
 
         /// <summary>
@@ -445,11 +454,7 @@ namespace Kaenx.Konnect.Classes
         {
             List<byte> datalist = databytes.ToList();
             int currentPosition = address;
-            int maxCount = 12;
-
-            if(SupportsExtendedFrames) {
-                maxCount = 254;
-            }
+            int maxCount = MaxFrameLength;
 
             while (datalist.Count != 0)
             {
@@ -467,7 +472,7 @@ namespace Kaenx.Konnect.Classes
 
 
                 var seq = _currentSeqNum++;
-                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, SupportsExtendedFrames);
+                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, MaxFrameLength > 13);
                 message.SequenceNumber = seq;
 
                 await _conn.Send(message);
@@ -583,7 +588,7 @@ namespace Kaenx.Konnect.Classes
         /// <summary>
         /// Trennt die Verbindung zum Gerät
         /// </summary>
-        public void Disconnect()
+        public async Task Disconnect()
         {
             _connected = false;
 
