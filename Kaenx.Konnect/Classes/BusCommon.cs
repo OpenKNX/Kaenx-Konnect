@@ -58,16 +58,18 @@ namespace Kaenx.Konnect.Classes
 
 
 
-        public async void IndividualAddressRead()
+        public async Task IndividualAddressRead()
         {
             MsgIndividualAddressReadReq message = new MsgIndividualAddressReadReq();
             await _conn.Send(message);
+            await Task.Delay(200);
         }
 
-        public async  void IndividualAddressWrite(UnicastAddress newAddr)
+        public async Task IndividualAddressWrite(UnicastAddress newAddr)
         {
             MsgIndividualAddressWriteReq message = new MsgIndividualAddressWriteReq(newAddr);
             await _conn.Send(message);
+            await Task.Delay(200);
         }
 
 
