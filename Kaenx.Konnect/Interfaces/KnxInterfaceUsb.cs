@@ -10,6 +10,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
 
 namespace Kaenx.Konnect.Interfaces
 {
@@ -17,6 +19,7 @@ namespace Kaenx.Konnect.Interfaces
     public class KnxInterfaceUsb : IKnxInterface
     {
         public string Name { get; set; }
+        [field: NonSerialized]
         public ConnectedDeviceDefinition ConnDefinition { get; set; }
         public string Serial { get; set; }
         public DateTime LastFound { get; set; }
