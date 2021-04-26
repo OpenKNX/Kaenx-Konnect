@@ -54,15 +54,17 @@ namespace Kaenx.Konnect.Messages.Request
 
             send_data[0] = ObjectIndex;
             send_data[1] = PropertyId;
-            send_data[2] = 0x10;
+            send_data[2] = 0x10; //TODO check if it must be set to data.length
             send_data[3] = 0x01;
 
             for (int i = 0; i < Data.Length; i++)
                 send_data[i + 4] = Data[i];
 
-            TunnelCemiRequest builder = new TunnelCemiRequest();
+            List<byte> data = new List<byte>() { 0x11, 0x00 };
+            TunnelRequest builder = new TunnelRequest();
             builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.PropertyValueWrite, SequenceNumber, send_data);
-            return builder.GetBytes();
+            data.AddRange(builder.GetBytes());
+            return data.ToArray();
         }
 
         public byte[] GetBytesEmi1()

@@ -21,7 +21,7 @@ namespace Kaenx.Konnect.Classes
         private string _mask = "";
 
         public bool SupportsExtendedFrames { get; set; } = false;
-        private int MaxFrameLength { get; set; }
+        private int MaxFrameLength { get; set; } = 15;
 
         private UnicastAddress _address;
         private IKnxConnection _conn;
@@ -60,11 +60,9 @@ namespace Kaenx.Konnect.Classes
             set { _lastNumb = value; }
         }
 
-
-
-
-
         private bool _connected = false;
+
+
 
         public BusDevice(string address, IKnxConnection conn)
         {
@@ -85,7 +83,7 @@ namespace Kaenx.Konnect.Classes
 
 
 
-
+        #region Waiters
         private void _conn_OnTunnelAck(MsgAckRes response)
         {
             acks[response.SequenceNumber] = true;
@@ -132,52 +130,16 @@ namespace Kaenx.Konnect.Classes
 
             acks[seq] = false;
         }
+        #endregion
 
 
+        #region Helper Functions
         private async Task<string> GetMaskVersion()
         {
             if (_mask != "") return _mask;
 
             _mask = await DeviceDescriptorRead();
             return _mask;
-        }
-
-
-
-        /// <summary>
-        /// Stellt eine Verbindung mit dem Gerät her.
-        /// Wird für viele weitere Methoden benötigt.
-        /// </summary>
-        public async Task Connect(bool onlyConnect = false)
-        {
-            MsgConnectReq message = new MsgConnectReq(_address);
-            await _conn.Send(message);
-            _connected = true;
-
-            _conn.OnTunnelResponse += OnTunnelResponse;
-            _conn.OnTunnelAck += _conn_OnTunnelAck;
-
-            await Task.Delay(300);
-
-            ///TODO Property haben nicht alle. Nach max 2 Sekunden weiter machen
-            //return;
-            if (onlyConnect) return;
-
-            MaxFrameLength = await PropertyRead<int>(0, 56);
-            Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
-            if (MaxFrameLength > 15) SupportsExtendedFrames = true;
-        }
-
-        /// <summary>
-        /// Startet das Gerät neu.
-        /// </summary>
-        public async Task Restart()
-        {
-            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
-
-            MsgRestartReq message = new MsgRestartReq(_address);
-            message.SequenceNumber = _currentSeqNum++;
-            await _conn.Send(message);
         }
 
         /// <summary>
@@ -203,6 +165,100 @@ namespace Kaenx.Konnect.Classes
             }
         }
 
+
+        /// <summary>
+        /// Checks if the Device is reachable. 
+        /// May not work with older devices.
+        /// </summary>
+        /// <returns>Bool if device is reachable</returns>
+        public async Task<bool> IsReachable()
+        {
+            try
+            {
+                int res = await PropertyRead<int>(0, 1);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        #endregion
+
+
+        #region Connection
+        /// <summary>
+        /// Stellt eine Verbindung mit dem Gerät her.
+        /// Wird für viele weitere Methoden benötigt.
+        /// </summary>
+        public async Task Connect(bool onlyConnect = false)
+        {
+            MsgConnectReq message = new MsgConnectReq(_address);
+            await _conn.Send(message);
+            _connected = true;
+
+            _conn.OnTunnelResponse += OnTunnelResponse;
+            _conn.OnTunnelAck += _conn_OnTunnelAck;
+
+            await Task.Delay(300);
+
+            //return;
+            if (onlyConnect)
+            {
+                MaxFrameLength = 15;
+                return;
+            }
+
+            try
+            {
+                MaxFrameLength = await PropertyRead<int>(0, 56);
+                Debug.WriteLine("Maximale Länge:  " + MaxFrameLength);
+                if (MaxFrameLength > 15) SupportsExtendedFrames = true;
+                if (MaxFrameLength < 15) MaxFrameLength = 15;
+                Debug.WriteLine("Maximale Länge*: " + MaxFrameLength);
+            }
+            catch
+            {
+                MaxFrameLength = 12;
+                Debug.WriteLine("Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
+            }
+        }
+
+        /// <summary>
+        /// Trennt die Verbindung zum Gerät
+        /// </summary>
+        public async Task Disconnect()
+        {
+            _connected = false;
+
+            MsgDisconnectReq message = new MsgDisconnectReq(_address);
+            var seq = _currentSeqNum++;
+            message.SequenceNumber = seq;
+            await _conn.Send(message);
+            await Task.Delay(300);
+
+            _currentSeqNum = 0;
+            _lastNumb = -1;
+
+            _conn.OnTunnelResponse -= OnTunnelResponse;
+            _conn.OnTunnelAck -= _conn_OnTunnelAck;
+        }
+
+        /// <summary>
+        /// Startet das Gerät neu.
+        /// </summary>
+        public async Task Restart()
+        {
+            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+
+            MsgRestartReq message = new MsgRestartReq(_address);
+            message.SequenceNumber = _currentSeqNum++;
+            await _conn.Send(message);
+        }
+        #endregion
+
+
+        #region Ressource
         /// <summary>
         /// Schreibe den Wert in die Property des Gerätes
         /// </summary>
@@ -259,32 +315,6 @@ namespace Kaenx.Konnect.Classes
                     await MemoryWrite(addr, data);
                     break;
             }
-        }
-
-        /// <summary>
-        /// Schreibe den Wert in die Property des Gerätes
-        /// </summary>
-        /// <param name="objIdx">ObjektIndex</param>
-        /// <param name="propId">PropertyId</param>
-        /// <param name="data">Daten die geschrieben werden sollen</param>
-        /// <returns></returns>
-        /// <exception cref="System.TimeoutException" />
-        public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
-        {
-
-            var seq1 = _currentSeqNum++;
-
-            MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
-            message.SequenceNumber = seq1;
-            var seq2 = lastReceivedNumber;
-
-            await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-
-            if (waitForResp)
-                await WaitForData(seq2, tokenS.Token);
-            else
-                await WaitForAck(seq1, tokenS.Token);
         }
 
         /// <summary>
@@ -352,7 +382,10 @@ namespace Kaenx.Konnect.Classes
 
             return (T)Convert.ChangeType(null, typeof(T));
         }
+#endregion
 
+
+        #region Property
         /// <summary>
         /// Liest Property vom Gerät aus.
         /// </summary>
@@ -361,9 +394,9 @@ namespace Kaenx.Konnect.Classes
         /// <param name="length">Anzahl der zu lesenden Bytes</param>
         /// <param name="start">Startindex</param>
         /// <returns>Property Wert</returns>
-        public async Task<byte[]> PropertyRead(byte objIdx, byte propId)
+        public async Task<byte[]> PropertyRead(byte objIdx, byte propId, int timeout = 4000)
         {
-            return await PropertyRead<byte[]>(objIdx, propId);
+            return await PropertyRead<byte[]>(objIdx, propId, timeout);
         }
 
         /// <summary>
@@ -375,7 +408,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="start">Startindex</param>
         /// <returns>Property Wert</returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<T> PropertyRead<T>(byte objIdx, byte propId)
+        public async Task<T> PropertyRead<T>(byte objIdx, byte propId, int timeout = 4000)
         {
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
@@ -385,49 +418,43 @@ namespace Kaenx.Konnect.Classes
             var seq = lastReceivedNumber;
 
             await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
             Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + seq);
             MsgPropertyReadRes resp = (MsgPropertyReadRes) await WaitForData(seq, tokenS.Token);
             Debug.WriteLine("Ended waiting");
             return resp.Get<T>();
         }
 
-
-
-        /*/// <summary>
-        /// Schreibt die Daten in den Speicher des Gerätes.
+        /// <summary>
+        /// Schreibe den Wert in die Property des Gerätes
         /// </summary>
-        /// <param name="address">Start Adresse</param>
-        /// <param name="databytes">Daten zum Schreiben</param>
-        public async void MemoryWrite(int address, byte[] databytes)
+        /// <param name="objIdx">ObjektIndex</param>
+        /// <param name="propId">PropertyId</param>
+        /// <param name="data">Daten die geschrieben werden sollen</param>
+        /// <returns></returns>
+        /// <exception cref="System.TimeoutException" />
+        public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
         {
-            List<byte> datalist = databytes.ToList();
-            int currentPosition = address;
+            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
-            while (datalist.Count != 0)
-            {
-                List<byte> data_temp = new List<byte>();
-                if (datalist.Count >= 14)
-                {
-                    data_temp.AddRange(datalist.Take(14));
-                    datalist.RemoveRange(0, 14);
-                } else
-                {
-                    data_temp.AddRange(datalist.Take(datalist.Count));
-                    datalist.RemoveRange(0, datalist.Count);
-                }
+            var seq1 = _currentSeqNum++;
 
-                Debug.WriteLine("MesgWrite:" + _currentSeqNum);
-                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
-                message.SequenceNumber = _currentSeqNum++;
+            MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
+            message.SequenceNumber = seq1;
+            var seq2 = lastReceivedNumber;
 
-                await _conn.Send(message);
+            await _conn.Send(message);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
 
-                currentPosition += data_temp.Count;
-            }
+            if (waitForResp)
+                await WaitForData(seq2, tokenS.Token);
+            else
+                await WaitForAck(seq1, tokenS.Token);
+        }
+        #endregion
 
-        }*/
 
+        #region Memory
         /// <summary>
         /// Schreibt Daten in den Speicher und wartet auf RÜckmeldung vom Interface
         /// </summary>
@@ -437,16 +464,21 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task MemoryWrite(int address, byte[] databytes)
         {
+            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+
             List<byte> datalist = databytes.ToList();
             int currentPosition = address;
+            int maxCount = MaxFrameLength - 3;
+
+            if (maxCount > 63) maxCount = 63;
 
             while (datalist.Count != 0)
             {
                 List<byte> data_temp = new List<byte>();
-                if (datalist.Count >= 12)
+                if (datalist.Count >= maxCount)
                 {
-                    data_temp.AddRange(datalist.Take(12));
-                    datalist.RemoveRange(0, 12);
+                    data_temp.AddRange(datalist.Take(maxCount));
+                    datalist.RemoveRange(0, maxCount);
                 }
                 else
                 {
@@ -456,7 +488,7 @@ namespace Kaenx.Konnect.Classes
 
 
                 var seq = _currentSeqNum++;
-                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
+                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, MaxFrameLength > 15);
                 message.SequenceNumber = seq;
 
                 await _conn.Send(message);
@@ -492,20 +524,24 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<T> MemoryRead<T>(int address, int length)
         {
+            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+
             List<byte> readed = new List<byte>();
             int currentPosition = address;
             int toRead = length;
+            int maxCount = MaxFrameLength - 3;
 
+            if (maxCount > 63) maxCount = 63;
 
             while (true)
             {
                 if (length == 0) break;
 
-                if(length > 12) toRead = 12;
+                if(length > maxCount) toRead = maxCount;
                 else toRead = length;
 
 
-                MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address);
+                MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address, MaxFrameLength > 15);
                 msg.SequenceNumber = _currentSeqNum++;
 
                 var seq = lastReceivedNumber;
@@ -547,7 +583,7 @@ namespace Kaenx.Konnect.Classes
                     }
             }
         }
-
+        #endregion
 
         /// <summary>
         /// Liest die Maskenversion des Gerätes aus
@@ -567,26 +603,6 @@ namespace Kaenx.Konnect.Classes
             IMessageResponse resp = await WaitForData(seq, tokenS.Token);
             _mask = "MV-" + BitConverter.ToString(resp.Raw).Replace("-", "");
             return _mask;
-        }
-
-        /// <summary>
-        /// Trennt die Verbindung zum Gerät
-        /// </summary>
-        public async Task Disconnect()
-        {
-            _connected = false;
-
-            MsgDisconnectReq message = new MsgDisconnectReq(_address);
-            var seq = _currentSeqNum++;
-            message.SequenceNumber = seq;
-            await _conn.Send(message);
-            await Task.Delay(300);
-
-            _currentSeqNum = 0;
-            _lastNumb = -1;
-
-            _conn.OnTunnelResponse -= OnTunnelResponse;
-            _conn.OnTunnelAck -= _conn_OnTunnelAck;
         }
 
         private XDocument GetKnxMaster()

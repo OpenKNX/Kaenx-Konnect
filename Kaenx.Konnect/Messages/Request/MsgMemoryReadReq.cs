@@ -20,6 +20,7 @@ namespace Kaenx.Konnect.Messages.Request
         public IKnxAddress DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.MemoryRead;
         public byte[] Raw { get; set; }
+        public bool IsExtended { get; set; }
 
 
         public int Address { get; set; }
@@ -32,11 +33,12 @@ namespace Kaenx.Konnect.Messages.Request
         /// <param name="address">Memory Address</param>
         /// <param name="length">Length of data to read</param>
         /// <param name="addr">Unicast Address from device</param>
-        public MsgMemoryReadReq(int address, int length, UnicastAddress addr)
+        public MsgMemoryReadReq(int address, int length, UnicastAddress addr, bool isExtended = false)
         {
             Address = address;
             Length = length;
             DestinationAddress = addr;
+            IsExtended = isExtended;
         }
 
         public MsgMemoryReadReq() { }
@@ -44,8 +46,11 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            if (Length > 256)
-                throw new Exception("Bei Emi1 kann maximal 256 Bytes ausgelesen werden. (Angefordert waren " + Length + " bytes)");
+            if (IsExtended && Length > 256)
+                throw new Exception("Bei Emi1 kann maximal 256 Bytes ausgelesen werden. (Angefordert waren " + Length + " bytes)[ExtendedFrame]");
+
+            if (!IsExtended && Length > 13)
+                throw new Exception("Bei Emi1 kann maximal 13 Bytes ausgelesen werden. (Angefordert waren " + Length + " bytes)[StandardFrame]");
 
             List<byte> bytes = new List<byte>();
 
@@ -63,8 +68,11 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            if (Length > 256)
-                throw new Exception("Bei cEmi kann maximal 256 Bytes ausgelesen werden. (Angefordert waren " + Length + " bytes)");
+            if (IsExtended && Length > 256)
+                throw new Exception("Bei cEmi kann maximal 256 Bytes ausgelesen werden. (Angefordert waren " + Length + " bytes)[ExtendedFrame]");
+
+            if (!IsExtended && Length > 13)
+                throw new Exception("Bei cEmi kann maximal 13 Bytes ausgelesen werden. (Angefordert waren " + Length + " bytes)[StandardFrame]");
 
 
             List<byte> data = new List<byte> { BitConverter.GetBytes(Length)[0] };
@@ -72,10 +80,12 @@ namespace Kaenx.Konnect.Messages.Request
             data.Add(addr[1]);
             data.Add(addr[0]);
 
-            Builders.TunnelCemiRequest builder = new TunnelCemiRequest();
+            Builders.TunnelRequest builder = new TunnelRequest();
+            if(IsExtended) builder.SetIsExtended();
             builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.MemoryRead, SequenceNumber, data.ToArray());
-
-            return builder.GetBytes();
+            data = new List<byte>() { 0x11, 0x00 };
+            data.AddRange(builder.GetBytes());
+            return data.ToArray();
         }
 
 

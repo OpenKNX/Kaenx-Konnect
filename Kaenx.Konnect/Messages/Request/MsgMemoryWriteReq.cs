@@ -21,6 +21,7 @@ namespace Kaenx.Konnect.Messages.Request
         public IKnxAddress DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.MemoryWrite;
         public byte[] Raw { get; set; }
+        public bool IsExtended { get; set; }
 
 
         private int Length { get; set; }
@@ -34,14 +35,17 @@ namespace Kaenx.Konnect.Messages.Request
         /// <param name="data">Data to write</param>
         /// <param name="uniAddr">Unicast Address from Device</param>
         /// <exception cref="Exception">Thrown if data length is greater than 256 bytes</exception>
-        public MsgMemoryWriteReq(int address, byte[] data, UnicastAddress uniAddr)
+        public MsgMemoryWriteReq(int address, byte[] data, UnicastAddress uniAddr, bool isExtended = false)
         {
-            if (data.Length > 256)
-                throw new Exception("Es können maximal 256 Bytes geschrieben werden. (Angefordert waren " + data.Length + " bytes)");
+            if (isExtended && data.Length > 256)
+                throw new Exception("Es können maximal 256 Bytes geschrieben werden. (Angefordert waren " + data.Length + " bytes)[ExtendedFrame]");
+            if (!isExtended && data.Length > 13)
+                throw new Exception("Es können maximal 13 Bytes geschrieben werden. (Angefordert waren " + data.Length + " bytes)[StandardFrame]");
 
             Address = address;
             Data = data;
             DestinationAddress = uniAddr;
+            IsExtended = isExtended;
         }
 
         public MsgMemoryWriteReq() { }
@@ -51,15 +55,18 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            TunnelCemiRequest builder = new TunnelCemiRequest();
+            TunnelRequest builder = new TunnelRequest();
             List<byte> data = new List<byte> { Convert.ToByte(Data.Length) };
             byte[] addr = BitConverter.GetBytes(Convert.ToInt16(Address));
             Array.Reverse(addr);
             data.AddRange(addr);
             data.AddRange(Data);
 
+            if(IsExtended) builder.SetIsExtended();
             builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.MemoryWrite, SequenceNumber, data.ToArray());
-            return builder.GetBytes();
+            data = new List<byte>() { 0x11, 0x00 };
+            data.AddRange(builder.GetBytes());
+            return data.ToArray();
         }
 
         public byte[] GetBytesEmi1()

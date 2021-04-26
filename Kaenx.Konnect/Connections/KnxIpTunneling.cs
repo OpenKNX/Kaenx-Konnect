@@ -354,9 +354,11 @@ namespace Kaenx.Konnect.Connections
 
                                 if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
-                                    TunnelCemiRequest builder = new TunnelCemiRequest();
+                                    List<byte> data = new List<byte>() { 0x11, 0x00 };
+                                    TunnelRequest builder = new TunnelRequest();
                                     builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
-                                    _=Send(builder.GetBytes(), _sequenceCounter);
+                                    data.AddRange(builder.GetBytes());
+                                    _=Send(data.ToArray(), _sequenceCounter);
                                     _sequenceCounter++;
                                     //Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
 

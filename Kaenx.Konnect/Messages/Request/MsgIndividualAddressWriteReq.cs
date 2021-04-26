@@ -39,10 +39,12 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            TunnelCemiRequest builder = new TunnelCemiRequest();
+            List<byte> data = new List<byte>() { 0x11, 0x00 };
+            TunnelRequest builder = new TunnelRequest();
             builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressWrite, 255, _address.GetBytes());
             builder.SetPriority(Prios.System);
-            return builder.GetBytes();
+            data.AddRange(builder.GetBytes());
+            return data.ToArray();
         }
 
         public byte[] GetBytesEmi1()
