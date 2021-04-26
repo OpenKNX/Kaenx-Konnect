@@ -54,7 +54,7 @@ namespace Kaenx.Konnect.Messages.Request
 
             send_data[0] = ObjectIndex;
             send_data[1] = PropertyId;
-            send_data[2] = 0x10;
+            send_data[2] = 0x10; //TODO check if it must be set to data.length
             send_data[3] = 0x01;
 
             for (int i = 0; i < Data.Length; i++)
