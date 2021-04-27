@@ -38,7 +38,7 @@ Connection via USB is not widly implemented yet.
 
 
 ### Connection Events
-There are three Events:
+There are four Events:
 - OnTunnelRequest: 
   Is Invoked when the Interface receives a Request. (GroupValueWrite, IndividualAddressRead, etc.)
 - OnTunnelResponse: 
@@ -55,8 +55,9 @@ Create a Bus Device to read Property or Memory from it. Also you can restart it.
 BusDevice dev = new BusDevice("1.1.2", _connIp);
 await dev.Connect();
 byte[] data = await dev.MemoryRead(16495, 255);
-string mask = await dev.DeviceDescriptorRead(); //Returns Mask Version like 0701, 07B0, ...
+string mask = await dev.DeviceDescriptorRead(); //Returns Mask Version like MV-0701, MV-07B0, ...
 string serial = await dev.PropertyRead<string>("DeviceSerialNumber"); //Returns SerialNumber of Device
+byte[] serialbytes = await dev.PropertyRead("DeviceSerialNumber"); //Returns SerialNumber of Device as Byte Array
 await dev.Restart();
 await dev.Disconnect();
 ```
