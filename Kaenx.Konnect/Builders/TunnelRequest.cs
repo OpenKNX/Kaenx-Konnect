@@ -10,9 +10,10 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Builders
 {
-    class TunnelEmi1Request : IRequestBuilder
+    class TunnelRequest : IRequestBuilder
     {
         private List<byte> bytes = new List<byte>();
+        private bool IsExtended = false;
 
         private BitArray ctrlByte = new BitArray(new byte[] { 0xb0 });
         private BitArray drlByte = new BitArray(new byte[] { 0xe0 });
@@ -20,50 +21,27 @@ namespace Kaenx.Konnect.Builders
             //TODO sequenz obsolet machen!!
          public void Build(IKnxAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apciType, int sCounter = 255, byte[] data = null)
         {
-            bytes.Add(0x11); //Message Code
-            bytes.Add(0x00); //Manufacturer Code
-
-
+            //bytes.Add(0x11); //Message Code
+            //bytes.Add(0x00); //Manufacturer Code
+            if(IsExtended) ctrlByte.Set(7, false);
             bytes.Add(bitToByte(ctrlByte)); // Control Byte
+
+
 
             drlByte.Set(7, destinationAddress is MulticastAddress);
 
             bytes.Add(bitToByte(drlByte)); // DRL Byte
 
-            bytes.AddRange(new byte[] { 0x00, 0x00 }); // Source Address Unused
+            bytes.AddRange(sourceAddress.GetBytes()); // Source Address
             bytes.AddRange(destinationAddress.GetBytes()); // Destination Address
 
-            byte lengthData = 0x01;
+            byte lengthData = Convert.ToByte(data?.Length ?? 0);
 
 
-            //TODO when apci first 4 bites is  lower than 1111 thenlength++ or shift data to left in npdu byte
-            if(data != null)
-            {
-                lengthData = BitConverter.GetBytes((ushort)(data.Count() + 1))[0];
-                List<ApciTypes> length0Apci = new List<ApciTypes>() { ApciTypes.MemoryRead, ApciTypes.MemoryWrite, ApciTypes.GroupValueWrite, ApciTypes.ADCRead, ApciTypes.Disconnect };
-                if (apciType == ApciTypes.MemoryRead || apciType == ApciTypes.MemoryWrite || apciType == ApciTypes.GroupValueWrite || apciType == ApciTypes.ADCRead)
-                    lengthData--;
-            }
-            else
-            {
-                switch (apciType)
-                {
-                    case ApciTypes.ADCRead:
-                    case ApciTypes.ADCResponse:
-                    case ApciTypes.GroupValueResponse:
-                    case ApciTypes.GroupValueWrite:
-                    case ApciTypes.Ack:
-                    case ApciTypes.Connect:
-                    case ApciTypes.Disconnect:
-                        lengthData = 0x0;
-                        break;
-                }
-            }
 
-            bytes.Add(lengthData);
 
             List<ApciTypes> datatypes = new List<ApciTypes>() { ApciTypes.Restart, ApciTypes.IndividualAddressRead, ApciTypes.DeviceDescriptorRead, ApciTypes.GroupValueRead, ApciTypes.GroupValueResponse, ApciTypes.GroupValueWrite, ApciTypes.ADCRead, ApciTypes.ADCResponse, ApciTypes.MemoryRead, ApciTypes.MemoryResponse, ApciTypes.MemoryWrite };
-            
+
             int _apci = (int)apciType;
             if (apciType == ApciTypes.Ack)
                 _apci--;
@@ -71,37 +49,41 @@ namespace Kaenx.Konnect.Builders
             _apci = _apci | ((sCounter == 255 ? 0 : 1) << 14);
             _apci = _apci | (((data == null && !datatypes.Contains(apciType)) ? 1 : 0) << 15);
 
-            switch(apciType)
+
+            List<ApciTypes> withData = new List<ApciTypes>() {
+                ApciTypes.GroupValueRead, ApciTypes.GroupValueResponse, ApciTypes.GroupValueWrite,
+                ApciTypes.ADCRead, ApciTypes.ADCResponse,
+                ApciTypes.MemoryRead, ApciTypes.MemoryResponse, ApciTypes.MemoryWrite,
+                ApciTypes.DeviceDescriptorRead, ApciTypes.DeviceDescriptorResponse, ApciTypes.Restart
+            };
+
+            if (withData.Contains(apciType) && data != null)
             {
-                case ApciTypes.MemoryWrite:
-                case ApciTypes.MemoryRead:
-                    int number = BitConverter.ToInt16(new byte[] { data[0], 0, 0, 0 }, 0);
-                    if (number > 63)
-                        number = 63;
-                    _apci = _apci | number;
-                    byte[] data_temp = new byte[data.Length - 1];
-                    for (int i = 1; i < data.Length;i++)
+                    byte first = data[0];
+                    if(first < 64)
                     {
-                        data_temp[i - 1] = data[i];
+                        first &= 0b00111111;
+                        _apci |= first;
+                        data = data.Skip(1).ToArray();
+                        lengthData--;
                     }
-                    data = data_temp;
-                    break;
             }
-            
+
+
             byte[] _apci2 = BitConverter.GetBytes(Convert.ToUInt16(_apci));
 
             switch(apciType)
             {
-                case ApciTypes.GroupValueResponse:
-                case ApciTypes.GroupValueWrite:
                 case ApciTypes.ADCRead:
                 case ApciTypes.ADCResponse:
                 case ApciTypes.Ack:
                 case ApciTypes.Connect:
                 case ApciTypes.Disconnect:
+                    bytes.Add(lengthData);
                     bytes.Add(_apci2[1]);
                     break;
                 default:
+                    bytes.Add(++lengthData);
                     bytes.Add(_apci2[1]);
                     bytes.Add(_apci2[0]);
                     break;
@@ -116,16 +98,10 @@ namespace Kaenx.Konnect.Builders
             return bytes.ToArray();
         }
 
-
-        public void SetChannelId(byte channelId)
-        {
-            bytes[7] = channelId;
+        public void SetIsExtended() {
+            IsExtended = true;
         }
 
-        public void SetSequence(byte sequence)
-        {
-            bytes[8] = sequence;
-        }
 
 
         public void SetPriority(Prios prio)
@@ -167,4 +143,13 @@ namespace Kaenx.Konnect.Builders
             return byteOut;
         }
     }
+
+    enum Prios
+    {
+        System,
+        Alarm,
+        High,
+        Low
+    }
+
 }

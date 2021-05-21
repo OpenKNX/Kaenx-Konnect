@@ -38,7 +38,7 @@ namespace Kaenx.Konnect.Classes
             var serviceTypeIdentifier = ParseServiceTypeIdentifier(responseBytes[2], responseBytes[3]);
             var totalLength = ParseTotalLength(responseBytes[4], responseBytes[5]);
 
-            Console.WriteLine($"ServiceType: {serviceTypeIdentifier} {responseBytes[2]:X}-{responseBytes[3]:X}");
+            //Console.WriteLine($"ServiceType: {serviceTypeIdentifier} {responseBytes[2]:X}-{responseBytes[3]:X}");
 
             return _responseParsers.AsQueryable().SingleOrDefault(x => x.ServiceTypeIdentifier == serviceTypeIdentifier)
               ?.Build(headerLength, protocolVersion, totalLength, responseBytes.Skip(6).ToArray());

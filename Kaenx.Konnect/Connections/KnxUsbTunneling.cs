@@ -154,8 +154,8 @@ namespace Kaenx.Konnect.Connections
 
         public async Task Disconnect()
         {
-            //DeviceKnx.Close();
-            //DeviceKnx.Dispose();
+            DeviceKnx.Close();
+            DeviceKnx.Dispose();
         }
 
         public async Task Send(byte[] data, bool ignoreConnected = false)

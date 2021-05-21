@@ -32,7 +32,7 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
-            TunnelCemiRequest builder = new TunnelCemiRequest();
+            TunnelRequest builder = new TunnelRequest();
             byte[] data = new byte[5];
             data[0] = 0;
             data[1] = (byte)(Key >> 24);

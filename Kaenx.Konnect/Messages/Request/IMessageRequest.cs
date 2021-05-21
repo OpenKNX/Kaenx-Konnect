@@ -8,11 +8,5 @@ namespace Kaenx.Konnect.Messages.Request
     public interface IMessageRequest : IMessage
     {
 
-
-        //Todo implement it
-
-        //void ParseDataCemi();
-        //void ParseDataEmi1();
-        //void ParseDataEmi2();
     }
 }
