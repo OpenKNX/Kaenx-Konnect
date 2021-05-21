@@ -515,14 +515,14 @@ namespace Kaenx.Konnect.Classes
             {
                 byte[] deviceControl = await PropertyRead(0, 14);
                 deviceControl[0] &= 0b1111_1011;
-                await PropertyWrite(0, 14, deviceControl);
+                await PropertyWrite(0, 14, deviceControl, true);
                 verifyMode = VerifyMode.Disabled;
             }
             else if (verify && verifyMode == VerifyMode.Disabled)
             {
                 byte[] deviceControl = await PropertyRead(0, 14);
                 deviceControl[0] |= 0b0000_0100;
-                await PropertyWrite(0, 14, deviceControl);
+                await PropertyWrite(0, 14, deviceControl, true);
                 verifyMode = VerifyMode.Enabled;
             }
 
