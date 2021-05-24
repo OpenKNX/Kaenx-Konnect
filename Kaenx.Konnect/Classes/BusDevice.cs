@@ -585,7 +585,7 @@ namespace Kaenx.Konnect.Classes
 
 
                 var seq = _currentSeqNum++;
-                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, MaxFrameLength > 15);
+                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, data_temp.Count > 13);
                 message.SequenceNumber = seq;
 
                 var seqRes = lastReceivedNumber;
