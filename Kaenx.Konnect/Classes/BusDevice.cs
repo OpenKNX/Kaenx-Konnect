@@ -1,4 +1,5 @@
-﻿using Kaenx.Konnect.Addresses;
+﻿
+using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
 using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.Messages.Request;
@@ -317,6 +318,20 @@ namespace Kaenx.Konnect.Classes
             }
         }
 
+
+        public async Task<int> RessourceAddress(string ressourceId)
+        {
+            if(await HasResource(ressourceId + "Ptr"))
+            {
+                return await RessourceRead<int>(ressourceId + "Ptr");
+            }
+            else
+            {
+                return await RessourceRead<int>(ressourceId, true);
+            }
+        }
+
+
         /// <summary>
         /// Liest Property vom Gerät aus.
         /// </summary>
@@ -337,7 +352,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
         /// <returns>Property Wert </returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
-        public async Task<T> RessourceRead<T>(string resourceId)
+        public async Task<T> RessourceRead<T>(string resourceId, bool onlyAddress = false)
         {
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
@@ -364,11 +379,14 @@ namespace Kaenx.Konnect.Classes
                     return await PropertyRead<T>(Convert.ToByte(obj), Convert.ToByte(pid));
 
                 case "StandardMemory":
-                    return await MemoryRead<T>(int.Parse(start), length);
+                    if (onlyAddress)
+                        return (T)Convert.ChangeType(int.Parse(start), typeof(T));
+                    else
+                        return await MemoryRead<T>(int.Parse(start), length);
 
                 case "Pointer":
                     string newProp = loc.Attribute("PtrResource").Value;
-                    return await RessourceRead<T>(newProp);
+                    return await RessourceRead<T>(newProp, onlyAddress);
 
                 case "RelativeMemory":
                     obj = loc.Attribute("InterfaceObjectRef").Value;

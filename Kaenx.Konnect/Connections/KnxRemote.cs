@@ -76,6 +76,7 @@ namespace Kaenx.Konnect.Connections
                 _connId = new Random().Next(1, 255);
                 await _knxConn.Connect();
                 TunnelResponse res = new TunnelResponse();
+                res.Type = TunnelTypes.Connect;
                 res.SequenceNumber = req.SequenceNumber;
                 res.Group = req.Group;
                 res.ChannelId = req.ChannelId;
