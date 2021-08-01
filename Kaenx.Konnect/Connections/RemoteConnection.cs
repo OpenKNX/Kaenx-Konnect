@@ -72,6 +72,7 @@ namespace Kaenx.Konnect.Connections
             }
         }
         public string Group { get; set; }
+        public string GroupRemote { get; set; }
         public int ChannelId { get; set; }
         public string Hostname { get; private set; }
         public string Authentification { get; private set; }
@@ -132,8 +133,11 @@ namespace Kaenx.Konnect.Connections
                 {
                     AuthResponse response = (AuthResponse)resp;
                     Group = response.Group;
+                    State = "Verbunden (" + Group + ")";
+                } else
+                {
+                    throw new Exception("Ungültige Antwort erhalten: " + resp.GetType().ToString());
                 }
-                State = "Verbunden (" + Group + ")";
             } catch(Exception ex)
             {
                 State = ex.Message;
@@ -156,14 +160,46 @@ namespace Kaenx.Konnect.Connections
                 if (message is TunnelRequest)
                 {
                     TunnelRequest req = message as TunnelRequest;
-                    if (req.ChannelId == 0) req.ChannelId = Remotes[req.ConnId].ChannelId;
-                    if (req.Group == "") req.Group = Remotes[req.ConnId].Group;
+                    if (req.ChannelId == 0 && Remotes.ContainsKey(req.ConnId))
+                    {
+                        req.ChannelId = Remotes[req.ConnId].ChannelId;
+                    } else
+                    {
+                        req.ChannelId = ChannelId;
+                    }
+
+                    if (req.Group == "" && Remotes.ContainsKey(req.ConnId))
+                    {
+                        req.Group = Remotes[req.ConnId].Group;
+                    } else
+                    {
+                        req.Group = GroupRemote;
+                    }
                 }
                 if (message is TunnelResponse)
                 {
                     TunnelResponse res = message as TunnelResponse;
-                    if (res.ChannelId == 0) res.ChannelId = Remotes[res.ConnId].ChannelId;
-                    if (res.Group == "") res.Group = Remotes[res.ConnId].Group;
+                    if (res.ChannelId == 0 && Remotes.ContainsKey(res.ConnId))
+                    {
+                        res.ChannelId = Remotes[res.ConnId].ChannelId;
+                    }
+                    else if(res.ChannelId == 0)
+                    {
+                        res.ChannelId = ChannelId;
+                    }
+
+                    if (res.Group == "" && Remotes.ContainsKey(res.ConnId))
+                    {
+                        res.Group = Remotes[res.ConnId].Group;
+                    }
+                    else if( res.Group == "0")
+                    {
+                        res.Group = GroupRemote;
+                    }
+                }
+                if(message is SearchRequest)
+                {
+                    (message as SearchRequest).Group = Group;
                 }
                 await socket.SendAsync(message.GetBytes(), WebSocketMessageType.Binary, true, source.Token);
                 mesg = await WaitForResponse(message.SequenceNumber);
