@@ -540,8 +540,8 @@ namespace Kaenx.Konnect.Classes
             if (verifyMode == VerifyMode.Unknown)
             {
                 XNamespace ns = MaskXML.GetDefaultNamespace();
-                XElement verifyModeFeature = MaskXML.Element(ns + "HawkConfigurationData").Element(ns + "Features")
-                    .Elements(ns + "Feature").FirstOrDefault(feature => feature.Attribute("Name").Value == "VerifyMode");
+                XElement verifyModeFeature = MaskXML.Element(ns + "HawkConfigurationData")?.Element(ns + "Features")
+                    ?.Elements(ns + "Feature")?.FirstOrDefault(feature => feature.Attribute("Name").Value == "VerifyMode");
                 if (verifyModeFeature != null && verifyModeFeature.Attribute("Value").Value == "1")
                 {
                     byte[] deviceControl = await PropertyRead(0, 14);
