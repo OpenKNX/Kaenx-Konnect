@@ -82,7 +82,12 @@ namespace Kaenx.Konnect.Classes
 
 
 
-        public async void GroupValueWrite(MulticastAddress ga, byte[] data)
+        public async Task GroupValueWrite(MulticastAddress ga, byte data)
+        {
+            await GroupValueWrite(ga, new byte[] { data });
+        }
+
+        public async Task GroupValueWrite(MulticastAddress ga, byte[] data)
         {
             MsgGroupWriteReq message = new MsgGroupWriteReq(from, ga, data);
             await _conn.Send(message);
