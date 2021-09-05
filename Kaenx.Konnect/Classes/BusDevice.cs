@@ -261,7 +261,7 @@ namespace Kaenx.Konnect.Classes
         #endregion
 
 
-        #region Ressource
+        #region Resource
         /// <summary>
         /// Schreibe den Wert in die Property des Gerätes
         /// </summary>
@@ -269,7 +269,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
         /// <returns></returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
-        public async Task RessourceWrite(string resourceId, byte[] data)
+        public async Task ResourceWrite(string resourceId, byte[] data)
         {
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
@@ -308,7 +308,7 @@ namespace Kaenx.Konnect.Classes
 
                 case "Pointer":
                     string newProp = loc.Attribute("PtrResource").Value;
-                    await RessourceWrite(newProp, data);
+                    await ResourceWrite(newProp, data);
                     break;
 
                 case "RelativeMemory":
@@ -321,15 +321,15 @@ namespace Kaenx.Konnect.Classes
         }
 
 
-        public async Task<int> RessourceAddress(string ressourceId)
+        public async Task<int> ResourceAddress(string ressourceId)
         {
             if(await HasResource(ressourceId + "Ptr"))
             {
-                return await RessourceRead<int>(ressourceId + "Ptr");
+                return await ResourceRead<int>(ressourceId + "Ptr");
             }
             else
             {
-                return await RessourceRead<int>(ressourceId, true);
+                return await ResourceRead<int>(ressourceId, true);
             }
         }
 
@@ -342,9 +342,9 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Property Wert as Byte Array</returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
         /// <exception cref="System.TimeoutException">Wenn Gerät Ressource nicht in angemessener Zeit antwortet</exception>
-        public async Task<byte[]> RessourceRead(string resourceId)
+        public async Task<byte[]> ResourceRead(string resourceId, bool onlyAddress = false)
         {
-            return await RessourceRead<byte[]>(resourceId);
+            return await ResourceRead<byte[]>(resourceId, onlyAddress);
         }
 
         /// <summary>
@@ -354,7 +354,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
         /// <returns>Property Wert </returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
-        public async Task<T> RessourceRead<T>(string resourceId, bool onlyAddress = false)
+        public async Task<T> ResourceRead<T>(string resourceId, bool onlyAddress = false)
         {
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
@@ -365,7 +365,7 @@ namespace Kaenx.Konnect.Classes
                 prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name").Value == resourceId);
             } catch
             {
-                throw new NotSupportedException("Mask '" + maskId + "' does not support this Ressource: " + resourceId);
+                throw new NotSupportedException("Mask '" + maskId + "' does not support this Resource: " + resourceId);
             }
 
             XElement loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
@@ -388,7 +388,7 @@ namespace Kaenx.Konnect.Classes
 
                 case "Pointer":
                     string newProp = loc.Attribute("PtrResource").Value;
-                    return await RessourceRead<T>(newProp, onlyAddress);
+                    return await ResourceRead<T>(newProp, onlyAddress);
 
                 case "RelativeMemory":
                     obj = loc.Attribute("InterfaceObjectRef").Value;

@@ -56,8 +56,8 @@ BusDevice dev = new BusDevice("1.1.2", _connIp);
 await dev.Connect();
 byte[] data = await dev.MemoryRead(16495, 255);
 string mask = await dev.DeviceDescriptorRead(); //Returns Mask Version like MV-0701, MV-07B0, ...
-string serial = await dev.PropertyRead<string>("DeviceSerialNumber"); //Returns SerialNumber of Device
-byte[] serialbytes = await dev.PropertyRead("DeviceSerialNumber"); //Returns SerialNumber of Device as Byte Array
+string serial = await dev.ResourceRead<string>("DeviceSerialNumber"); //Returns SerialNumber of Device
+byte[] serialbytes = await dev.ResourceRead("DeviceSerialNumber"); //Returns SerialNumber of Device as Byte Array
 await dev.Restart();
 await dev.Disconnect();
 ```
@@ -68,6 +68,7 @@ Use this Class for common tasks on the bus like IndividualAddressRead or GroupVa
 BusCommon bus = new BusCommon(_conn);
 await bus.IndividualAddressWrite(UnicastAddress.FromString("1.1.6"));
 await bus.GroupValueWrite(MulticastAddress.FromString("1/4/3"), 0x1);
+await bus.GroupValueWrite(MulticastAddress.FromString("1/4/4"), new byte[] { 0x1, 0x23 });
 ```
 
 # Credits
