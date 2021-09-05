@@ -21,6 +21,7 @@ namespace Kaenx.Konnect.Classes
     {
         private string _mask = "";
 
+        public ManagmentModels ManagmentModel { get; set; }
         public bool SupportsExtendedFrames { get; set; } = false;
         private int MaxFrameLength { get; set; } = 15;
 
@@ -28,6 +29,7 @@ namespace Kaenx.Konnect.Classes
         private IKnxConnection _conn;
         private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
         private Dictionary<int, bool> acks = new Dictionary<int, bool>();
+        private Dictionary<string, string> features;
 
         private int _seqNum = 0;
         private int _currentSeqNum
@@ -620,7 +622,35 @@ namespace Kaenx.Konnect.Classes
             Debug.WriteLine("Warte auf Descriptor " + seq);
             IMessageResponse resp = await WaitForData(seq, tokenS.Token);
             _mask = "MV-" + BitConverter.ToString(resp.Raw).Replace("-", "");
+
+
+            //Load Features
+            features = new Dictionary<string, string>();
+
+            XDocument master = GetKnxMaster();
+            XElement xmask = master.Root.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(e => e.Attribute("Id").Value == _mask);
+            foreach(XElement xfeature in xmask.Descendants(XName.Get("Feature", master.Root.Name.NamespaceName)))
+                features.Add(xfeature.Attribute("Name").Value, xfeature.Attribute("Value").Value);
+
+            ManagmentModel = xmask.Attribute("ManagmentModel").Value switch
+            {
+                "None" => ManagmentModels.None,
+                "SystemB" => ManagmentModels.SystemB,
+                "Bcu1" => ManagmentModels.Bcu1,
+                "Bcu2" => ManagmentModels.Bcu2,
+                "BimM112" => ManagmentModels.BimM112,
+                "PropertyBased" => ManagmentModels.PropertyBased,
+                _ => throw new Exception($"Unbekanntes ManagmentModel: {xmask.Attribute("ManagmentModel").Value}")
+            };
+
             return _mask;
+        }
+
+        public string GetFeature(string name)
+        {
+            if (features.ContainsKey(name))
+                return features[name];
+            return null;
         }
 
         private XDocument GetKnxMaster()
