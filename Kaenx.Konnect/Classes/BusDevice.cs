@@ -21,15 +21,16 @@ namespace Kaenx.Konnect.Classes
     {
         private string _mask = "";
 
+        public ManagmentModels ManagmentModel { get; set; }
         public bool SupportsExtendedFrames { get; set; } = false;
         private int MaxFrameLength { get; set; } = 15;
         public ushort? MaskVersion { get; private set; } = null;
-        public XElement MaskXML { get; private set; }
 
         private UnicastAddress _address;
         private IKnxConnection _conn;
         private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
         private Dictionary<int, bool> acks = new Dictionary<int, bool>();
+        private Dictionary<string, string> features;
 
         private int _seqNum = 0;
         private int _currentSeqNum
@@ -557,10 +558,7 @@ namespace Kaenx.Konnect.Classes
 
             if (verifyMode == VerifyMode.Unknown)
             {
-                XNamespace ns = MaskXML.GetDefaultNamespace();
-                XElement verifyModeFeature = MaskXML.Element(ns + "HawkConfigurationData")?.Element(ns + "Features")
-                    ?.Elements(ns + "Feature")?.FirstOrDefault(feature => feature.Attribute("Name").Value == "VerifyMode");
-                if (verifyModeFeature != null && verifyModeFeature.Attribute("Value").Value == "1")
+                if (GetFeature("VerifyMode") == "1")
                 {
                     byte[] deviceControl = await PropertyRead(0, 14);
                     bool verifyEnabled = (deviceControl[0] & (1 << 2)) != 0;
@@ -751,10 +749,26 @@ namespace Kaenx.Konnect.Classes
             MaskVersion = (ushort)(resp.Raw[0] << 8 | resp.Raw[1]);
             _mask = "MV-" + BitConverter.ToString(resp.Raw).Replace("-", "");
 
-            XDocument masterXml = GetKnxMaster();
-            XNamespace ns = masterXml.Root.GetDefaultNamespace();
-            XElement maskVersions = masterXml.Root.Element(ns + "MasterData").Element(ns + "MaskVersions");
-            MaskXML = maskVersions.Elements().Where(x => x.Attribute("Id").Value == _mask).Single();
+            //Load Features
+            features = new Dictionary<string, string>();
+
+            XDocument master = GetKnxMaster();
+            XNamespace ns = master.Root.Name.Namespace;
+            XElement xmask = master.Root.Descendants(ns + "MaskVersion").Single(e => e.Attribute("Id").Value == _mask);
+            foreach (XElement xfeature in xmask.Element(ns + "HawkConfigurationData").Descendants(ns + "Feature"))
+                features[xfeature.Attribute("Name").Value] = xfeature.Attribute("Value").Value;
+
+            ManagmentModel = xmask.Attribute("ManagementModel").Value switch
+            {
+                "None" => ManagmentModels.None,
+                "SystemB" => ManagmentModels.SystemB,
+                "Bcu1" => ManagmentModels.Bcu1,
+                "Bcu2" => ManagmentModels.Bcu2,
+                "BimM112" => ManagmentModels.BimM112,
+                "PropertyBased" => ManagmentModels.PropertyBased,
+                _ => throw new Exception($"Unbekanntes ManagmentModel: {xmask.Attribute("ManagmentModel").Value}")
+            };
+
             return _mask;
         }
 
@@ -772,6 +786,13 @@ namespace Kaenx.Konnect.Classes
             Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
             if (MaxFrameLength > 15) SupportsExtendedFrames = true;
             return MaxFrameLength;
+        }
+
+        public string GetFeature(string name)
+        {
+            if (features.ContainsKey(name))
+                return features[name];
+            return null;
         }
 
         private XDocument GetKnxMaster()
