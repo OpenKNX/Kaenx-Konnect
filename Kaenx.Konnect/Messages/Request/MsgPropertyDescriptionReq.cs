@@ -51,8 +51,7 @@ namespace Kaenx.Konnect.Messages.Request
             TunnelRequest builder = new TunnelRequest();
             List<byte> data = new List<byte>() { ObjectIndex, PropertyId, PropertyIndex };
 
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.PropertyValueRead, SequenceNumber, data.ToArray());
-
+            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciType, SequenceNumber, data.ToArray());
             data = new List<byte>() { 0x11, 0x00 };
             data.AddRange(builder.GetBytes());
             return data.ToArray();

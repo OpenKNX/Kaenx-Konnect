@@ -57,7 +57,7 @@ namespace Kaenx.Konnect.Messages.Request
         {
             TunnelRequest builder = new TunnelRequest();
             List<byte> data = new List<byte> { Convert.ToByte(Data.Length) };
-            byte[] addr = BitConverter.GetBytes(Convert.ToInt16(Address));
+            byte[] addr = BitConverter.GetBytes(Convert.ToUInt16(Address));
             Array.Reverse(addr);
             data.AddRange(addr);
             data.AddRange(Data);
