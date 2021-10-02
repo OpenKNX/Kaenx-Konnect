@@ -1,6 +1,7 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Builders;
 using System;
+using System.Collections.Generic;
 
 namespace Kaenx.Konnect.Messages.Request
 {
@@ -33,15 +34,20 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] GetBytesCemi()
         {
             TunnelRequest builder = new TunnelRequest();
-            byte[] data = new byte[5];
-            data[0] = 0;
-            data[1] = (byte)(Key >> 24);
-            data[2] = (byte)(Key >> 16);
-            data[3] = (byte)(Key >> 8);
-            data[4] = (byte)Key;
 
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciType, SequenceNumber, data);
-            return builder.GetBytes();
+
+            List<byte> data = new List<byte>() { };
+            data.Add(0x00);
+            data.Add((byte)(Key >> 24));
+            data.Add((byte)(Key >> 16));
+            data.Add((byte)(Key >> 8));
+            data.Add((byte)Key);
+
+            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciType, SequenceNumber, data.ToArray());
+
+            data = new List<byte>() { 0x11, 0x00 };
+            data.AddRange(builder.GetBytes());
+            return data.ToArray();
         }
 
         public byte[] GetBytesEmi1()
