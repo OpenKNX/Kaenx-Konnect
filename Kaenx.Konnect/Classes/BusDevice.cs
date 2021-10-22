@@ -109,6 +109,12 @@ namespace Kaenx.Konnect.Classes
         }
 
 
+        private void CheckForData(int seq)
+        {
+            if (responses.ContainsKey(seq))
+                responses.Remove(seq);
+        }
+
         /// <summary>
         /// Wartet auf antwort
         /// </summary>
@@ -363,11 +369,11 @@ namespace Kaenx.Konnect.Classes
         {
             MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
             message.SequenceNumber = _currentSeqNum++;
-            var seq = lastReceivedNumber;
+            CheckForData(message.SequenceNumber)
             await _conn.Send(message);
 
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(seq, tokenS.Token);
+            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message.SequenceNumber, tokenS.Token);
             return resp.Get<T>();
         }
 
@@ -474,12 +480,11 @@ namespace Kaenx.Konnect.Classes
             Debug.WriteLine("PropRead:" + _currentSeqNum);
             MsgPropertyReadReq message = new MsgPropertyReadReq(objIdx, propId, _address);
             message.SequenceNumber = _currentSeqNum++;
-            var seq = lastReceivedNumber;
-
+            CheckForData(message.SequenceNumber);
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
-            Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + seq);
-            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(seq, tokenS.Token);
+            Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + message.SequenceNumber);
+            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message.SequenceNumber, tokenS.Token);
             Debug.WriteLine("Ended waiting");
             return resp.Get<T>();
         }
@@ -496,12 +501,11 @@ namespace Kaenx.Konnect.Classes
             Debug.WriteLine("PropDescriptionRead:" + _currentSeqNum);
             MsgPropertyDescriptionReq message = new MsgPropertyDescriptionReq(objIdx, propId, 0, _address);
             message.SequenceNumber = _currentSeqNum++;
-            var seq = lastReceivedNumber;
-
+            CheckForData(message.SequenceNumber);
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-            Debug.WriteLine("Wating for Description " + objIdx + "/" + propId + ": " + seq);
-            MsgPropertyDescriptionRes resp = (MsgPropertyDescriptionRes)await WaitForData(seq, tokenS.Token);
+            Debug.WriteLine("Wating for Description " + objIdx + "/" + propId + ": " + message.SequenceNumber);
+            MsgPropertyDescriptionRes resp = (MsgPropertyDescriptionRes)await WaitForData(message.SequenceNumber, tokenS.Token);
             Debug.WriteLine("Ended waiting");
             return resp;
         }
@@ -524,13 +528,12 @@ namespace Kaenx.Konnect.Classes
 
             MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
             message.SequenceNumber = seq1;
-            var seq2 = lastReceivedNumber;
-
+            CheckForData(message.SequenceNumber);
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
 
             if (waitForResp)
-                await WaitForData(seq2, tokenS.Token);
+                await WaitForData(message.SequenceNumber, tokenS.Token);
             else
                 await WaitForAck(seq1, tokenS.Token);
         }
@@ -600,11 +603,10 @@ namespace Kaenx.Konnect.Classes
                 }
 
 
-                var seq = _currentSeqNum++;
                 MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, data_temp.Count > 13);
                 message.SequenceNumber = seq;
-
-                var seqRes = lastReceivedNumber;
+                var seq = message.SequenceNumber;
+                CheckForData(message.SequenceNumber);
                 await _conn.Send(message);
                 CancellationTokenSource tokenS = new CancellationTokenSource(10000);
                 if (verify)
@@ -613,9 +615,11 @@ namespace Kaenx.Konnect.Classes
                     {
                         MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, data_temp.Count, _address);
                         msg.SequenceNumber = _currentSeqNum++;
+                        CheckForData(msg.SequenceNumber);
                         await _conn.Send(msg);
+                        seq = msg.SequenceNumber;
                     }
-                    IMessageResponse resp = await WaitForData(seqRes, tokenS.Token);
+                    IMessageResponse resp = await WaitForData(seq, tokenS.Token);
                     if (!resp.Raw.Skip(2).SequenceEqual(data_temp))
                         throw new Exception($"Adresse 0x{currentPosition:X}-0x{currentPosition + data_temp.Count:X} konnte nicht beschrieben werden");
                 }
@@ -671,13 +675,12 @@ namespace Kaenx.Konnect.Classes
 
                 MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address, MaxFrameLength > 15);
                 msg.SequenceNumber = _currentSeqNum++;
-
-                var seq = lastReceivedNumber;
+                CheckForData(message.SequenceNumber);
                 await _conn.Send(msg);
 
                 //Debug.WriteLine("Warten auf: " + seq);
                 CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-                IMessageResponse resp = await WaitForData(seq, tokenS.Token);
+                IMessageResponse resp = await WaitForData(message.SequenceNumber, tokenS.Token);
                 readed.AddRange(resp.Raw.Skip(2));
                 currentPosition += toRead;
                 length -= toRead;
@@ -723,10 +726,10 @@ namespace Kaenx.Konnect.Classes
         {
             MsgAuthorizeReq message = new MsgAuthorizeReq(key, _address);
             message.SequenceNumber = _currentSeqNum++;
-            var seq = lastReceivedNumber;
+            CheckForData(message.SequenceNumber);
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-            MsgAuthorizeRes resp = (MsgAuthorizeRes)await WaitForData(seq, tokenS.Token);
+            MsgAuthorizeRes resp = (MsgAuthorizeRes)await WaitForData(message.SequenceNumber, tokenS.Token);
             return resp.Level;
         }
 
@@ -739,13 +742,12 @@ namespace Kaenx.Konnect.Classes
         {
             MsgDescriptorReadReq message = new MsgDescriptorReadReq(_address);
             message.SequenceNumber = _currentSeqNum++;
-            var seq = lastReceivedNumber;
+            CheckForData(message.SequenceNumber);
             await _conn.Send(message);
             //Debug.WriteLine("Warten auf: " + seq);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
             //Todo MsgDeviceDescriptorReadRes convert benutzen
-            Debug.WriteLine("Warte auf Descriptor " + seq);
-            IMessageResponse resp = await WaitForData(seq, tokenS.Token);
+            IMessageResponse resp = await WaitForData(message.SequenceNumber, tokenS.Token);
             MaskVersion = (ushort)(resp.Raw[0] << 8 | resp.Raw[1]);
             _mask = "MV-" + BitConverter.ToString(resp.Raw).Replace("-", "");
 
