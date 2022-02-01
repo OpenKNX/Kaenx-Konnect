@@ -58,7 +58,10 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            List<byte> data = new List<byte>() { ObjectIndex, PropertyId, 0x10, 0x01 };
+            Emi2Request builder = new Emi2Request();
+            builder.Build(null, DestinationAddress, ApciTypes.PropertyValueRead, SequenceNumber, data.ToArray());
+            return builder.GetBytes();
         }
 
         public byte[] GetBytesEmi2()

@@ -80,11 +80,11 @@ namespace Kaenx.Konnect.Parser
                     case 2:
                         type = ApciTypes.GroupValueWrite;
                         int datai = npdu[1] & 63;
-                        data = new byte[responseBytes.Length - 15 + 1];
+                        data = new byte[responseBytes[12]];
                         data[0] = Convert.ToByte(datai);
-                        for(int i = 1; i< responseBytes.Length - 15 + 1; i++)
+                        for(int i = 15; i< responseBytes.Length; i++)
                         {
-                            data[i] = responseBytes[i];
+                            data[i-14] = responseBytes[i];
                         }
                         break;
                     case 3:

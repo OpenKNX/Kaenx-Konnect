@@ -206,6 +206,7 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         public async Task Connect(bool onlyConnect = false)
         {
+
             MsgConnectReq message = new MsgConnectReq(_address);
             await _conn.Send(message);
             _connected = true;
@@ -214,6 +215,9 @@ namespace Kaenx.Konnect.Classes
             _conn.OnTunnelAck += _conn_OnTunnelAck;
 
             await Task.Delay(300);
+
+
+            var x = await DeviceDescriptorRead();
 
             //return;
             if (onlyConnect)

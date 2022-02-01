@@ -137,21 +137,35 @@ namespace Kaenx.Konnect.Connections
                 NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
                 foreach (NetworkInterface adapter in nics)
                 {
-                    IPInterfaceProperties ipprops = adapter.GetIPProperties();
-                    if (ipprops.MulticastAddresses.Count == 0 // most of VPN adapters will be skipped
-                        || !adapter.SupportsMulticast // multicast is meaningless for this type of connection
-                        || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
-                        continue;
+
+                    //TODO try this
+                    /*
+                     * udpClient = new UdpClient(8088);
+        udpClient.JoinMulticastGroup(IPAddress.Parse("224.100.0.1"), 50);
+
+                    */
+                    try
+                    {
+                        IPInterfaceProperties ipprops = adapter.GetIPProperties();
+                        /*if (ipprops.MulticastAddresses.Count == 0 // most of VPN adapters will be skipped
+                            || !adapter.SupportsMulticast // multicast is meaningless for this type of connection
+                            || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
+                            continue;*/
                     IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
-                    if (null == p) continue; // IPv4 is not configured on this adapter
-                    int index = IPAddress.HostToNetworkOrder(p.Index);
+                        if (null == p) continue; // IPv4 is not configured on this adapter
+                        int index = IPAddress.HostToNetworkOrder(p.Index);
 
-                    IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
-                    UdpClient _udpClient = new UdpClient(new IPEndPoint(addr, GetFreePort()));
-                    _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, index);
-                    _udpList.Add(_udpClient);
+                        IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
+                        UdpClient _udpClient = new UdpClient(new IPEndPoint(addr, GetFreePort()));
+                        _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, index);
+                        _udpList.Add(_udpClient);
 
-                    Debug.WriteLine("Binded to " + adapter.Name);
+                        Debug.WriteLine("Binded to " + adapter.Name);
+                    } catch(Exception ex)
+                    {
+                        Debug.WriteLine("Exception binding to " + adapter.Name);
+                        Debug.WriteLine(ex.Message);
+                    }
                 }
             }
             else

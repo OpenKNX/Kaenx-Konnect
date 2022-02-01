@@ -149,6 +149,7 @@ namespace Kaenx.Konnect.Connections
             IsConnected = true;
             ConnectionChanged?.Invoke(true);
 
+            ProcessReceiveMessages();
             ProcessSendMessages();
         }
 
@@ -168,38 +169,9 @@ namespace Kaenx.Konnect.Connections
             if (!ignoreConnected && !IsConnected)
                 throw new Exception("Roflkopter");
 
-            //var seq = _sequenceCounter;
-            //message.SetInfo(_communicationChannel, _sequenceCounter);
-            //_sequenceCounter++;
-
-
             _sendMessages.Add(message);
 
             return 0x01;
-
-            byte[] data;
-
-            switch (CurrentType)
-            {
-                case ProtocolTypes.Emi1:
-                    data = message.GetBytesEmi1();
-                    break;
-
-                case ProtocolTypes.Emi2:
-                    data = message.GetBytesEmi2();
-                    break;
-
-                case ProtocolTypes.cEmi:
-                    data = message.GetBytesCemi();
-                    break;
-
-                default:
-                    throw new Exception("Unbekanntes Protokoll");
-            }
-
-            await DeviceKnx.WriteAsync(data);
-
-            return 0x01; // return seq
         }
 
         public async Task<bool> SendStatusReq()
@@ -234,74 +206,107 @@ namespace Kaenx.Konnect.Connections
             return true;
         }
 
+        private void ProcessReceiveMessages()
+        {
+            Task.Run(async () =>
+            {
+                while(true)
+                {
+                    try
+                    {
+                        //CancellationTokenSource source = new CancellationTokenSource(1000);
+                        TransferResult res = await DeviceKnx.ReadAsync(); // source.Token);
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            });
+        }
+
 
         private void ProcessSendMessages()
         {
             Task.Run(async () =>
             {
-
-                foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
+                while(true)
                 {
-                    if (sendMessage is byte[])
+                    foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
                     {
-
-                       
-                    }
-                    else if (sendMessage is MsgSearchReq)
-                    {
-                        return; //SearchRequest not supported on USB
-                    }
-                    else if (sendMessage is IMessage)
-                    {
-                        IMessage message = sendMessage as IMessage;
-                        List<byte> xdata = new List<byte>();
-
-                        //KNX/IP Header
-                        xdata.Add(0x06); //Header Length
-                        xdata.Add(0x10); //Protokoll Version 1.0
-                        xdata.Add(0x04); //Service Identifier Family: Tunneling
-                        xdata.Add(0x20); //Service Identifier Type: Request
-                        xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
-
-                        //Connection header
-                        xdata.Add(0x04); // Body Structure Length
-                        xdata.Add(1); // Channel Id
-                        xdata.Add(message.SequenceCounter); // Sequenz Counter
-                        xdata.Add(0x00); // Reserved
-
-
-                        switch (CurrentType)
+                        try
                         {
-                            case ProtocolTypes.Emi1:
-                                xdata.AddRange(message.GetBytesEmi1());
-                                break;
+                            if (sendMessage is byte[])
+                            {
 
-                            case ProtocolTypes.Emi2:
-                                xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
-                                                                        //xdata.AddRange(message.GetBytesEmi2());
-                                break;
 
-                            case ProtocolTypes.cEmi:
-                                xdata.AddRange(message.GetBytesCemi());
-                                break;
+                            }
+                            else if (sendMessage is MsgSearchReq)
+                            {
+                                return; //SearchRequest not supported on USB
+                            }
+                            else if (sendMessage is IMessage)
+                            {
+                                IMessage message = sendMessage as IMessage;
+                                List<byte> xdata = new List<byte>();
 
-                            default:
-                                throw new Exception("Unbekanntes Protokoll");
+                                //Report Header
+                                xdata.Add(0x01); //Report ID fixed 1
+                                xdata.Add(0x13); //First Packet with start and end
+                                xdata.Add(0x09); //Data Length
+
+                                //Transfer Header
+                                xdata.Add(0x00); //Protocoll Version
+                                xdata.Add(0x08); //Header Length fixed
+                                xdata.Add(0x00); //Body Length
+                                xdata.Add(0x08); //Body Length
+                                xdata.Add(0x01); //Protocol ID 1=KNX Tunnel
+                                xdata.Add(0x01); //EMI Version 1=EMI1
+                                xdata.Add(0x00); //Manufacturer Code
+                                xdata.Add(0x00); //Manufacturer Code
+
+
+                                byte[] body;
+
+                                switch (CurrentType)
+                                {
+                                    case ProtocolTypes.Emi1:
+                                        body = message.GetBytesEmi1();
+                                        break;
+
+                                    case ProtocolTypes.Emi2:
+                                        body = message.GetBytesEmi1(); //Todo check diffrences between emi1
+                                                                       //xdata.AddRange(message.GetBytesEmi2());
+                                        break;
+
+                                    case ProtocolTypes.cEmi:
+                                        body = message.GetBytesCemi();
+                                        break;
+
+                                    default:
+                                        throw new Exception("Unbekanntes Protokoll");
+                                }
+
+                                xdata[2] = (byte)(body.Length + xdata[4] - 1);
+                                xdata[6] = (byte)(body.Length - 1);
+
+                                xdata.AddRange(body);
+
+
+
+                                int toadd = (64 - xdata.Count);
+                                for (int i = 0; i < toadd; i++)
+                                    xdata.Add(0x00);
+
+                                CancellationTokenSource source = new CancellationTokenSource(1000);
+
+                                await DeviceKnx.WriteAsync(xdata.ToArray(), source.Token);
+                            }
                         }
+                        catch
+                        {
 
-
-                        byte[] length = BitConverter.GetBytes((ushort)(xdata.Count));
-                        Array.Reverse(length);
-                        xdata[4] = length[0];
-                        xdata[5] = length[1];
-
-
-                        int toadd = (64 - xdata.Count);
-                        for (int i = 0; i < toadd; i++)
-                            xdata.Add(0x00);
-
-                        CancellationTokenSource source = new CancellationTokenSource(1000);
-                        await DeviceKnx.WriteAsync(xdata.ToArray(), source.Token);
+                        }
                     }
                 }
             });

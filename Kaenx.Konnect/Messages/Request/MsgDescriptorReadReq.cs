@@ -44,7 +44,20 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            List<byte> data = new List<byte>()
+            {
+                0x11, //L_Data.req
+                0xb0, //Control Byte
+                0x00, 0x00 //Source Address
+            };
+
+            data.AddRange(DestinationAddress.GetBytes());
+            data.AddRange(new byte[]
+            {
+                0x61, //NPCI Byte
+                0x43, 0x00 //NPDU+APCI
+            });
+            return data.ToArray();
         }
 
         public byte[] GetBytesEmi2()

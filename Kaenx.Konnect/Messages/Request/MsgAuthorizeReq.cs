@@ -52,7 +52,9 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            Emi2Request builder = new Emi2Request();
+            builder.Build(null, DestinationAddress, ApciTypes.AuthorizeRequest, SequenceNumber, BitConverter.GetBytes(Key));
+            return builder.GetBytes();
         }
 
         public byte[] GetBytesEmi2()
