@@ -25,5 +25,33 @@ namespace Kaenx.Konnect.Classes.DPT
             
             throw new Exception("DPT1 kann nicht in " + typeof(T).Name + " umgewandelt werden.");
         }
+
+        public byte[] GetBytes(object value)
+        {
+            uint v;
+
+            switch (Type.GetTypeCode(value.GetType()))
+            {
+                case TypeCode.String:
+                    if(!uint.TryParse(value.ToString(), out v)) {
+                        throw new Exception(value.ToString() +  " kann nicht in DPT5 (usigned int) umgewandelt werden.");
+                    }
+                    break;
+
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                    v = (uint)value;
+                    break;
+
+                default:
+                    throw new Exception(value.GetType().ToString() +  " kann nicht in DPT5 (unsigned int) umgewandelt werden.");
+            }
+            
+            if(v > 255)
+                throw new Exception(v.ToString() +  " ist zu groß für DPT5 (unsigned int; 0-255)");
+
+            return new byte[] { BitConverter.GetBytes(v)[0] };
+        }
     }
 }

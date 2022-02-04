@@ -8,18 +8,26 @@ namespace Kaenx.Konnect.Classes.DPT
 {
     public class DptConverter
     {
-        public static T To<T>(DPTs dpt, byte[] value)
+        public static T FromByteArray<T>(DPTs dpt, byte[] value)
         {
-            List<string> temp = new List<string>();
+            IDPT idpt = GetDptClass(dpt.ToString());
+            return idpt.GetValue<T>(value);
+        }
+
+        public static byte[] ToByteArray(DPTs dpt, object value)
+        {
+            IDPT idpt = GetDptClass(dpt.ToString());
+            return idpt.GetBytes(value);
+        }
+
+        private static IDPT GetDptClass(string name) {
             Type[] types = Assembly.GetExecutingAssembly().GetTypes();
 
-            if (types.Any(t => t.IsClass && !t.IsNested && t.Name == dpt.ToString())) {
-                Type type = types.Single(t => t.IsClass && !t.IsNested && t.Name == dpt.ToString());
-                IDPT idpt = (IDPT)Activator.CreateInstance(type);
-                return idpt.GetValue<T>(value);
+            if (types.Any(t => t.IsClass && !t.IsNested && t.Name == name)) {
+                Type type = types.Single(t => t.IsClass && !t.IsNested && t.Name == name);
+                return (IDPT)Activator.CreateInstance(type);
             }
-
-            throw new NotImplementedException(dpt.ToString() + " wurde noch nicht implementiert");
+            throw new NotImplementedException(name + " wurde noch nicht implementiert");
         }
     }
 }

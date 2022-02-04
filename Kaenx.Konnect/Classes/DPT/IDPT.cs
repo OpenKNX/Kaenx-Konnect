@@ -7,5 +7,6 @@ namespace Kaenx.Konnect.Classes.DPT
     public interface IDPT
     {
         public T GetValue<T>(byte[] value);
+        public byte[] GetBytes(object value);
     }
 }

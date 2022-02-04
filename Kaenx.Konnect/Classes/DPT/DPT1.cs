@@ -22,5 +22,27 @@ namespace Kaenx.Konnect.Classes.DPT
             
             throw new Exception("DPT1 kann nicht in " + typeof(T).Name + " umgewandelt werden.");
         }
+
+        public byte[] GetBytes(object value)
+        {
+            byte output;
+
+            switch (Type.GetTypeCode(value.GetType()))
+            {
+                case TypeCode.String:
+                    string v = value.ToString();
+                    output = (byte)((v == "on" || v == "True") ? 0x01 : 0x00);
+                    break;
+
+                case TypeCode.Boolean:
+                    output = (byte)(((bool)value) ? 0x01 : 0x00);
+                    break;
+
+                default:
+                    throw new Exception(value.GetType().ToString() +  " kann nicht in DPT1 (boolsch) umgewandelt werden.");
+            }
+            
+            return new byte[] { output };
+        }
     }
 }
