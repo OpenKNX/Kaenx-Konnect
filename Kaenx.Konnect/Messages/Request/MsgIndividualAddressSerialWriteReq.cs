@@ -61,12 +61,12 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi1 - MsgIndividualAddresSerialWriteReq");
         }
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgIndividualAddresSerialWriteReq");
         }
 
 

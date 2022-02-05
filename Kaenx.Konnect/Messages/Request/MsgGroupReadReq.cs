@@ -45,29 +45,20 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi1 - MsgGroupValueRead");
         }
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgGroupValueRead");
         }
 
 
 
-        public void ParseDataCemi()
-        {
-            throw new NotImplementedException("ParseDataCemi - MsgGroupValueRead");
-        }
+        public void ParseDataCemi() { } //No Data to parse, only Raw
 
-        public void ParseDataEmi1()
-        {
-            throw new NotImplementedException("ParseDataEmi1 - MsgGroupValueRead");
-        }
+        public void ParseDataEmi1() { } //No Data to parse, only Raw
 
-        public void ParseDataEmi2()
-        {
-            throw new NotImplementedException("ParseDataEmi2 - MsgGroupValueRead");
-        }
+        public void ParseDataEmi2() { } //No Data to parse, only Raw
     }
 }

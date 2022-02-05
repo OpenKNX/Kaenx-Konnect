@@ -63,7 +63,7 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException("Wird noch hinzugefügt");
+            throw new NotImplementedException("GetBytesEmi2 - MsgMemoryReadReq");
         }
 
         public byte[] GetBytesCemi()

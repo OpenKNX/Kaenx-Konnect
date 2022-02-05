@@ -39,25 +39,19 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi1 - MsgRestartReq");
         }
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgRestartReq");
         }
 
 
-        public void ParseDataCemi() { }
+        public void ParseDataCemi() { } //No Data to parse
 
-        public void ParseDataEmi1()
-        {
-            throw new NotImplementedException("ParseDataEmi1 - MsgRestartReq");
-        }
+        public void ParseDataEmi1() { } //No Data to parse
 
-        public void ParseDataEmi2()
-        {
-            throw new NotImplementedException("ParseDataEmi2 - MsgRestartReq");
-        }
+        public void ParseDataEmi2() { } //No Data to parse
     }
 }

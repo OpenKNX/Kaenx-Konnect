@@ -22,7 +22,7 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] Raw { get; set; }
 
 
-        private UnicastAddress _address { get; set; }
+        public UnicastAddress NewAddress { get; set; }
 
         /// <summary>
         /// Creates a telegram to write an individual addres via programm button
@@ -30,7 +30,7 @@ namespace Kaenx.Konnect.Messages.Request
         /// <param name="newAddress">New Unicast Address</param>
         public MsgIndividualAddressWriteReq(UnicastAddress newAddress)
         {
-            _address = newAddress;
+            NewAddress = newAddress;
         }
 
         public MsgIndividualAddressWriteReq() { }
@@ -41,7 +41,7 @@ namespace Kaenx.Konnect.Messages.Request
         {
             List<byte> data = new List<byte>() { 0x11, 0x00 };
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressWrite, 255, _address.GetBytes());
+            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressWrite, 255, NewAddress.GetBytes());
             builder.SetPriority(Prios.System);
             data.AddRange(builder.GetBytes());
             return data.ToArray();
@@ -49,18 +49,18 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi1 - MsgIndividualAddressWriteReq");
         }
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgIndividualAddressWriteReq");
         }
 
 
         public void ParseDataCemi()
         {
-            //TODO implement
+            NewAddress = UnicastAddress.FromByteArray(Raw);
         }
 
         public void ParseDataEmi1()

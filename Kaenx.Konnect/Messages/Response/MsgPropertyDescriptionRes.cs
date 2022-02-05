@@ -53,17 +53,17 @@ namespace Kaenx.Konnect.Messages.Response
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi1 - MsgPropertyDescriptionRes");
         }
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("getBytesEmi2 - MsgPropertyDescriptionRes");
         }
 
         public byte[] GetBytesCemi()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesCemi - MsgPropertyDescriptionRes");
         }
     }
 }

@@ -66,7 +66,7 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgPropertyReadReq");
         }
 
 

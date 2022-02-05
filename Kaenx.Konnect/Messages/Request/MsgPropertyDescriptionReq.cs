@@ -59,12 +59,12 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi1 - MsgPropertyDescriptionReq");
         }
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgPropertyDescriptionReq");
         }
 
 
@@ -77,12 +77,12 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataEmi1()
         {
-            throw new NotImplementedException("ParseDataEmi1 - MsgPropertyReadReq");
+            throw new NotImplementedException("ParseDataEmi1 - MsgPropertyDescriptionReq");
         }
 
         public void ParseDataEmi2()
         {
-            throw new NotImplementedException("ParseDataEmi2 - MsgPropertyReadReq");
+            throw new NotImplementedException("ParseDataEmi2 - MsgPropertyDescriptionReq");
         }
     }
 }

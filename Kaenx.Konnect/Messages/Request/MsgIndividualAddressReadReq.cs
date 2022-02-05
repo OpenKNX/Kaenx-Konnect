@@ -42,23 +42,14 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgIndividualAddressReadReq");
         }
 
 
-        public void ParseDataCemi()
-        {
-            //TODO implement
-        }
+        public void ParseDataCemi() { } //No Data to parse
 
-        public void ParseDataEmi1()
-        {
-            throw new NotImplementedException("ParseDataEmi1 - MsgIndividualAddressReadReq");
-        }
+        public void ParseDataEmi1() { } //No Data to parse
 
-        public void ParseDataEmi2()
-        {
-            throw new NotImplementedException("ParseDataEmi2 - MsgIndividualAddressReadReq");
-        }
+        public void ParseDataEmi2() { } //No Data to parse
     }
 }

@@ -71,27 +71,27 @@ namespace Kaenx.Konnect.Messages.Response
 
         public void ParseDataEmi1()
         {
-            throw new NotImplementedException("ParseDataEmi1 - MsgSearchRes");
+            throw new NotImplementedException("ParseDataEmi1 - MsgPropertyReadRes");
         }
 
         public void ParseDataEmi2()
         {
-            throw new NotImplementedException("ParseDataEmi2 - MsgSearchRes");
+            throw new NotImplementedException("ParseDataEmi2 - MsgPropertyReadRes");
         }
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi1 - MsgPropertyReadRes");
         }
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgPropertyReadRes");
         }
 
         public byte[] GetBytesCemi()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesCemi - MsgPropertyReadRes");
         }
     }
 }

@@ -45,26 +45,20 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi1 - MsgDisconnectReq");
         }
 
         public byte[] GetBytesEmi2()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("GetBytesEmi2 - MsgDisconnectReq");
         }
 
 
 
-        public void ParseDataCemi() { }
+        public void ParseDataCemi() { } //No Data to parse
 
-        public void ParseDataEmi1()
-        {
-            throw new NotImplementedException("ParseDataEmi1 - MsgDisconnectReq");
-        }
+        public void ParseDataEmi1() { } //No Data to parse
 
-        public void ParseDataEmi2()
-        {
-            throw new NotImplementedException("ParseDataEmi2 - MsgDisconnectReq");
-        }
+        public void ParseDataEmi2() { } //No Data to parse
     }
 }
