@@ -4,7 +4,6 @@ using Kaenx.Konnect.Classes;
 using Kaenx.Konnect.Messages;
 using Kaenx.Konnect.Messages.Request;
 using Kaenx.Konnect.Messages.Response;
-using Kaenx.Konnect.Parser;
 using Kaenx.Konnect.Responses;
 using System;
 using System.Collections.Concurrent;
@@ -15,8 +14,6 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using static Kaenx.Konnect.Connections.IKnxConnection;
 
@@ -111,7 +108,7 @@ namespace Kaenx.Konnect.Connections
                 }
             }
 
-            if(IP == null)
+            if (IP == null)
             {
                 try
                 {
@@ -151,7 +148,7 @@ namespace Kaenx.Konnect.Connections
                             || !adapter.SupportsMulticast // multicast is meaningless for this type of connection
                             || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
                             continue;*/
-                    IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
+                        IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
                         if (null == p) continue; // IPv4 is not configured on this adapter
                         int index = IPAddress.HostToNetworkOrder(p.Index);
 
@@ -161,7 +158,8 @@ namespace Kaenx.Konnect.Connections
                         _udpList.Add(_udpClient);
 
                         Debug.WriteLine("Binded to " + adapter.Name);
-                    } catch(Exception ex)
+                    }
+                    catch (Exception ex)
                     {
                         Debug.WriteLine("Exception binding to " + adapter.Name);
                         Debug.WriteLine(ex.Message);
@@ -300,10 +298,9 @@ namespace Kaenx.Konnect.Connections
             Task.Run(async () =>
             {
                 int rofl = 0;
-                try
+                while (!StopProcessing)
                 {
-
-                    while (!StopProcessing)
+                    try
                     {
                         rofl++;
                         var result = await _udpClient.ReceiveAsync();
@@ -372,11 +369,11 @@ namespace Kaenx.Konnect.Connections
                                     TunnelRequest builder = new TunnelRequest();
                                     builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
                                     data.AddRange(builder.GetBytes());
-                                    _=Send(data.ToArray(), _sequenceCounter);
+                                    _ = Send(data.ToArray(), _sequenceCounter);
                                     _sequenceCounter++;
                                     //Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
 
-                                    
+
                                 }
                                 else if (tunnelResponse.APCI == ApciTypes.Ack)
                                 {
@@ -453,7 +450,7 @@ namespace Kaenx.Konnect.Connections
 
                             case SearchResponse searchResponse:
                                 MsgSearchRes msg = new MsgSearchRes(searchResponse.responseBytes);
-                                switch(CurrentType)
+                                switch (CurrentType)
                                 {
                                     case ProtocolTypes.cEmi:
                                         msg.ParseDataCemi();
@@ -481,15 +478,15 @@ namespace Kaenx.Konnect.Connections
                                 break;
                         }
                     }
-
-                    Debug.WriteLine("Stopped Processing Messages " + _udpClient.Client.LocalEndPoint.ToString());
-                    _udpClient.Close();
-                    _udpClient.Dispose();
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("Exception ProcessSendMessage: " + ex.Message);
+                    }
                 }
-                catch
-                {
 
-                }
+                Debug.WriteLine("Stopped Processing Messages " + _udpClient.Client.LocalEndPoint.ToString());
+                _udpClient.Close();
+                _udpClient.Dispose();
             });
         }
 
@@ -540,7 +537,9 @@ namespace Kaenx.Konnect.Connections
 
                             client.SendAsync(xdata, xdata.Length, _sendEndPoint);
                         }
-                    } else if(sendMessage is IMessage) { 
+                    }
+                    else if (sendMessage is IMessage)
+                    {
                         IMessage message = sendMessage as IMessage;
                         List<byte> xdata = new List<byte>();
 
