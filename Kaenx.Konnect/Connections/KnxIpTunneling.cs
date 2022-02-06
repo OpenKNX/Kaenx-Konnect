@@ -82,6 +82,9 @@ namespace Kaenx.Konnect.Connections
 
         private IPAddress GetIpAddress(string receiver)
         {
+            if (receiver == "127.0.0.1")
+                return IPAddress.Parse(receiver);
+
             IPAddress IP = null;
             int mostipcount = 0;
             string[] ipParts = receiver.Split('.');
