@@ -46,6 +46,16 @@ namespace Kaenx.Konnect.Messages.Response
                     {
                         xint[i] = datai[i];
                     }
+                    return (T)Convert.ChangeType(BitConverter.ToInt32(xint, 0), typeof(T));
+
+                case TypeCode.UInt32:
+                    byte[] datai = Raw.Skip(4).Reverse().ToArray();
+                    byte[] xint = new byte[4];
+
+                    for (int i = 0; i < datai.Length; i++)
+                    {
+                        xint[i] = datai[i];
+                    }
                     return (T)Convert.ChangeType(BitConverter.ToUInt32(xint, 0), typeof(T));
 
                 default:

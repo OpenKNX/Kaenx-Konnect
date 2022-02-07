@@ -30,7 +30,6 @@ namespace Kaenx.Konnect.Connections
         public event SearchResponseHandler OnSearchResponse;
         public event ConnectionChangedHandler ConnectionChanged;
 
-
         public int Port;
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
@@ -61,7 +60,7 @@ namespace Kaenx.Konnect.Connections
             Init();
         }
 
-        private void Init(bool sendBroadcast = false)
+        private void Init()
         {
             //_udp = new UdpClient(new IPEndPoint(IPAddress.Parse("192.168.178.221"), 8088));
             ////_udp.JoinMulticastGroup(IPAddress.Parse("224.100.0.1"), 50);
@@ -115,14 +114,8 @@ namespace Kaenx.Konnect.Connections
             foreach (UdpClient client in _udpList)
                 ProcessReceivingMessages(client);
 
+            IsConnected = true;
         }
-
-        private void test(IAsyncResult result)
-        {
-
-        }
-
-
 
         public static int GetFreePort()
         {
@@ -180,52 +173,29 @@ namespace Kaenx.Konnect.Connections
             return Task.FromResult(seq);
         }
 
-        public async Task Connect()
-        {
-            _flagCRRecieved = false;
-            ConnectionRequest builder = new ConnectionRequest();
-            builder.Build(_receiveEndPoint, 0x00);
-            await Send(builder.GetBytes(), true);
-            await Task.Delay(500);
-
-            if (!_flagCRRecieved)
-            {
-                throw new Exception("Schnittstelle ist nicht erreichbar!");
-            }
-
-            if (!IsConnected)
-            {
-                throw new Exception("Verbindung zur Schnittstelle konnte nicht hergestellt werden! Error: " + LastError);
-            }
-
-            bool state = await SendStatusReq();
-            if (!state)
-            {
-                throw new Exception("Die Schnittstelle hat keine Verbindung zum Bus! Error: " + LastError);
-            }
+        public void Search() {
+            Send(new MsgSearchReq());
         }
 
-        public Task Disconnect()
+        public async Task Connect()
         {
-            if (!IsConnected)
-                return Task.CompletedTask;
+            //Nothing to do here
+        }
 
-            DisconnectRequest builder = new DisconnectRequest();
-            builder.Build(_receiveEndPoint, _communicationChannel);
-            Send(builder.GetBytes(), true);
-
-            StopProcessing = true;
-            return Task.CompletedTask;
+        public async Task Disconnect()
+        {
+            //Nothing to do here
         }
 
         public async Task<bool> SendStatusReq()
         {
-            ConnectionStatusRequest stat = new ConnectionStatusRequest();
-            stat.Build(_receiveEndPoint, _communicationChannel);
-            stat.SetChannelId(_communicationChannel);
-            await Send(stat.GetBytes());
-            await Task.Delay(200);
-            return IsConnected;
+            //TODO check if its needed
+            //ConnectionStatusRequest stat = new ConnectionStatusRequest();
+            //stat.Build(_receiveEndPoint, _communicationChannel);
+            //stat.SetChannelId(_communicationChannel);
+            //await Send(stat.GetBytes());
+            //await Task.Delay(200);
+            //return IsConnected;
         }
 
 
@@ -243,10 +213,6 @@ namespace Kaenx.Konnect.Connections
                         rofl++;
                         var result = await _udpClient.ReceiveAsync();
                         var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
-
-                        //if(!(knxResponse is SearchResponse))
-                        //    Debug.WriteLine("Telegram angekommen: " + knxResponse?.ToString());
-
 
                         switch (knxResponse)
                         {
