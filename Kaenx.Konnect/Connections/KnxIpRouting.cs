@@ -96,7 +96,7 @@ namespace Kaenx.Konnect.Connections
                     //_udpClient.JoinMulticastGroup(IPAddress.Parse("224.0.3.12"), addr);
                     _udpClient.MulticastLoopback = true;
                     _udpClient.Client.MulticastLoopback = true;
-                    _udpClient.BeginReceive(test, null);
+                    //_udpClient.BeginReceive(test, null);
                     _udpList.Add(_udpClient);
 
                     Debug.WriteLine("Binded to " + adapter.Name + " - " + addr.ToString() + " - " + port++);
@@ -196,6 +196,7 @@ namespace Kaenx.Konnect.Connections
             //await Send(stat.GetBytes());
             //await Task.Delay(200);
             //return IsConnected;
+            return true;
         }
 
 

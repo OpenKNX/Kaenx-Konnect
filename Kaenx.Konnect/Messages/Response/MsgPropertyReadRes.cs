@@ -38,7 +38,7 @@ namespace Kaenx.Konnect.Messages.Response
                     string datas = BitConverter.ToString(Raw.Skip(4).ToArray()).Replace("-", "");
                     return (T)Convert.ChangeType(datas, typeof(T));
 
-                case TypeCode.Int32:
+                case TypeCode.Int32: {
                     byte[] datai = Raw.Skip(4).Reverse().ToArray();
                     byte[] xint = new byte[4];
 
@@ -47,8 +47,9 @@ namespace Kaenx.Konnect.Messages.Response
                         xint[i] = datai[i];
                     }
                     return (T)Convert.ChangeType(BitConverter.ToInt32(xint, 0), typeof(T));
+                }
 
-                case TypeCode.UInt32:
+                case TypeCode.UInt32: {
                     byte[] datai = Raw.Skip(4).Reverse().ToArray();
                     byte[] xint = new byte[4];
 
@@ -57,6 +58,7 @@ namespace Kaenx.Konnect.Messages.Response
                         xint[i] = datai[i];
                     }
                     return (T)Convert.ChangeType(BitConverter.ToUInt32(xint, 0), typeof(T));
+                }
 
                 default:
                     try
