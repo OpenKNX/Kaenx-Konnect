@@ -414,10 +414,18 @@ namespace Kaenx.Konnect.Connections
                                 if (message == null)
                                 {
                                     //throw new Exception("Kein MessageParser für den APCI " + tunnelResponse.APCI);
-                                    message = new MsgDefaultRes()
+                                    if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                     {
-                                        ApciType = tunnelResponse.APCI
-                                    };
+                                        message = new MsgDefaultRes()
+                                        {
+                                            ApciType = tunnelResponse.APCI
+                                        };
+                                    } else {
+                                        message = new MsgDefaultReq()
+                                        {
+                                            ApciType = tunnelResponse.APCI
+                                        };
+                                    }
                                     Debug.WriteLine("Kein MessageParser für den APCI " + tunnelResponse.APCI);
                                 }
 
