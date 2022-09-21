@@ -391,8 +391,6 @@ namespace Kaenx.Konnect.Connections
                                     break;
                                 }
 
-
-                                List<string> temp = new List<string>();
                                 var q = from t in Assembly.GetExecutingAssembly().GetTypes()
                                         where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
                                         select t;
