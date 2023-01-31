@@ -391,8 +391,6 @@ namespace Kaenx.Konnect.Connections
                                     break;
                                 }
 
-
-                                List<string> temp = new List<string>();
                                 var q = from t in Assembly.GetExecutingAssembly().GetTypes()
                                         where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
                                         select t;
@@ -414,10 +412,18 @@ namespace Kaenx.Konnect.Connections
                                 if (message == null)
                                 {
                                     //throw new Exception("Kein MessageParser für den APCI " + tunnelResponse.APCI);
-                                    message = new MsgDefaultRes()
+                                    if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                     {
-                                        ApciType = tunnelResponse.APCI
-                                    };
+                                        message = new MsgDefaultRes()
+                                        {
+                                            ApciType = tunnelResponse.APCI
+                                        };
+                                    } else {
+                                        message = new MsgDefaultReq()
+                                        {
+                                            ApciType = tunnelResponse.APCI
+                                        };
+                                    }
                                     Debug.WriteLine("Kein MessageParser für den APCI " + tunnelResponse.APCI);
                                 }
 
