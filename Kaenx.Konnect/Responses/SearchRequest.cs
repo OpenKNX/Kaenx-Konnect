@@ -1,12 +1,10 @@
-﻿using Kaenx.Konnect.Addresses;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    class SearchResponse : IParserMessage
+    internal class SearchRequest : IParserMessage
     {
         public byte[] responseBytes;
     }

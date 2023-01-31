@@ -23,6 +23,8 @@ namespace Kaenx.Konnect.Connections
 
         public delegate void SearchResponseHandler(MsgSearchRes message);
         public event SearchResponseHandler OnSearchResponse;
+        public delegate void SearchRequestHandler(MsgSearchReq message);
+        public event SearchRequestHandler OnSearchRequest;
 
         public delegate void ConnectionChangedHandler(bool isConnected);
         public event ConnectionChangedHandler ConnectionChanged;

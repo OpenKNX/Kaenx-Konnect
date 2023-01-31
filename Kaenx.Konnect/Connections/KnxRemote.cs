@@ -35,6 +35,7 @@ namespace Kaenx.Konnect.Connections
         public event IKnxConnection.TunnelResponseHandler OnTunnelResponse;
         public event IKnxConnection.TunnelAckHandler OnTunnelAck;
         public event IKnxConnection.SearchResponseHandler OnSearchResponse;
+        public event IKnxConnection.SearchRequestHandler OnSearchRequest;
         public event IKnxConnection.ConnectionChangedHandler ConnectionChanged;
 
         private ClientWebSocket socket { get; set; } = new ClientWebSocket();

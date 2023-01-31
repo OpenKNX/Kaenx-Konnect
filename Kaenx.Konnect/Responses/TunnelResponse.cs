@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    class TunnelResponse : IResponse
+    class TunnelResponse : IParserMessage
     {
         public TunnelResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte structureLength,
           byte communicationChannel, byte sequenceCounter, byte status)

@@ -25,6 +25,7 @@ namespace Kaenx.Konnect.Connections
         public event TunnelResponseHandler OnTunnelResponse;
         public event TunnelAckHandler OnTunnelAck;
         public event SearchResponseHandler OnSearchResponse;
+        public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
 
@@ -108,6 +109,11 @@ namespace Kaenx.Konnect.Connections
                         }
                         sameCount++;
                     }
+                    if (sameCount > mostipcount)
+                    {
+                        IP = addr;
+                        mostipcount = sameCount;
+                    }
                 }
             }
 
@@ -156,8 +162,10 @@ namespace Kaenx.Konnect.Connections
                         int index = IPAddress.HostToNetworkOrder(p.Index);
 
                         IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
-                        UdpClient _udpClient = new UdpClient(new IPEndPoint(addr, GetFreePort()));
+                        UdpClient _udpClient = new UdpClient();
                         _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, index);
+                        _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                        _udpClient.Client.Bind(new IPEndPoint(addr, GetFreePort()));
                         _udpList.Add(_udpClient);
 
                         Debug.WriteLine("Binded to " + adapter.Name);
@@ -510,13 +518,14 @@ namespace Kaenx.Konnect.Connections
                         }
 
                     }
-                    else if (sendMessage is MsgSearchReq)
+                    else if (sendMessage is MsgSearchReq || sendMessage is MsgSearchRes)
                     {
-                        MsgSearchReq message = sendMessage as MsgSearchReq;
-
+                        IMessage message = (IMessage)sendMessage;
                         foreach (UdpClient client in _udpList)
                         {
-                            message.Endpoint = client.Client.LocalEndPoint as IPEndPoint;
+                            if(message is MsgSearchReq msr)
+                                msr.Endpoint = client.Client.LocalEndPoint as IPEndPoint;
+
                             byte[] xdata;
 
                             switch (CurrentType)

@@ -8,6 +8,6 @@ namespace Kaenx.Konnect.Classes
     interface IReceiveParser
     {
         ushort ServiceTypeIdentifier { get; }
-        IResponse Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes);
+        IParserMessage Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes);
     }
 }

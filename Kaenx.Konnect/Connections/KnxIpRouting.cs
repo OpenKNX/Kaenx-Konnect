@@ -28,6 +28,7 @@ namespace Kaenx.Konnect.Connections
         public event TunnelResponseHandler OnTunnelResponse;
         public event TunnelAckHandler OnTunnelAck;
         public event SearchResponseHandler OnSearchResponse;
+        public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
         public int Port;
@@ -43,7 +44,7 @@ namespace Kaenx.Konnect.Connections
         private readonly IPEndPoint _receiveEndPoint;
         private readonly IPEndPoint _sendEndPoint;
         private List<UdpClient> _udpList = new List<UdpClient>();
-        private UdpClient _udp;
+        //private UdpClient _udp;
         private readonly BlockingCollection<object> _sendMessages;
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
         private bool _flagCRRecieved = false;
@@ -62,18 +63,18 @@ namespace Kaenx.Konnect.Connections
 
         private void Init()
         {
-            //_udp = new UdpClient(new IPEndPoint(IPAddress.Parse("192.168.178.221"), 8088));
-            ////_udp.JoinMulticastGroup(IPAddress.Parse("224.100.0.1"), 50);
-            //_udp.JoinMulticastGroup(IPAddress.Parse("224.100.0.1"), IPAddress.Parse("192.168.178.221"));
-            //_udp.MulticastLoopback = true;
-            //_udp.Client.MulticastLoopback = true;
-            //ProcessReceivingMessages(_udp);
-            //ProcessSendMessages();
-
-
+            UdpClient client = new UdpClient();
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            client.Client.Bind(new IPEndPoint(IPAddress.Any, 3671));
+            client.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"));
+            client.MulticastLoopback = true;
+            client.Client.MulticastLoopback = true;
+            ProcessSendMessages();
+            ProcessReceivingMessages(client);
+            
+            /*
             NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
-            int port = 8088;
-
+           
             foreach (NetworkInterface adapter in nics)
             {
 
@@ -91,15 +92,14 @@ namespace Kaenx.Konnect.Connections
                     IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
                     UdpClient _udpClient = new UdpClient();
                     _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    _udpClient.Client.Bind(new IPEndPoint(addr, port));
+                    _udpClient.Client.Bind(new IPEndPoint(addr, 3671));
                     _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, index);
-                    //_udpClient.JoinMulticastGroup(IPAddress.Parse("224.0.3.12"), addr);
+                    _udpClient.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"), IPAddress.Any);
                     _udpClient.MulticastLoopback = true;
                     _udpClient.Client.MulticastLoopback = true;
-                    //_udpClient.BeginReceive(test, null);
                     _udpList.Add(_udpClient);
 
-                    Debug.WriteLine("Binded to " + adapter.Name + " - " + addr.ToString() + " - " + port++);
+                    Debug.WriteLine("Binded to " + adapter.Name + " - " + addr.ToString() + " - 3671");
                 }
                 catch (Exception ex)
                 {
@@ -115,6 +115,7 @@ namespace Kaenx.Konnect.Connections
                 ProcessReceivingMessages(client);
 
             IsConnected = true;
+            */
         }
 
         public static int GetFreePort()
@@ -202,7 +203,7 @@ namespace Kaenx.Konnect.Connections
 
         private void ProcessReceivingMessages(UdpClient _udpClient)
         {
-            Debug.WriteLine("Höre jetzt auf: " + (_udpClient.Client.LocalEndPoint as IPEndPoint).Port);
+            Debug.WriteLine("Höre jetzt auf: " + (_udpClient.Client.LocalEndPoint as IPEndPoint)?.Port);
             Task.Run(async () =>
             {
                 int rofl = 0;
@@ -353,24 +354,23 @@ namespace Kaenx.Konnect.Connections
 
                                 break;
 
-                            case SearchResponse searchResponse:
-                                MsgSearchRes msg = new MsgSearchRes(searchResponse.responseBytes);
-                                switch(CurrentType)
+
+
+                            case SearchRequest searchRequest:
                                 {
-                                    case ProtocolTypes.cEmi:
-                                        msg.ParseDataCemi();
-                                        break;
-                                    case ProtocolTypes.Emi1:
-                                        msg.ParseDataEmi1();
-                                        break;
-                                    case ProtocolTypes.Emi2:
-                                        msg.ParseDataEmi2();
-                                        break;
-                                    default:
-                                        throw new NotImplementedException("Unbekanntes Protokoll - SearchResponse KnxIpTunneling");
+                                    MsgSearchReq msg = new MsgSearchReq(searchRequest.responseBytes);
+                                    msg.ParseDataCemi();
+                                    OnSearchRequest?.Invoke(msg);
+                                    break;
                                 }
-                                OnSearchResponse?.Invoke(msg);
-                                break;
+
+                            case SearchResponse searchResponse:
+                                {
+                                    MsgSearchRes msg = new MsgSearchRes(searchResponse.responseBytes);
+                                    msg.ParseDataCemi();
+                                    OnSearchResponse?.Invoke(msg);
+                                    break;
+                                }
 
                             case TunnelAckResponse tunnelAck:
                                 //Do nothing
@@ -404,9 +404,10 @@ namespace Kaenx.Konnect.Connections
                 {
                     if (sendMessage is byte[])
                     {
-
-                        byte[] data = sendMessage as byte[]; 
-                        _udp.SendAsync(data, data.Length, _sendEndPoint);
+                        byte[] data = sendMessage as byte[];
+                        foreach (UdpClient client in _udpList)
+                            client.SendAsync(data, data.Length, _sendEndPoint);
+                        //_udp.SendAsync(data, data.Length, _sendEndPoint);
 
                     }
                     else if (sendMessage is MsgSearchReq)
@@ -415,7 +416,7 @@ namespace Kaenx.Konnect.Connections
 
                         foreach(UdpClient _udp in _udpList)
                         {
-                            message.Endpoint = new IPEndPoint(IPAddress.Parse("192.168.178.221"), (_udp.Client.LocalEndPoint as IPEndPoint).Port);
+                            message.Endpoint = _udp.Client.LocalEndPoint as IPEndPoint;
                             byte[] xdata;
 
                             switch (CurrentType)
@@ -481,7 +482,11 @@ namespace Kaenx.Konnect.Connections
                         xdata[4] = length[0];
                         xdata[5] = length[1];
 
-                        _udp.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
+
+                        //_udp.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
+
+                        foreach (UdpClient client in _udpList)
+                            client.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
                     }
                     else
                     {

@@ -24,6 +24,7 @@ namespace Kaenx.Konnect.Connections
         public event TunnelResponseHandler OnTunnelResponse;
         public event TunnelAckHandler OnTunnelAck;
         public event SearchResponseHandler OnSearchResponse;
+        public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
         private readonly BlockingCollection<object> _sendMessages;

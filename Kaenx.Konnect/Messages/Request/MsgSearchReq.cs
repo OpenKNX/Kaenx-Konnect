@@ -23,6 +23,8 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] Raw { get; set; }
 
 
+        public string IPAddress;
+
 
         public IPEndPoint Endpoint { get; set; }
 
@@ -30,6 +32,9 @@ namespace Kaenx.Konnect.Messages.Request
         /// Creates a telegram to search for interfaces (only for IP and cEMI)
         /// </summary>
         public MsgSearchReq() { }
+
+
+        public MsgSearchReq(byte[] data) => Raw = data;
 
         public byte[] GetBytesCemi()
         {
@@ -49,7 +54,12 @@ namespace Kaenx.Konnect.Messages.Request
         }
 
 
-        public void ParseDataCemi() { } //No Data to parse
+        public void ParseDataCemi()
+        {
+            byte[] addr = new byte[4] { Raw[2], Raw[3], Raw[4], Raw[5] };
+            Endpoint = new IPEndPoint(new IPAddress(addr), BitConverter.ToUInt16(new byte[2] { Raw[7], Raw[6] }, 0));
+            IPAddress = new IPAddress(addr).ToString();
+        }
 
         public void ParseDataEmi1() { } //No Data to parse
 
