@@ -9,7 +9,9 @@ namespace Kaenx.Konnect.Classes.DPT
     {
         public T GetValue<T>(byte[] value)
         {
-            uint val2 = BitConverter.ToUInt16(value.Reverse().ToArray(), 0); //Check reverse
+            List<byte> values = new List<byte>(value.Reverse());
+            if (values.Count == 1) values.Add(0x00);
+            uint val2 = BitConverter.ToUInt16(values.ToArray(), 0); //Check reverse
 
             switch (Type.GetTypeCode(typeof(T)))
             {
@@ -38,6 +40,9 @@ namespace Kaenx.Konnect.Classes.DPT
                     }
                     break;
 
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
                 case TypeCode.UInt16:
                 case TypeCode.UInt32:
                 case TypeCode.UInt64:
