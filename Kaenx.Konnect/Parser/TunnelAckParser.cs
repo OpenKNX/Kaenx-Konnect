@@ -15,7 +15,7 @@ namespace Kaenx.Konnect.Parser
 
         public TunnelAckParser() { }
 
-        IResponse IReceiveParser.Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes)
+        IParserMessage IReceiveParser.Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes)
         {
             return Build(headerLength, protocolVersion, totalLength, responseBytes);
         }

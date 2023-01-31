@@ -31,7 +31,7 @@ namespace Kaenx.Konnect.Classes
             }
         }
 
-        public IResponse Build(byte[] responseBytes)
+        public IParserMessage Build(byte[] responseBytes)
         {
             var headerLength = ParseHeaderLength(responseBytes[0]);
             var protocolVersion = ParseProtocolVersion(responseBytes[1]);

@@ -13,7 +13,7 @@ namespace Kaenx.Konnect.Parser
     {
         public ushort ServiceTypeIdentifier => 0x0208;
 
-        IResponse IReceiveParser.Build(byte headerLength, byte protocolVersion, ushort totalLength,
+        IParserMessage IReceiveParser.Build(byte headerLength, byte protocolVersion, ushort totalLength,
           byte[] responseBytes)
         {
             return Build(headerLength, protocolVersion, totalLength, responseBytes);

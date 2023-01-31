@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    class ConnectStateResponse : IResponse
+    class ConnectStateResponse : IParserMessage
     {
         public ConnectStateResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte communicationChannel, byte status)
         {

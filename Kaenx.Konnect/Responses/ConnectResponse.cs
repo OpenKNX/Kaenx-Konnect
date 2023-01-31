@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Responses
 {
-    class ConnectResponse : IResponse
+    class ConnectResponse : IParserMessage
     {
         public ConnectResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte communicationChannel,
       byte status, HostProtocolAddressInformation dataEndpoint, ConnectionResponseDataBlock connectionResponseDataBlock)

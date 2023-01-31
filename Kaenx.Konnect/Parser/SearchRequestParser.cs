@@ -8,13 +8,13 @@ using System.Text;
 
 namespace Kaenx.Konnect.Parser
 {
-    class SearchResponseParser : IReceiveParser
+    class SearchRequestParser : IReceiveParser
     {
-        public ushort ServiceTypeIdentifier => 0x0202;
+        public ushort ServiceTypeIdentifier => 0x0201;
 
         public IParserMessage Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes)
         {
-            SearchResponse resp = new SearchResponse();
+            SearchRequest resp = new SearchRequest();
             resp.responseBytes = responseBytes;
             return resp;
         }
