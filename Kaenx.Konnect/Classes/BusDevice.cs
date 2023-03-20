@@ -541,6 +541,66 @@ namespace Kaenx.Konnect.Classes
             else
                 await WaitForAck(seq1, tokenS.Token);
         }
+
+        /// <summary>
+        /// Führt eine Function Propety 
+        /// </summary>
+        /// <param name="objIdx">ObjektIndex</param>
+        /// <param name="propId">PropertyId</param>
+        /// <param name="data">Daten die übergeben werden sollen</param>
+        /// <returns></returns>
+        /// <exception cref="System.TimeoutException" />
+        public async Task<MsgFunctionPropertyStateRes> InvokeFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
+        {
+            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+
+            if(data == null)
+                data = new byte[0];
+
+            var seq1 = _currentSeqNum++;
+
+            MsgFunctionPropertyCommandReq message = new MsgFunctionPropertyCommandReq(objIdx, propId, data, _address);
+            message.SequenceNumber = seq1;
+            CheckForData(message.SequenceNumber);
+            await _conn.Send(message);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
+
+            if (waitForResp)
+                return (MsgFunctionPropertyStateRes)await WaitForData(message.SequenceNumber, tokenS.Token);
+            
+            await WaitForAck(seq1, tokenS.Token);
+            return null;
+        }
+
+        /// <summary>
+        /// Liest den Status einer Function Property aus
+        /// </summary>
+        /// <param name="objIdx">ObjektIndex</param>
+        /// <param name="propId">PropertyId</param>
+        /// <param name="data">Daten die übergeben werden sollen</param>
+        /// <returns></returns>
+        /// <exception cref="System.TimeoutException" />
+        public async Task<MsgFunctionPropertyStateRes> ReadFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
+        {
+            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+
+            if(data == null)
+                data = new byte[0];
+
+            var seq1 = _currentSeqNum++;
+
+            MsgFunctionPropertyStateReq message = new MsgFunctionPropertyStateReq(objIdx, propId, data, _address);
+            message.SequenceNumber = seq1;
+            CheckForData(message.SequenceNumber);
+            await _conn.Send(message);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
+
+            if (waitForResp)
+                return (MsgFunctionPropertyStateRes)await WaitForData(message.SequenceNumber, tokenS.Token);
+            
+            await WaitForAck(seq1, tokenS.Token);
+            return null;
+        }
         #endregion
 
 
