@@ -94,7 +94,7 @@ namespace Kaenx.Konnect.Classes
         private void _conn_OnTunnelAck(MsgAckRes response)
         {
             acks[response.SequenceNumber] = true;
-            Debug.WriteLine("Got Ack: " + response.SequenceNumber);
+            //("Got Ack: " + response.SequenceNumber);
         }
 
         private void OnTunnelResponse(IMessageResponse response)
@@ -105,7 +105,7 @@ namespace Kaenx.Konnect.Classes
                 responses.Add(response.SequenceNumber, response);
 
             lastReceivedNumber = response.SequenceNumber;
-            Debug.WriteLine("Got Response: " + response.ApciType + "/" + response.SequenceNumber);
+            //Debug.WriteLine("Got Response: " + response.ApciType + "/" + response.SequenceNumber);
         }
 
 
@@ -229,15 +229,15 @@ namespace Kaenx.Konnect.Classes
             try
             {
                 MaxFrameLength = await PropertyRead<int>(0, 56);
-                Debug.WriteLine("Maximale Länge:  " + MaxFrameLength);
+                //Debug.WriteLine("Maximale Länge:  " + MaxFrameLength);
                 if (MaxFrameLength > 15) SupportsExtendedFrames = true;
                 if (MaxFrameLength < 15) MaxFrameLength = 15;
-                Debug.WriteLine("Maximale Länge*: " + MaxFrameLength);
+                //Debug.WriteLine("Maximale Länge*: " + MaxFrameLength);
             }
             catch
             {
                 MaxFrameLength = 12;
-                Debug.WriteLine("Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
+                //Debug.WriteLine("Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
             }
         }
 
@@ -481,15 +481,15 @@ namespace Kaenx.Konnect.Classes
         {
             if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
 
-            Debug.WriteLine("PropRead:" + _currentSeqNum);
+            //Debug.WriteLine("PropRead:" + _currentSeqNum);
             MsgPropertyReadReq message = new MsgPropertyReadReq(objIdx, propId, _address);
             message.SequenceNumber = _currentSeqNum++;
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
-            Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + message.SequenceNumber);
+            //Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + message.SequenceNumber);
             MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message.SequenceNumber, tokenS.Token);
-            Debug.WriteLine("Ended waiting");
+            //Debug.WriteLine("Ended waiting");
             return resp.Get<T>();
         }
 
@@ -502,15 +502,15 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<MsgPropertyDescriptionRes> PropertyDescriptionRead(byte objIdx, byte propId)
         {
-            Debug.WriteLine("PropDescriptionRead:" + _currentSeqNum);
+            //Debug.WriteLine("PropDescriptionRead:" + _currentSeqNum);
             MsgPropertyDescriptionReq message = new MsgPropertyDescriptionReq(objIdx, propId, 0, _address);
             message.SequenceNumber = _currentSeqNum++;
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(10000);
-            Debug.WriteLine("Wating for Description " + objIdx + "/" + propId + ": " + message.SequenceNumber);
+            //Debug.WriteLine("Wating for Description " + objIdx + "/" + propId + ": " + message.SequenceNumber);
             MsgPropertyDescriptionRes resp = (MsgPropertyDescriptionRes)await WaitForData(message.SequenceNumber, tokenS.Token);
-            Debug.WriteLine("Ended waiting");
+            //Debug.WriteLine("Ended waiting");
             return resp;
         }
 
@@ -849,7 +849,7 @@ namespace Kaenx.Konnect.Classes
                     break;
             }
 
-            Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
+            //Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
             if (MaxFrameLength > 15) SupportsExtendedFrames = true;
             return MaxFrameLength;
         }
