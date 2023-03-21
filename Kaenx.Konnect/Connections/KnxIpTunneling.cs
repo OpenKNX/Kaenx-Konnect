@@ -168,7 +168,7 @@ namespace Kaenx.Konnect.Connections
                         _udpClient.Client.Bind(new IPEndPoint(addr, GetFreePort()));
                         _udpList.Add(_udpClient);
 
-                        Debug.WriteLine("Binded to " + adapter.Name);
+                        //Debug.WriteLine("Binded to " + adapter.Name);
                     }
                     catch (Exception ex)
                     {
@@ -181,7 +181,7 @@ namespace Kaenx.Konnect.Connections
             {
                 UdpClient _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, Port));
                 _udpList.Add(_udpClient);
-                Debug.WriteLine("Binded to default");
+                //Debug.WriteLine("Binded to default");
             }
 
 
@@ -305,7 +305,7 @@ namespace Kaenx.Konnect.Connections
 
         private void ProcessReceivingMessages(UdpClient _udpClient)
         {
-            Debug.WriteLine("Höre jetzt auf: " + (_udpClient.Client.LocalEndPoint as IPEndPoint).Port);
+            //Debug.WriteLine("Höre jetzt auf: " + (_udpClient.Client.LocalEndPoint as IPEndPoint).Port);
             Task.Run(async () =>
             {
                 int rofl = 0;
@@ -324,7 +324,7 @@ namespace Kaenx.Konnect.Connections
                         switch (knxResponse)
                         {
                             case ConnectStateResponse connectStateResponse:
-                                Debug.WriteLine("Connection State Response: " + connectStateResponse.Status.ToString());
+                                //Debug.WriteLine("Connection State Response: " + connectStateResponse.Status.ToString());
                                 switch (connectStateResponse.Status)
                                 {
                                     case 0x00:
@@ -332,7 +332,7 @@ namespace Kaenx.Konnect.Connections
                                         ConnectionChanged?.Invoke(IsConnected);
                                         break;
                                     default:
-                                        Debug.WriteLine("Connection State: Fehler: " + connectStateResponse.Status.ToString());
+                                        //Debug.WriteLine("Connection State: Fehler: " + connectStateResponse.Status.ToString());
                                         LastError = ConnectionErrors.NotConnectedToBus;
                                         IsConnected = false;
                                         ConnectionChanged?.Invoke(IsConnected);
@@ -350,10 +350,10 @@ namespace Kaenx.Konnect.Connections
                                         IsConnected = true;
                                         ConnectionChanged?.Invoke(IsConnected);
                                         PhysicalAddress = connectResponse.ConnectionResponseDataBlock.KnxAddress;
-                                        Debug.WriteLine("Connected: Eigene Adresse: " + PhysicalAddress.ToString());
+                                        //Debug.WriteLine("Connected: Eigene Adresse: " + PhysicalAddress.ToString());
                                         break;
                                     default:
-                                        Debug.WriteLine("Connected: Fehler: " + connectResponse.Status.ToString());
+                                        //Debug.WriteLine("Connected: Fehler: " + connectResponse.Status.ToString());
                                         LastError = ConnectionErrors.Undefined;
                                         IsConnected = false;
                                         ConnectionChanged?.Invoke(IsConnected);
@@ -364,9 +364,9 @@ namespace Kaenx.Konnect.Connections
                             case Builders.TunnelResponse tunnelResponse:
                                 if (tunnelResponse.IsRequest && tunnelResponse.DestinationAddress != PhysicalAddress)
                                 {
-                                    Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
-                                    Debug.WriteLine("Typ: " + tunnelResponse.APCI);
-                                    Debug.WriteLine("Eigene Adresse: " + PhysicalAddress.ToString());
+                                    //Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
+                                    //Debug.WriteLine("Typ: " + tunnelResponse.APCI);
+                                    //Debug.WriteLine("Eigene Adresse: " + PhysicalAddress.ToString());
                                     break;
                                 }
 
@@ -432,7 +432,7 @@ namespace Kaenx.Konnect.Connections
                                             ApciType = tunnelResponse.APCI
                                         };
                                     }
-                                    Debug.WriteLine("Kein MessageParser für den APCI " + tunnelResponse.APCI);
+                                    //Debug.WriteLine("Kein MessageParser für den APCI " + tunnelResponse.APCI);
                                 }
 
                                 message.Raw = tunnelResponse.Data;
@@ -501,7 +501,7 @@ namespace Kaenx.Konnect.Connections
                     }
                 }
 
-                Debug.WriteLine("Stopped Processing Messages " + _udpClient.Client.LocalEndPoint.ToString());
+                //Debug.WriteLine("Stopped Processing Messages " + _udpClient.Client.LocalEndPoint.ToString());
                 _udpClient.Close();
                 _udpClient.Dispose();
             });
