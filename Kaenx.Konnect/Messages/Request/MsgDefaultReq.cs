@@ -9,6 +9,7 @@ namespace Kaenx.Konnect.Messages.Request
     public class MsgDefaultReq : IMessageRequest
     {
         public byte ChannelId { get; set; }
+        public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
         public IKnxAddress SourceAddress { get; set; }
@@ -16,6 +17,9 @@ namespace Kaenx.Konnect.Messages.Request
         public ApciTypes ApciType { get; set; }
         public byte[] Raw { get; set; }
 
+
+        public MsgDefaultReq() { }
+        public MsgDefaultReq(bool isNumbered) => IsNumbered = isNumbered;
 
 
         public byte[] GetBytesCemi()

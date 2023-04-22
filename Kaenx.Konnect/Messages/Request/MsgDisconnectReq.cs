@@ -14,6 +14,7 @@ namespace Kaenx.Konnect.Messages.Request
     public class MsgDisconnectReq : IMessageRequest
     {
         public byte ChannelId { get; set; }
+        public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
         public IKnxAddress SourceAddress { get; set; }

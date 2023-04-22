@@ -257,7 +257,7 @@ namespace Kaenx.Konnect.Connections
                                 break;
 
                             case Builders.TunnelResponse tunnelResponse:
-                                if (tunnelResponse.IsRequest && tunnelResponse.DestinationAddress != PhysicalAddress)
+                                if (tunnelResponse.APCI.ToString().EndsWith("Request") && tunnelResponse.DestinationAddress != PhysicalAddress)
                                 {
                                     Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
                                     Debug.WriteLine("Typ: " + tunnelResponse.APCI);

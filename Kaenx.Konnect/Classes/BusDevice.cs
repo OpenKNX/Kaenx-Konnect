@@ -26,6 +26,7 @@ namespace Kaenx.Konnect.Classes
         private int MaxFrameLength { get; set; } = 15;
         public ushort? MaskVersion { get; private set; } = null;
 
+        private bool _isConnected = false;
         private UnicastAddress _address;
         private IKnxConnection _conn;
         private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
@@ -67,8 +68,6 @@ namespace Kaenx.Konnect.Classes
 
 
 
-
-        private bool _connected = false;
         private VerifyMode verifyMode = VerifyMode.Unknown;
 
         public BusDevice(string address, IKnxConnection conn)
@@ -99,6 +98,8 @@ namespace Kaenx.Konnect.Classes
 
         private void OnTunnelResponse(IMessageResponse response)
         {
+            if(!response.IsNumbered) return;
+
             if (responses.ContainsKey(response.SequenceNumber))
                 responses[response.SequenceNumber] = response;
             else
@@ -106,6 +107,15 @@ namespace Kaenx.Konnect.Classes
 
             lastReceivedNumber = response.SequenceNumber;
             //Debug.WriteLine("Got Response: " + response.ApciType + "/" + response.SequenceNumber);
+        }
+
+        private void OnTunnelRequest(IMessageRequest request)
+        {
+            if(request is MsgDisconnectReq)
+            {
+                _isConnected = false;
+                //Debug.WriteLine("Got Request: " + request.ApciType + "/" + request.SequenceNumber);
+            }
         }
 
 
@@ -206,16 +216,16 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         public async Task Connect(bool onlyConnect = false)
         {
-
             MsgConnectReq message = new MsgConnectReq(_address);
             await _conn.Send(message);
-            _connected = true;
 
             _conn.OnTunnelResponse += OnTunnelResponse;
+            _conn.OnTunnelRequest += OnTunnelRequest;
             _conn.OnTunnelAck += _conn_OnTunnelAck;
 
             await Task.Delay(300);
 
+            _isConnected = true;
 
             var x = await DeviceDescriptorRead();
 
@@ -246,8 +256,7 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         public async Task Disconnect()
         {
-            _connected = false;
-
+            _isConnected = false;
             MsgDisconnectReq message = new MsgDisconnectReq(_address);
             var seq = _currentSeqNum++;
             message.SequenceNumber = seq;
@@ -258,6 +267,7 @@ namespace Kaenx.Konnect.Classes
             _lastNumb = -1;
 
             _conn.OnTunnelResponse -= OnTunnelResponse;
+            _conn.OnTunnelRequest -= OnTunnelRequest;
             _conn.OnTunnelAck -= _conn_OnTunnelAck;
         }
 
@@ -266,7 +276,8 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         public async Task Restart()
         {
-            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
 
             MsgRestartReq message = new MsgRestartReq(_address);
             message.SequenceNumber = _currentSeqNum++;
@@ -285,6 +296,9 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
         public async Task ResourceWrite(string resourceId, byte[] data)
         {
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
+
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
             XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
@@ -337,6 +351,9 @@ namespace Kaenx.Konnect.Classes
 
         public async Task<int> ResourceAddress(string ressourceId)
         {
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
+
             if(await HasResource(ressourceId + "Ptr"))
             {
                 return await ResourceRead<int>(ressourceId + "Ptr");
@@ -371,6 +388,9 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<T> PropertyWriteResponse<T>(byte objIdx, byte propId, byte[] data)
         {
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
+
             MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
             message.SequenceNumber = _currentSeqNum++;
             CheckForData(message.SequenceNumber);
@@ -404,6 +424,9 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
         public async Task<T> ResourceRead<T>(string resourceId, bool onlyAddress = false)
         {
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
+
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
             XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
@@ -479,7 +502,8 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<T> PropertyRead<T>(byte objIdx, byte propId, int timeout = 4000)
         {
-            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
 
             //Debug.WriteLine("PropRead:" + _currentSeqNum);
             MsgPropertyReadReq message = new MsgPropertyReadReq(objIdx, propId, _address);
@@ -502,6 +526,9 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<MsgPropertyDescriptionRes> PropertyDescriptionRead(byte objIdx, byte propId)
         {
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
+
             //Debug.WriteLine("PropDescriptionRead:" + _currentSeqNum);
             MsgPropertyDescriptionReq message = new MsgPropertyDescriptionReq(objIdx, propId, 0, _address);
             message.SequenceNumber = _currentSeqNum++;
@@ -526,7 +553,8 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
         {
-            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
 
             var seq1 = _currentSeqNum++;
 
@@ -552,7 +580,9 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<MsgFunctionPropertyStateRes> InvokeFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
         {
-            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
+
 
             if(data == null)
                 data = new byte[0];
@@ -582,7 +612,8 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<MsgFunctionPropertyStateRes> ReadFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
         {
-            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
 
             if(data == null)
                 data = new byte[0];
@@ -615,7 +646,8 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task MemoryWrite(int address, byte[] databytes, bool verify = false)
         {
-            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
 
             List<byte> datalist = databytes.ToList();
             int currentPosition = address;
@@ -720,7 +752,8 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<T> MemoryRead<T>(int address, int length)
         {
-            if (!_connected) throw new Exception("Nicht mit Gerät verbunden.");
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
 
             List<byte> readed = new List<byte>();
             int currentPosition = address;
@@ -788,6 +821,9 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Zugriffslevel</returns>
         public async Task<byte> Authorize(uint key)
         {
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
+
             MsgAuthorizeReq message = new MsgAuthorizeReq(key, _address);
             message.SequenceNumber = _currentSeqNum++;
             CheckForData(message.SequenceNumber);
@@ -804,6 +840,9 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task<string> DeviceDescriptorRead()
         {
+            if(!_isConnected)
+                throw new Exception("Device is not connected");
+
             MsgDescriptorReadReq message = new MsgDescriptorReadReq(_address);
             message.SequenceNumber = _currentSeqNum++;
             CheckForData(message.SequenceNumber);

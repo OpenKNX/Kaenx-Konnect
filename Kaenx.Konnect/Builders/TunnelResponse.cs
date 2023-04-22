@@ -11,7 +11,7 @@ namespace Kaenx.Konnect.Builders
     class TunnelResponse : IParserMessage
     {
         public TunnelResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte structureLength,
-          byte communicationChannel, byte sequenceCounter, byte messageCode, byte addInformationLength, bool isRequest, bool ackWanted, byte controlField,
+          byte communicationChannel, byte sequenceCounter, byte messageCode, byte addInformationLength, bool isNumbered, bool ackWanted, byte controlField,
           byte controlField2, UnicastAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apci, int seqNumb,
           byte[] data)
         {
@@ -31,10 +31,10 @@ namespace Kaenx.Konnect.Builders
             APCI = apci;
             SequenceNumber = seqNumb;
             Data = data;
-            IsRequest = IsRequest;
+            IsNumbered = isNumbered;
         }
 
-        public bool IsRequest { get; }
+        public bool IsNumbered { get; }
         public byte HeaderLength { get; }
         public byte ProtocolVersion { get; }
         public ushort TotalLength { get; }

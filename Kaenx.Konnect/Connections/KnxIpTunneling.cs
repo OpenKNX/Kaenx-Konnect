@@ -362,7 +362,7 @@ namespace Kaenx.Konnect.Connections
                                 break;
 
                             case Builders.TunnelResponse tunnelResponse:
-                                if (tunnelResponse.IsRequest && tunnelResponse.DestinationAddress != PhysicalAddress)
+                                if (tunnelResponse.APCI.ToString().EndsWith("Request") && tunnelResponse.DestinationAddress != PhysicalAddress)
                                 {
                                     //Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
                                     //Debug.WriteLine("Typ: " + tunnelResponse.APCI);
@@ -374,7 +374,7 @@ namespace Kaenx.Konnect.Connections
 
                                 //Debug.WriteLine("Telegram APCI: " + tunnelResponse.APCI.ToString());
 
-                                if (tunnelResponse.APCI.ToString().EndsWith("Response"))
+                                if (tunnelResponse.IsNumbered && tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
                                     List<byte> data = new List<byte>() { 0x11, 0x00 };
                                     TunnelRequest builder = new TunnelRequest();
@@ -422,12 +422,12 @@ namespace Kaenx.Konnect.Connections
                                     //throw new Exception("Kein MessageParser für den APCI " + tunnelResponse.APCI);
                                     if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                     {
-                                        message = new MsgDefaultRes()
+                                        message = new MsgDefaultRes(tunnelResponse.IsNumbered)
                                         {
                                             ApciType = tunnelResponse.APCI
                                         };
                                     } else {
-                                        message = new MsgDefaultReq()
+                                        message = new MsgDefaultReq(tunnelResponse.IsNumbered)
                                         {
                                             ApciType = tunnelResponse.APCI
                                         };
