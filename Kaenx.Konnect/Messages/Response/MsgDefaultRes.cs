@@ -13,7 +13,7 @@ namespace Kaenx.Konnect.Messages.Response
         public int SequenceNumber { get; set; }
         public IKnxAddress SourceAddress { get; set; }
         public IKnxAddress DestinationAddress { get; set; }
-        public ApciTypes ApciType { get; set; }
+        public ApciTypes ApciType { get; set; } = ApciTypes.Undefined;
         public byte[] Raw { get; set; }
 
         public byte[] GetBytesCemi()
