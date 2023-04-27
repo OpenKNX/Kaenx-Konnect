@@ -587,7 +587,7 @@ namespace Kaenx.Konnect.Classes
             if(data == null)
                 data = new byte[0];
 
-            var seq1 = _currentSeqNum++;
+            var seq1 = _currentSeqNum;
 
             MsgFunctionPropertyCommandReq message = new MsgFunctionPropertyCommandReq(objIdx, propId, data, _address);
             message.SequenceNumber = seq1;
@@ -595,8 +595,13 @@ namespace Kaenx.Konnect.Classes
             await _conn.Send(message);
             CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
 
-            if (waitForResp)
-                return (MsgFunctionPropertyStateRes)await WaitForData(message.SequenceNumber, tokenS.Token);
+            if (waitForResp) {
+                var response = (MsgFunctionPropertyStateRes)await WaitForData(message.SequenceNumber, tokenS.Token);
+                // this will be called only if there is no exception during WaitForData
+                _currentSeqNum++;
+                return response;
+            } else
+                _currentSeqNum++;
             
             await WaitForAck(seq1, tokenS.Token);
             return null;
