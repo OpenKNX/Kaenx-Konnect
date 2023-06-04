@@ -154,8 +154,6 @@ namespace Kaenx.Konnect.Connections
 
         public async Task Disconnect()
         {
-
-
             IsConnected = false;
 
             _conn.RemoveInterface(_connId);
@@ -169,7 +167,7 @@ namespace Kaenx.Konnect.Connections
         public async Task<byte> Send(IMessage message, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
-                throw new Exception("Roflkopter 2");
+                throw new Exception("Not connected with interface");
 
 
             Debug.WriteLine("Sende nun einen normalen Request");

@@ -249,6 +249,7 @@ namespace Kaenx.Konnect.Connections
                             else if (sendMessage is IMessage)
                             {
                                 IMessage message = sendMessage as IMessage;
+                                message.SourceAddress = UnicastAddress.FromString("0.0.0");
                                 List<byte> xdata = new List<byte>();
 
                                 //Report Header

@@ -14,6 +14,7 @@ namespace Kaenx.Konnect.Messages.Request
     public class MsgPropertyDescriptionReq : IMessageRequest
     {
         public byte ChannelId { get; set; }
+        public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
         public IKnxAddress SourceAddress { get; set; }
@@ -51,7 +52,7 @@ namespace Kaenx.Konnect.Messages.Request
             TunnelRequest builder = new TunnelRequest();
             List<byte> data = new List<byte>() { ObjectIndex, PropertyId, PropertyIndex };
 
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciType, SequenceNumber, data.ToArray());
+            builder.Build(SourceAddress, DestinationAddress, ApciType, SequenceNumber, data.ToArray());
             data = new List<byte>() { 0x11, 0x00 };
             data.AddRange(builder.GetBytes());
             return data.ToArray();

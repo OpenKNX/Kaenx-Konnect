@@ -14,6 +14,7 @@ namespace Kaenx.Konnect.Messages.Request
     public class MsgIndividualAddressWriteReq : IMessageRequest
     {
         public byte ChannelId { get; set; }
+        public bool IsNumbered { get; } = false;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
         public IKnxAddress SourceAddress { get; set; }
@@ -41,7 +42,7 @@ namespace Kaenx.Konnect.Messages.Request
         {
             List<byte> data = new List<byte>() { 0x11, 0x00 };
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(MulticastAddress.FromString("0/0/0"), MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressWrite, 255, NewAddress.GetBytes());
+            builder.Build(SourceAddress, MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressWrite, 255, NewAddress.GetBytes());
             builder.SetPriority(Prios.System);
             data.AddRange(builder.GetBytes());
             return data.ToArray();

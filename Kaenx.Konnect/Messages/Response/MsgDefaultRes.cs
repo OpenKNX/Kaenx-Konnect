@@ -9,12 +9,16 @@ namespace Kaenx.Konnect.Messages.Response
     public class MsgDefaultRes : IMessageResponse
     {
         public byte ChannelId { get; set; }
+        public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
         public IKnxAddress SourceAddress { get; set; }
         public IKnxAddress DestinationAddress { get; set; }
         public ApciTypes ApciType { get; set; } = ApciTypes.Undefined;
         public byte[] Raw { get; set; }
+
+        public MsgDefaultRes() { }
+        public MsgDefaultRes(bool isNumbered) => IsNumbered = isNumbered;
 
         public byte[] GetBytesCemi()
         {

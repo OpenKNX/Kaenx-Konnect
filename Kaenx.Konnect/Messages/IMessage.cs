@@ -9,6 +9,7 @@ namespace Kaenx.Konnect.Messages
     public interface IMessage
     {
         public byte ChannelId { get; set; }
+        public bool IsNumbered { get; }
         IKnxAddress SourceAddress { get; set; }
         IKnxAddress DestinationAddress { get; set; }
         byte SequenceCounter { get; set; }

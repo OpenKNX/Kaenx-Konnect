@@ -48,13 +48,15 @@ namespace Kaenx.Konnect.Parser
 
             byte[] data = null;
             int seqNumb = 0x0;
+            bool isNumbered = false;
             ApciTypes type = ApciTypes.Undefined;
 
             if (npduLength != 0)
             {
 
                 BitArray bitsNpdu = new BitArray(npdu);
-                if(bitsNpdu.Get(6))
+                isNumbered = bitsNpdu.Get(6);
+                if(isNumbered)
                 {
                     seqNumb = npdu[0] >> 2;
                     seqNumb = seqNumb & 0xF;
@@ -137,7 +139,8 @@ namespace Kaenx.Konnect.Parser
                 int apci3 = npdu[0] & 3;
 
                 BitArray bitsNpdu = new BitArray(npdu);
-                if (bitsNpdu.Get(6))
+                isNumbered = bitsNpdu.Get(6);
+                if (isNumbered)
                 {
                     seqNumb = npdu[0] >> 2;
                     seqNumb = seqNumb & 0xF;
@@ -173,8 +176,6 @@ namespace Kaenx.Konnect.Parser
                 destAddr = UnicastAddress.FromByteArray(new[] { responseBytes[10], responseBytes[11] });
 
             bool ackWanted = bitsCtrl1.Get(2);
-            bool isRequest = ReqMC.Contains(responseBytes[4]);
-
 
             switch (type)
             {
@@ -194,19 +195,11 @@ namespace Kaenx.Konnect.Parser
                     break;
             }
 
-
-
             return new Builders.TunnelResponse(headerLength, protocolVersion, totalLength, structureLength, communicationChannel,
-              sequenceCounter, messageCode, addInformationLength, isRequest, ackWanted, controlField, controlField2,
+              sequenceCounter, messageCode, addInformationLength, isNumbered, ackWanted, controlField, controlField2,
               UnicastAddress.FromByteArray(new[] { responseBytes[8], responseBytes[9] }),
               destAddr, type, seqNumb,
               data);
         }
-
-        //Message Codes für Requests
-        private List<byte> ReqMC = new List<byte>() {
-            0x11, // L_Data.req -> 0x2e
-            0xfc // M_PropRead.req -> 0xfc
-        };
     }
 }
