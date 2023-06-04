@@ -55,7 +55,7 @@ namespace Kaenx.Konnect.Messages.Response
             List<byte> data = new List<byte>() { ObjectIndex, PropertyId };
             data.AddRange(Data);
 
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciType, SequenceNumber, data.ToArray());
+            builder.Build(SourceAddress, DestinationAddress, ApciType, SequenceNumber, data.ToArray());
             
             data = new List<byte>() { 0x11, 0x00 };
             data.AddRange(builder.GetBytes());

@@ -232,7 +232,7 @@ namespace Kaenx.Konnect.Connections
         public Task Send(byte[] data, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
-                throw new Exception("Roflkopter 1");
+                throw new Exception("Not connected with interface");
 
             _sendMessages.Add(data);
 
@@ -242,7 +242,7 @@ namespace Kaenx.Konnect.Connections
         public Task<byte> Send(IMessage message, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
-                throw new Exception("Roflkopter 2");
+                throw new Exception("Not connected with interface");
 
             byte seq = _sequenceCounter++;
             message.SequenceCounter = seq;
@@ -559,6 +559,7 @@ namespace Kaenx.Konnect.Connections
                     else if (sendMessage is IMessage)
                     {
                         IMessage message = sendMessage as IMessage;
+                        message.SourceAddress = UnicastAddress.FromString("0.0.0");
                         List<byte> xdata = new List<byte>();
 
                         //KNX/IP Header

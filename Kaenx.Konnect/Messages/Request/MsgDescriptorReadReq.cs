@@ -38,7 +38,7 @@ namespace Kaenx.Konnect.Messages.Request
         {
             List<byte> data = new List<byte>() { 0x11, 0x00 };
             TunnelRequest builder = new TunnelRequest();
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.DeviceDescriptorRead, SequenceNumber);
+            builder.Build(SourceAddress, DestinationAddress, ApciTypes.DeviceDescriptorRead, SequenceNumber);
             data.AddRange(builder.GetBytes());
             return data.ToArray();
         }

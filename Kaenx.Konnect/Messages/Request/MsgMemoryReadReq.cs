@@ -83,7 +83,7 @@ namespace Kaenx.Konnect.Messages.Request
 
             Builders.TunnelRequest builder = new TunnelRequest();
             if(IsExtended) builder.SetIsExtended();
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciTypes.MemoryRead, SequenceNumber, data.ToArray());
+            builder.Build(SourceAddress, DestinationAddress, ApciTypes.MemoryRead, SequenceNumber, data.ToArray());
             data = new List<byte>() { 0x11, 0x00 };
             data.AddRange(builder.GetBytes());
             return data.ToArray();

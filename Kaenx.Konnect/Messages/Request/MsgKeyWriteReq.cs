@@ -46,7 +46,7 @@ namespace Kaenx.Konnect.Messages.Request
             data.Add((byte)(Key >> 8));
             data.Add((byte)Key);
 
-            builder.Build(UnicastAddress.FromString("0.0.0"), DestinationAddress, ApciType, SequenceNumber, data.ToArray());
+            builder.Build(SourceAddress, DestinationAddress, ApciType, SequenceNumber, data.ToArray());
 
             data = new List<byte>() { 0x11, 0x00 };
             data.AddRange(builder.GetBytes());
