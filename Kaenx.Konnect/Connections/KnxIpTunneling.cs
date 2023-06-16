@@ -46,6 +46,8 @@ namespace Kaenx.Konnect.Connections
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
         private bool _flagCRRecieved = false;
 
+        private System.Timers.Timer _timer = new System.Timers.Timer(60000);
+
         public KnxIpTunneling(string ip, int port, bool sendBroadcast = false)
         {
             Port = GetFreePort();
@@ -61,6 +63,7 @@ namespace Kaenx.Konnect.Connections
             _sendMessages = new BlockingCollection<object>();
 
             Init(sendBroadcast);
+            _timer.Elapsed += TimerElapsed;
         }
 
         public KnxIpTunneling(IPEndPoint sendEndPoint, bool sendBroadcast = false)
@@ -77,9 +80,13 @@ namespace Kaenx.Konnect.Connections
             _sendMessages = new BlockingCollection<object>();
 
             Init(sendBroadcast);
+            _timer.Elapsed += TimerElapsed;
         }
 
-
+        private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            SendStatusReq();
+        }
 
         private IPAddress GetIpAddress(string receiver)
         {
@@ -192,9 +199,6 @@ namespace Kaenx.Konnect.Connections
                 ProcessReceivingMessages(client);
         }
 
-
-
-
         public static int GetFreePort()
         {
             TcpListener l = new TcpListener(IPAddress.Loopback, 0);
@@ -203,7 +207,6 @@ namespace Kaenx.Konnect.Connections
             l.Stop();
             return port;
         }
-
 
         public Task Send(byte[] data, byte sequence)
         {
@@ -228,7 +231,6 @@ namespace Kaenx.Konnect.Connections
             return Task.CompletedTask;
         }
 
-
         public Task Send(byte[] data, bool ignoreConnected = false)
         {
             if (!ignoreConnected && !IsConnected)
@@ -250,9 +252,6 @@ namespace Kaenx.Konnect.Connections
 
             return Task.FromResult(seq);
         }
-
-
-
 
         public async Task Connect()
         {
@@ -277,6 +276,8 @@ namespace Kaenx.Konnect.Connections
             {
                 throw new Exception("Die Schnittstelle hat keine Verbindung zum Bus! Error: " + LastError);
             }
+
+            _timer.Start();
         }
 
         public Task Disconnect()
@@ -289,6 +290,7 @@ namespace Kaenx.Konnect.Connections
             Send(builder.GetBytes(), true);
 
             StopProcessing = true;
+            _timer.Stop();
             return Task.CompletedTask;
         }
 
