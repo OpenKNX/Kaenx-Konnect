@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using Kaenx.Konnect.Classes;
 
-namespace Kaenx.Konnect.Responses
+namespace Kaenx.Konnect.Requests
 {
-    class DisconnectResponse : IParserMessage
+    class DisconnectRequest : IParserMessage
     {
-        public DisconnectResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte communicationChannel,
+        public DisconnectRequest(byte headerLength, byte protocolVersion, ushort totalLength, byte communicationChannel,
       byte status)
         {
             HeaderLength = headerLength;

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Kaenx.Konnect.Classes;
 
 namespace Kaenx.Konnect.Responses
 {

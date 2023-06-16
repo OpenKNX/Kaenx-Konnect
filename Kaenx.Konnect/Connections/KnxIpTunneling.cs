@@ -490,6 +490,16 @@ namespace Kaenx.Konnect.Connections
                                 //Do nothing
                                 break;
 
+                            case Kaenx.Konnect.Requests.DisconnectRequest disconnectRequest:
+                            {
+                                if(disconnectRequest.CommunicationChannel != _communicationChannel) return;
+                                IsConnected = false;
+                                _communicationChannel = 0;
+                                ConnectionChanged?.Invoke(IsConnected);
+                                Debug.WriteLine("Die Verbindung wurde vom Gerät geschlossen");
+                                break;
+                            }
+
                             case DisconnectResponse disconnectResponse:
                                 IsConnected = false;
                                 _communicationChannel = 0;
