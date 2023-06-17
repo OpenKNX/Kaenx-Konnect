@@ -5,6 +5,7 @@ using Kaenx.Konnect.Messages;
 using Kaenx.Konnect.Messages.Request;
 using Kaenx.Konnect.Messages.Response;
 using Kaenx.Konnect.Parser;
+using Kaenx.Konnect.Requests;
 using Kaenx.Konnect.Responses;
 using System;
 using System.Collections.Concurrent;

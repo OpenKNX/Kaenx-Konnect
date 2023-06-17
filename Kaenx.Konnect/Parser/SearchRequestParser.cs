@@ -1,6 +1,7 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Classes;
 using Kaenx.Konnect.Responses;
+using Kaenx.Konnect.Requests;
 using System;
 using System.Collections.Generic;
 using System.Net;
