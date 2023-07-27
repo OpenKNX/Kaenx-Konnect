@@ -7,11 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Kaenx.Konnect.Builders
+namespace Kaenx.Konnect.Requests
 {
-    class TunnelResponse : IParserMessage
+    class TunnelRequest : IParserMessage
     {
-        public TunnelResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte structureLength,
+        public TunnelRequest(byte headerLength, byte protocolVersion, ushort totalLength, byte structureLength,
           byte communicationChannel, byte sequenceCounter, byte messageCode, byte addInformationLength, bool isNumbered, bool ackWanted, byte controlField,
           byte controlField2, UnicastAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apci, int seqNumb,
           byte[] data)

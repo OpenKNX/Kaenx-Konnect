@@ -25,10 +25,10 @@ namespace Kaenx.Konnect.Parser
         }
 
 
-        public Builders.RoutingResponse Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes)
+        public Responses.RoutingResponse Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes)
         {
             var x = new TunnelRequestParser();
-            Builders.TunnelResponse resp = x.Build(headerLength, protocolVersion, totalLength, responseBytes);
+            Requests.TunnelRequest resp = x.Build(headerLength, protocolVersion, totalLength, responseBytes);
             return new RoutingResponse(resp.HeaderLength,
                 resp.ProtocolVersion,
                 resp.TotalLength,

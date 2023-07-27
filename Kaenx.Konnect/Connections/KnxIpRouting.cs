@@ -213,7 +213,7 @@ namespace Kaenx.Konnect.Connections
 
                         switch (knxResponse)
                         {
-                            case Builders.RoutingResponse tunnelResponse:
+                            case Responses.RoutingResponse tunnelResponse:
                                 if (tunnelResponse.DestinationAddress != PhysicalAddressParent)
                                 {
                                     Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
@@ -226,7 +226,7 @@ namespace Kaenx.Konnect.Connections
                                 if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
                                     List<byte> data = new List<byte>() { 0x11, 0x00 };
-                                    TunnelRequest builder = new TunnelRequest();
+                                    Builders.TunnelRequest builder = new Builders.TunnelRequest();
                                     builder.Build(PhysicalAddressParent, tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
                                     data.AddRange(builder.GetBytes());
                                     _=Send(data.ToArray(), _sequenceCounter);

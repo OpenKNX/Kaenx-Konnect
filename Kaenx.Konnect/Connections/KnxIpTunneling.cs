@@ -14,6 +14,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using static Kaenx.Konnect.Connections.IKnxConnection;
 
@@ -45,6 +46,8 @@ namespace Kaenx.Konnect.Connections
         private readonly BlockingCollection<object> _sendMessages;
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
         private bool _flagCRRecieved = false;
+        private List<int> _receivedAcks;
+        private CancellationTokenSource _ackToken = null;
 
         private System.Timers.Timer _timer = new System.Timers.Timer(60000);
 
@@ -61,6 +64,7 @@ namespace Kaenx.Konnect.Connections
             _receiveEndPoint = new IPEndPoint(IP, Port);
             _receiveParserDispatcher = new ReceiverParserDispatcher();
             _sendMessages = new BlockingCollection<object>();
+            _receivedAcks = new List<int>();
 
             Init(sendBroadcast);
             _timer.Elapsed += TimerElapsed;
@@ -85,7 +89,7 @@ namespace Kaenx.Konnect.Connections
 
         private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            SendStatusReq();
+            _ = SendStatusReq();
         }
 
         private IPAddress GetIpAddress(string receiver)
@@ -258,8 +262,9 @@ namespace Kaenx.Konnect.Connections
             _flagCRRecieved = false;
             ConnectionRequest builder = new ConnectionRequest();
             builder.Build(_receiveEndPoint, 0x00);
+            _ackToken = new CancellationTokenSource();
             await Send(builder.GetBytes(), true);
-            await Task.Delay(500);
+            await Task.Delay(500, _ackToken.Token);
 
             if (!_flagCRRecieved)
             {
@@ -361,9 +366,11 @@ namespace Kaenx.Konnect.Connections
                                         ConnectionChanged?.Invoke(IsConnected);
                                         break;
                                 }
+                                if(_ackToken != null)
+                                    _ackToken.Cancel();
                                 break;
 
-                            case Builders.TunnelResponse tunnelResponse:
+                            case Requests.TunnelRequest tunnelResponse:
                                 if (tunnelResponse.APCI.ToString().EndsWith("Request") && tunnelResponse.DestinationAddress != PhysicalAddress)
                                 {
                                     //Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
@@ -487,7 +494,9 @@ namespace Kaenx.Konnect.Connections
                                 break;
 
                             case TunnelAckResponse tunnelAck:
-                                //Do nothing
+                                _receivedAcks.Add(tunnelAck.SequenceCounter);
+                                if(_ackToken != null)
+                                    _ackToken.Cancel();
                                 break;
 
                             case Kaenx.Konnect.Requests.DisconnectRequest disconnectRequest:
@@ -521,7 +530,7 @@ namespace Kaenx.Konnect.Connections
 
         private void ProcessSendMessages()
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
 
                 foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
@@ -532,7 +541,7 @@ namespace Kaenx.Konnect.Connections
                         byte[] data = sendMessage as byte[];
                         foreach (UdpClient client in _udpList)
                         {
-                            client.SendAsync(data, data.Length, _sendEndPoint);
+                            await client.SendAsync(data, data.Length, _sendEndPoint);
                         }
 
                     }
@@ -565,7 +574,7 @@ namespace Kaenx.Konnect.Connections
                                     throw new Exception("Unbekanntes Protokoll");
                             }
 
-                            client.SendAsync(xdata, xdata.Length, _sendEndPoint);
+                            await client.SendAsync(xdata, xdata.Length, _sendEndPoint);
                         }
                     }
                     else if (sendMessage is IMessage)
@@ -586,6 +595,9 @@ namespace Kaenx.Konnect.Connections
                         xdata.Add(_communicationChannel); // Channel Id
                         xdata.Add(message.SequenceCounter); // Sequenz Counter
                         xdata.Add(0x00); // Reserved
+
+                        if(_receivedAcks.Contains(message.SequenceCounter))
+                            _receivedAcks.Remove(message.SequenceCounter);
 
 
                         switch (CurrentType)
@@ -612,10 +624,20 @@ namespace Kaenx.Konnect.Connections
                         xdata[4] = length[0];
                         xdata[5] = length[1];
 
-                        foreach (UdpClient client in _udpList)
+                        int repeatCounter = 0;
+                        do 
                         {
-                            client.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
-                        }
+                            foreach (UdpClient client in _udpList)
+                                await client.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
+                            
+                            _ackToken = new CancellationTokenSource();
+                            await Task.Delay(5, _ackToken.Token);
+                            _ackToken = null;
+
+                            repeatCounter++;
+                        } while(!_receivedAcks.Contains(message.SequenceCounter));
+
+                        
                     }
                     else
                     {

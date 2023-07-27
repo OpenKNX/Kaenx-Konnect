@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Kaenx.Konnect.Builders
+namespace Kaenx.Konnect.Responses
 {
     class RoutingResponse : IParserMessage
     {

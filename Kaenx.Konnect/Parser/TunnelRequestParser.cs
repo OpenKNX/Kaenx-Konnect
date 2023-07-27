@@ -25,7 +25,7 @@ namespace Kaenx.Konnect.Parser
         }
 
 
-        public Builders.TunnelResponse Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes)
+        public Requests.TunnelRequest Build(byte headerLength, byte protocolVersion, ushort totalLength, byte[] responseBytes)
         {
             var structureLength = responseBytes[0];
             var communicationChannel = responseBytes[1];
@@ -195,7 +195,7 @@ namespace Kaenx.Konnect.Parser
                     break;
             }
 
-            return new Builders.TunnelResponse(headerLength, protocolVersion, totalLength, structureLength, communicationChannel,
+            return new Requests.TunnelRequest(headerLength, protocolVersion, totalLength, structureLength, communicationChannel,
               sequenceCounter, messageCode, addInformationLength, isNumbered, ackWanted, controlField, controlField2,
               UnicastAddress.FromByteArray(new[] { responseBytes[8], responseBytes[9] }),
               destAddr, type, seqNumb,
