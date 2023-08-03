@@ -62,17 +62,17 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
-            throw new NotImplementedException("ParseDataCemi - MsgConnectReq");
+            
         }
 
         public void ParseDataEmi1()
         {
-            throw new NotImplementedException("ParseDataEmi1 - MsgConnectReq");
+            
         }
 
         public void ParseDataEmi2()
         {
-            throw new NotImplementedException("ParseDataEmi2 - MsgConnectReq");
+            
         }
     }
 }
