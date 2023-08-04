@@ -48,31 +48,31 @@ namespace Kaenx.Konnect.Connections
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
         private bool _flagCRRecieved = false;
 
-        public KnxIpRouting()
+        public KnxIpRouting(string ip = "224.0.23.12", int port = 3671)
         {
             _receiveParserDispatcher = new ReceiverParserDispatcher();
             _sendMessages = new BlockingCollection<object>();
 
-            Init();
+            Init(ip, port);
         }
 
-        public KnxIpRouting(UnicastAddress physicalAddress)
+        public KnxIpRouting(UnicastAddress physicalAddress, string ip = "224.0.23.12", int port = 3671)
         {
             _receiveParserDispatcher = new ReceiverParserDispatcher();
             _sendMessages = new BlockingCollection<object>();
             PhysicalAddress = physicalAddress;
 
-            Init();
+            Init(ip, port);
         }
 
-        private void Init()
+        private void Init(string ip, int port)
         {
             UdpClient client = new UdpClient();
 
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            client.Client.Bind(new IPEndPoint(IPAddress.Any, 3671));
+            client.Client.Bind(new IPEndPoint(IPAddress.Any, port));
             //client.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, 100663296);
-            client.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"), IPAddress.Any);
+            client.JoinMulticastGroup(IPAddress.Parse(ip), IPAddress.Any);
             client.MulticastLoopback = true;
             client.Client.MulticastLoopback = true;
             _udpList.Add(client);
