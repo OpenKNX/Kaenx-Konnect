@@ -264,7 +264,9 @@ namespace Kaenx.Konnect.Connections
             builder.Build(_receiveEndPoint, 0x00);
             _ackToken = new CancellationTokenSource();
             await Send(builder.GetBytes(), true);
+            try{
             await Task.Delay(500, _ackToken.Token);
+            }catch{}
 
             if (!_flagCRRecieved)
             {
@@ -366,8 +368,8 @@ namespace Kaenx.Konnect.Connections
                                         ConnectionChanged?.Invoke(IsConnected);
                                         break;
                                 }
-                                if(_ackToken != null)
-                                    _ackToken.Cancel();
+                                //if(_ackToken != null)
+                                //    _ackToken.Cancel();
                                 break;
 
                             case Requests.TunnelRequest tunnelResponse:
@@ -385,15 +387,10 @@ namespace Kaenx.Konnect.Connections
 
                                 if (tunnelResponse.IsNumbered && tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
-                                    List<byte> data = new List<byte>() { 0x11, 0x00 };
-                                    TunnelRequest builder = new TunnelRequest();
-                                    builder.Build(UnicastAddress.FromString("0.0.0"), tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
-                                    data.AddRange(builder.GetBytes());
-                                    _ = Send(data.ToArray(), _sequenceCounter);
-                                    _sequenceCounter++;
-                                    //Debug.WriteLine("Got Response " + tunnelResponse.SequenceCounter + " . " + tunnelResponse.SequenceNumber);
-
-
+                                    Messages.Response.MsgAckRes msgAckRes = new MsgAckRes();
+                                    msgAckRes.DestinationAddress = tunnelResponse.SourceAddress;
+                                    msgAckRes.SequenceNumber = tunnelResponse.SequenceNumber;
+                                    _ = Send(msgAckRes);
                                 }
                                 else if (tunnelResponse.APCI == ApciTypes.Ack)
                                 {
@@ -581,20 +578,22 @@ namespace Kaenx.Konnect.Connections
                     {
                         IMessage message = sendMessage as IMessage;
                         message.SourceAddress = UnicastAddress.FromString("0.0.0");
-                        List<byte> xdata = new List<byte>();
-
-                        //KNX/IP Header
-                        xdata.Add(0x06); //Header Length
-                        xdata.Add(0x10); //Protokoll Version 1.0
-                        xdata.Add(0x04); //Service Identifier Family: Tunneling
-                        xdata.Add(0x20); //Service Identifier Type: Request
-                        xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
-
-                        //Connection header
-                        xdata.Add(0x04); // Body Structure Length
-                        xdata.Add(_communicationChannel); // Channel Id
-                        xdata.Add(message.SequenceCounter); // Sequenz Counter
-                        xdata.Add(0x00); // Reserved
+                        List<byte> xdata = new List<byte>
+                        {
+                            //KNX/IP Header
+                            0x06, //Header Length
+                            0x10, //Protokoll Version 1.0
+                            0x04, //Service Identifier Family: Tunneling
+                            0x20, //Service Identifier Type: Request
+                            0x00, //Total length. Set later
+                            0x00, //Total length. Set later
+                            
+                            //Connection header
+                            0x04, // Body Structure Length
+                            _communicationChannel, // Channel Id
+                            message.SequenceCounter, // Sequenz Counter
+                            0x00  //Reserved
+                        };
 
                         if(_receivedAcks.Contains(message.SequenceCounter))
                             _receivedAcks.Remove(message.SequenceCounter);
@@ -627,17 +626,25 @@ namespace Kaenx.Konnect.Connections
                         int repeatCounter = 0;
                         do 
                         {
+                            if(repeatCounter > 0)
+                            {
+                                Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
+                            }
+                            if(repeatCounter > 3)
+                                throw new Exception("Zu viele wiederholungen eines Telegramms auf kein OK");
+
                             foreach (UdpClient client in _udpList)
                                 await client.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
                             
                             _ackToken = new CancellationTokenSource();
-                            await Task.Delay(5, _ackToken.Token);
+                            
+                            try{
+                            await Task.Delay(1000, _ackToken.Token);
+                            }catch{}
                             _ackToken = null;
 
                             repeatCounter++;
                         } while(!_receivedAcks.Contains(message.SequenceCounter));
-
-                        
                     }
                     else
                     {
