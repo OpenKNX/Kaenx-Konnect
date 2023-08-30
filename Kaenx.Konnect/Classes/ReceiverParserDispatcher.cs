@@ -40,8 +40,9 @@ namespace Kaenx.Konnect.Classes
 
             //Console.WriteLine($"ServiceType: {serviceTypeIdentifier} {responseBytes[2]:X}-{responseBytes[3]:X}");
 
-            return _responseParsers.AsQueryable().SingleOrDefault(x => x.ServiceTypeIdentifier == serviceTypeIdentifier)
-              ?.Build(headerLength, protocolVersion, totalLength, responseBytes.Skip(6).ToArray());
+            IReceiveParser parser = _responseParsers.AsQueryable().SingleOrDefault(x => x.ServiceTypeIdentifier == serviceTypeIdentifier);
+            IParserMessage result = parser?.Build(headerLength, protocolVersion, totalLength, responseBytes.Skip(6).ToArray());
+            return result;
         }
 
         private static ushort ParseTotalLength(byte data, byte data1)

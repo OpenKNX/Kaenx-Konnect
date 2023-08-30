@@ -35,7 +35,6 @@ namespace Kaenx.Konnect.Connections
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
         public UnicastAddress PhysicalAddress { get; set; }
-        public UnicastAddress PhysicalAddressParent { get; set; }
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
         private byte _communicationChannel;
@@ -48,6 +47,7 @@ namespace Kaenx.Konnect.Connections
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
         private bool _flagCRRecieved = false;
 
+/*
         public KnxIpRouting(string ip = "224.0.23.12", int port = 3671)
         {
             _receiveParserDispatcher = new ReceiverParserDispatcher();
@@ -55,19 +55,21 @@ namespace Kaenx.Konnect.Connections
 
             Init(ip, port);
         }
+*/
 
         public KnxIpRouting(UnicastAddress physicalAddress, string ip = "224.0.23.12", int port = 3671)
         {
             _receiveParserDispatcher = new ReceiverParserDispatcher();
             _sendMessages = new BlockingCollection<object>();
             PhysicalAddress = physicalAddress;
+            _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
             Init(ip, port);
         }
 
         private void Init(string ip, int port)
         {
-            UdpClient client = new UdpClient();
+            /*UdpClient client = new UdpClient();
 
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             client.Client.Bind(new IPEndPoint(IPAddress.Any, port));
@@ -79,11 +81,11 @@ namespace Kaenx.Konnect.Connections
 
             ProcessSendMessages();
             ProcessReceivingMessages(client);
-            
+            */
 
             
             
-            /*NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
+            NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
            
             foreach (NetworkInterface adapter in nics)
             {
@@ -126,7 +128,7 @@ namespace Kaenx.Konnect.Connections
                 ProcessReceivingMessages(client);
 
             IsConnected = true;
-            */
+            
         }
 
         public static int GetFreePort()
@@ -148,7 +150,7 @@ namespace Kaenx.Konnect.Connections
             xdata.Add(0x10); //Protokoll Version 1.0
             xdata.Add(0x05); //Service Identifier Family: Tunneling
             xdata.Add(0x30); //Service Identifier Type: Request
-            xdata.AddRange(BitConverter.GetBytes(Convert.ToInt16(data.Length + 10)).Reverse()); //Total length. Set later
+            xdata.AddRange(BitConverter.GetBytes(Convert.ToInt16(data.Length + 6)).Reverse()); //Total length. Set later
 
             xdata.AddRange(data);
 
@@ -209,16 +211,18 @@ namespace Kaenx.Konnect.Connections
                     {
                         rofl++;
                         var result = await _udpClient.ReceiveAsync();
+                        Console.WriteLine(BitConverter.ToString(result.Buffer));
                         var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
+                        if(knxResponse == null) continue;
 
                         switch (knxResponse)
                         {
                             case Responses.RoutingResponse tunnelResponse:
-                                if (tunnelResponse.DestinationAddress != PhysicalAddressParent)
+                                if (tunnelResponse.DestinationAddress.ToString() != PhysicalAddress.ToString())
                                 {
                                     Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
                                     Debug.WriteLine("Typ: " + tunnelResponse.APCI);
-                                    Debug.WriteLine("Eigene Adresse: " + PhysicalAddressParent.ToString());
+                                    Debug.WriteLine("Eigene Adresse: " + PhysicalAddress.ToString());
                                     Debug.WriteLine("Adressiert an:  " + tunnelResponse.DestinationAddress.ToString());
                                     break;
                                 }
@@ -227,7 +231,7 @@ namespace Kaenx.Konnect.Connections
                                 {
                                     List<byte> data = new List<byte>() { 0x11, 0x00 };
                                     Builders.TunnelRequest builder = new Builders.TunnelRequest();
-                                    builder.Build(PhysicalAddressParent, tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
+                                    builder.Build(PhysicalAddress, tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
                                     data.AddRange(builder.GetBytes());
                                     _=Send(data.ToArray(), _sequenceCounter);
                                     _sequenceCounter++;
@@ -237,8 +241,8 @@ namespace Kaenx.Konnect.Connections
                                 {
                                     OnTunnelAck?.Invoke(new MsgAckRes()
                                     {
-                                        ChannelId = tunnelResponse.CommunicationChannel,
-                                        SequenceCounter = tunnelResponse.SequenceCounter,
+                                        //ChannelId = tunnelResponse.CommunicationChannel,
+                                        //SequenceCounter = tunnelResponse.SequenceCounter,
                                         SequenceNumber = tunnelResponse.SequenceNumber,
                                         SourceAddress = tunnelResponse.SourceAddress,
                                         DestinationAddress = tunnelResponse.DestinationAddress
@@ -277,8 +281,8 @@ namespace Kaenx.Konnect.Connections
                                 }
 
                                 message.Raw = tunnelResponse.Data;
-                                message.ChannelId = tunnelResponse.CommunicationChannel;
-                                message.SequenceCounter = tunnelResponse.SequenceCounter;
+                                //message.ChannelId = tunnelResponse.CommunicationChannel;
+                                //message.SequenceCounter = tunnelResponse.SequenceCounter;
                                 message.SequenceNumber = tunnelResponse.SequenceNumber;
                                 message.SourceAddress = tunnelResponse.SourceAddress;
                                 message.DestinationAddress = tunnelResponse.DestinationAddress;

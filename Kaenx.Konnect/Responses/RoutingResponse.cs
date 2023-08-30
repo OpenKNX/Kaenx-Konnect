@@ -11,17 +11,13 @@ namespace Kaenx.Konnect.Responses
 {
     class RoutingResponse : IParserMessage
     {
-        public RoutingResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte structureLength,
-          byte communicationChannel, byte sequenceCounter, byte messageCode, byte addInformationLength, bool isNumbered, bool ackWanted, byte controlField,
+        public RoutingResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte messageCode, byte addInformationLength, bool isNumbered, bool ackWanted, byte controlField,
           byte controlField2, UnicastAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apci, int seqNumb,
           byte[] data)
         {
             HeaderLength = headerLength;
             ProtocolVersion = protocolVersion;
             TotalLength = totalLength;
-            StructureLength = structureLength;
-            CommunicationChannel = communicationChannel;
-            SequenceCounter = sequenceCounter;
             MessageCode = messageCode;
             AddInformationLength = addInformationLength;
             AckWanted = ackWanted;
@@ -39,9 +35,6 @@ namespace Kaenx.Konnect.Responses
         public byte HeaderLength { get; }
         public byte ProtocolVersion { get; }
         public ushort TotalLength { get; }
-        public byte StructureLength { get; }
-        public byte CommunicationChannel { get; }
-        public byte SequenceCounter { get; }
         public int SequenceNumber { get; }
         public byte MessageCode { get; }
         public byte AddInformationLength { get; }
