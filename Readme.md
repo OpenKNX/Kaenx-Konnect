@@ -5,10 +5,10 @@
 [Nuget Package](https://www.nuget.org/packages/Kaenx.Konnect/) is availible.
 
 Kaenx.Konnect is a library to connect to a KNX Interface.  
-Its supports IP Tunneling, USB* and IP Routing*.
+Its supports IP Tunneling, USB* and IP Routing.
 
 
-*Not implemented yet
+*Not fully implemented yet, need of additional nuget package
 
 
 # How to use

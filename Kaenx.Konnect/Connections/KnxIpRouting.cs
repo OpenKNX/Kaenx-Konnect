@@ -37,7 +37,6 @@ namespace Kaenx.Konnect.Connections
         public UnicastAddress PhysicalAddress { get; set; }
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
-        private byte _communicationChannel;
         private bool StopProcessing = false;
         private byte _sequenceCounter = 0;
 
@@ -45,7 +44,6 @@ namespace Kaenx.Konnect.Connections
         private List<UdpClient> _udpList = new List<UdpClient>();
         private readonly BlockingCollection<object> _sendMessages;
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
-        private bool _flagCRRecieved = false;
 
 /*
         public KnxIpRouting(string ip = "224.0.23.12", int port = 3671)
@@ -128,7 +126,7 @@ namespace Kaenx.Konnect.Connections
                 ProcessReceivingMessages(client);
 
             IsConnected = true;
-            
+            ConnectionChanged?.Invoke(true);
         }
 
         public static int GetFreePort()
@@ -181,20 +179,21 @@ namespace Kaenx.Konnect.Connections
             //Send(new MsgSearchReq());
         }
 
-        public async Task Connect()
+        public Task Connect()
         {
             //Nothing to do here
-
+            return Task.CompletedTask;
         }
 
-        public async Task Disconnect()
+        public Task Disconnect()
         {
             //Nothing to do here
+            return Task.CompletedTask;
         }
 
-        public async Task<bool> SendStatusReq()
+        public Task<bool> SendStatusReq()
         {
-            return true;
+            return Task.FromResult<bool>(true);
         }
 
 
