@@ -101,19 +101,22 @@ namespace Kaenx.Konnect.Connections
             int mostipcount = 0;
             string[] ipParts = receiver.Split('.');
 
-            foreach (IPAddress addr in Dns.GetHostAddresses(Dns.GetHostName()))
+            NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
+
+            foreach(NetworkInterface adapter in adapters)
             {
-                if (addr.AddressFamily == AddressFamily.InterNetwork)
+                IPInterfaceProperties properties = adapter.GetIPProperties();
+                foreach(UnicastIPAddressInformation addr in properties.UnicastAddresses)
                 {
                     int sameCount = 0;
-                    string[] hostParts = addr.ToString().Split('.');
+                    string[] hostParts = addr.Address.ToString().Split('.');
                     for (int i = 0; i < 4; i++)
                     {
                         if (ipParts[i] != hostParts[i])
                         {
                             if (sameCount > mostipcount)
                             {
-                                IP = addr;
+                                IP = addr.Address;
                                 mostipcount = sameCount;
                             }
                             break;
@@ -122,12 +125,12 @@ namespace Kaenx.Konnect.Connections
                     }
                     if (sameCount > mostipcount)
                     {
-                        IP = addr;
+                        IP = addr.Address;
                         mostipcount = sameCount;
                     }
                 }
             }
-
+            
             if (IP == null)
             {
                 try
