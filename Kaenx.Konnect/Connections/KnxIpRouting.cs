@@ -210,7 +210,6 @@ namespace Kaenx.Konnect.Connections
                     {
                         rofl++;
                         var result = await _udpClient.ReceiveAsync();
-                        Console.WriteLine(BitConverter.ToString(result.Buffer));
                         var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
                         if(knxResponse == null) continue;
 
