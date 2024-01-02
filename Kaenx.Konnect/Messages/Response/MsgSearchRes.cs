@@ -25,18 +25,50 @@ namespace Kaenx.Konnect.Messages.Response
         public MsgSearchRes() { }
 
         public IPEndPoint Endpoint { get; set; }
+        public IPEndPoint Multicast { get; set; }
         public string FriendlyName { get; set; }
         public UnicastAddress PhAddr { get; set; }
-
+        public List<ServiceFamily> SupportedServiceFamilies = new List<ServiceFamily>();
 
         public void ParseDataCemi()
         {
+            //HPAI
+            //0 = length (8)
+            //1 = ipv4/ipv6
+            //2-5 = ip
             byte[] addr = new byte[4] { Raw[2], Raw[3], Raw[4], Raw[5] };
+            //6-7 = port
             Endpoint = new IPEndPoint(new IPAddress(addr), BitConverter.ToUInt16(new byte[2] { Raw[7], Raw[6] }, 0));
-            byte[] phAddr = new byte[2] { Raw[12], Raw[13] };
+            
+            //DIB DevInfo
+            //0 =  length (54)
+            //1 = DescriptionType
+            //2 = MediumType
+            //3 = DeviceState (ProgMode)
+            //4-5 = Physical Address
+            byte[] phAddr = new byte[2] { Raw[8+4], Raw[8+5] };
             PhAddr = UnicastAddress.FromByteArray(phAddr);
-            int total = Convert.ToInt32(Raw[8]);
-            FriendlyName = System.Text.Encoding.UTF8.GetString(Raw, 32, total - 32).Trim();
+            //6-7 = Project Installation Identifier
+            //8-13 = SerialNumber
+            //14-17 = MulticastAddress
+            addr = new byte[4] { Raw[8+14], Raw[8+15], Raw[8+16], Raw[8+17] };
+            Multicast = new IPEndPoint(new IPAddress(addr), 3671);
+            //18-23 = MAC Address
+            //24-53 = FriendlyName
+            FriendlyName = System.Text.Encoding.UTF8.GetString(Raw, 32, 30).Trim();
+
+            //DIB SupDvs
+            //0 = length (different)
+            //1 = DescriptionType
+            int offset = 8+54;
+            SupportedServiceFamilies.Clear();
+            for(int i = 2; i <= Raw[54+8]-2; i+=2)
+            {
+                SupportedServiceFamilies.Add(new ServiceFamily() {
+                    ServiceFamilyType = (ServiceFamilyTypes)Enum.ToObject(typeof(ServiceFamilyTypes), Raw[offset+i]),
+                    Version = Raw[offset+i+1]
+                });
+            }
         }
 
         public void ParseDataEmi1()
