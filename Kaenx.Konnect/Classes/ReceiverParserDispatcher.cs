@@ -9,6 +9,8 @@ namespace Kaenx.Konnect.Classes
 {
     class ReceiverParserDispatcher
     {
+        public static ReceiverParserDispatcher Instance { get; set; } = new ReceiverParserDispatcher();
+
         private readonly List<IReceiveParser> _responseParsers;
 
         public ReceiverParserDispatcher()

@@ -81,7 +81,11 @@ namespace Kaenx.Konnect.Connections
             ProcessReceivingMessages(client);
             */
 
-            
+// https://stackoverflow.com/questions/1096142/broadcasting-udp-message-to-all-the-available-network-cards
+// https://stackoverflow.com/questions/61661301/c-sharp-receive-multicast-udp-in-multiple-programs-on-the-same-machine
+// https://www.winsocketdotnetworkprogramming.com/clientserversocketnetworkcommunication8l.html
+// https://github.com/ChrisTTian667/knx-dotnet/blob/main/Knx/KnxNetIp/KnxNetIpRoutingClient.cs#L82
+// https://github.com/lifeemotions/knx.net/blob/master/src/KNXLib/KnxConnectionRouting.cs#L75
             
             NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
            
@@ -422,6 +426,11 @@ namespace Kaenx.Konnect.Connections
                     }
                 }
             });
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 }

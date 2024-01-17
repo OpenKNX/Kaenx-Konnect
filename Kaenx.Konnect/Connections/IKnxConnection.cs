@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Connections
 {
-    public interface IKnxConnection
+    public interface IKnxConnection : IDisposable
     {
         public delegate void TunnelRequestHandler(IMessageRequest message);
         public event TunnelRequestHandler OnTunnelRequest;
