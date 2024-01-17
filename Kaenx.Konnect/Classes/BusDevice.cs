@@ -214,7 +214,7 @@ namespace Kaenx.Konnect.Classes
         /// Stellt eine Verbindung mit dem Gerät her.
         /// Wird für viele weitere Methoden benötigt.
         /// </summary>
-        public async Task Connect(bool onlyConnect = false)
+        public async Task Connect(bool onlyConnect = false, bool isSecondTry = false)
         {
             MsgConnectReq message = new MsgConnectReq(_address);
             await _conn.Send(message);
@@ -246,8 +246,11 @@ namespace Kaenx.Konnect.Classes
             }
             catch
             {
-                MaxFrameLength = 12;
+                MaxFrameLength = 15;
                 //Debug.WriteLine("Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
+                await Disconnect();
+                if(!isSecondTry)
+                    await Connect(true, true);
             }
         }
 
