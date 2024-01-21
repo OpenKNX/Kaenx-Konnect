@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace Kaenx.Konnect.Remote
 {
@@ -21,12 +22,10 @@ namespace Kaenx.Konnect.Remote
         public ArraySegment<byte> GetBytes()
         {
             byte[] codes;
-            BinaryFormatter bf = new BinaryFormatter();
-            using (var ms = new MemoryStream())
-            {
-                bf.Serialize(ms, Codes);
-                codes = ms.ToArray();
-            }
+
+            // Serialize using Newtonsoft.Json
+            string json = JsonConvert.SerializeObject(Codes);
+            codes = Encoding.UTF8.GetBytes(json);
 
             byte[] bytes = new byte[2 + codes.Length];
             bytes[0] = Convert.ToByte(MessageCode);
@@ -41,13 +40,9 @@ namespace Kaenx.Konnect.Remote
         {
             SequenceNumber = buffer[1];
 
-            using (var memStream = new MemoryStream())
-            {
-                var binForm = new BinaryFormatter();
-                memStream.Write(buffer.Skip(2).ToArray(), 0, buffer.Length - 2);
-                memStream.Seek(0, SeekOrigin.Begin);
-                Codes = (List<string>)binForm.Deserialize(memStream);
-            }
+            // Deserialize using Newtonsoft.Json
+            string json = Encoding.UTF8.GetString(buffer, 2, buffer.Length - 2);
+            Codes = JsonConvert.DeserializeObject<List<string>>(json);
         }
     }
 }
