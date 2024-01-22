@@ -1,7 +1,7 @@
-[![Releases](https://badgen.net/github/last-commit/micromatch/micromatch)](https://github.com/OpenKNX/Kaenx-Konnect/releases)
+![Releases](https://badgen.net/github/last-commit/micromatch/micromatch)
 [![NuGet version](https://badgen.net/nuget/v/Kaenx.Konnect)](https://www.nuget.org/packages/Kaenx.Konnect/)
 [![NuGet version](https://badgen.net/nuget/dt/Kaenx.Konnect?color=blue)](https://www.nuget.org/packages/Kaenx.Konnect/)
-
+[![CodeFactor](https://www.codefactor.io/repository/github/openknx/kaenx-konnect/badge)](https://www.codefactor.io/repository/github/openknx/kaenx-konnect)
 
 # Kaenx.Konnect
 Kaenx.Konnect is a library to connect to a KNX Interface.  
