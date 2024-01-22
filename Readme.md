@@ -1,4 +1,4 @@
-![Releases](https://badgen.net/github/last-commit/micromatch/micromatch)
+![Releases](https://badgen.net/github/last-commit/OpenKNX/Kaenx-Konnect)
 [![NuGet version](https://badgen.net/nuget/v/Kaenx.Konnect)](https://www.nuget.org/packages/Kaenx.Konnect/)
 [![NuGet version](https://badgen.net/nuget/dt/Kaenx.Konnect?color=blue)](https://www.nuget.org/packages/Kaenx.Konnect/)
 [![CodeFactor](https://www.codefactor.io/repository/github/openknx/kaenx-konnect/badge)](https://www.codefactor.io/repository/github/openknx/kaenx-konnect)
