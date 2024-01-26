@@ -224,12 +224,9 @@ namespace Kaenx.Konnect.Classes
             _conn.OnTunnelAck += _conn_OnTunnelAck;
 
             await Task.Delay(300);
-
             _isConnected = true;
-
             var x = await DeviceDescriptorRead();
 
-            //return;
             if (onlyConnect)
             {
                 MaxFrameLength = 15;
@@ -246,8 +243,10 @@ namespace Kaenx.Konnect.Classes
             }
             catch
             {
-                MaxFrameLength = 12;
-                //Debug.WriteLine("Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
+                MaxFrameLength = 15;
+                Debug.WriteLine("Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
+                await Disconnect();
+                await Connect(true);
             }
         }
 

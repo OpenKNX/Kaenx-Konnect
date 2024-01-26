@@ -9,6 +9,7 @@ namespace Kaenx.Konnect.Classes
 {
     class ReceiverParserDispatcher
     {
+        public static ReceiverParserDispatcher Instance { get; set; } = new ReceiverParserDispatcher();
         private readonly List<IReceiveParser> _responseParsers;
 
         public ReceiverParserDispatcher()
@@ -22,7 +23,6 @@ namespace Kaenx.Konnect.Classes
                 if (type.IsClass && !type.IsNested && type.Namespace == "Kaenx.Konnect.Parser")
                     parsers.Add(type);
             }
-
 
             foreach (Type t in parsers)
             {

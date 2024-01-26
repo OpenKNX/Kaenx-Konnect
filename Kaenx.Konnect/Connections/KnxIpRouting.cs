@@ -45,16 +45,6 @@ namespace Kaenx.Konnect.Connections
         private readonly BlockingCollection<object> _sendMessages;
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
 
-/*
-        public KnxIpRouting(string ip = "224.0.23.12", int port = 3671)
-        {
-            _receiveParserDispatcher = new ReceiverParserDispatcher();
-            _sendMessages = new BlockingCollection<object>();
-
-            Init(ip, port);
-        }
-*/
-
         public KnxIpRouting(UnicastAddress physicalAddress, string ip = "224.0.23.12", int port = 3671)
         {
             _receiveParserDispatcher = new ReceiverParserDispatcher();
@@ -67,20 +57,12 @@ namespace Kaenx.Konnect.Connections
 
         private void Init(string ip, int port)
         {
-            /*UdpClient client = new UdpClient();
-
-            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            client.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-            //client.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, 100663296);
-            client.JoinMulticastGroup(IPAddress.Parse(ip), IPAddress.Any);
-            client.MulticastLoopback = true;
-            client.Client.MulticastLoopback = true;
-            _udpList.Add(client);
-
-            ProcessSendMessages();
-            ProcessReceivingMessages(client);
-            */
-
+// https://stackoverflow.com/questions/1096142/broadcasting-udp-message-to-all-the-available-network-cards
+// https://stackoverflow.com/questions/61661301/c-sharp-receive-multicast-udp-in-multiple-programs-on-the-same-machine
+// https://www.winsocketdotnetworkprogramming.com/clientserversocketnetworkcommunication8l.html
+// https://github.com/ChrisTTian667/knx-dotnet/blob/main/Knx/KnxNetIp/KnxNetIpRoutingClient.cs#L82
+// https://github.com/lifeemotions/knx.net/blob/master/src/KNXLib/KnxConnectionRouting.cs#L75
+            
             NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
            
             foreach (NetworkInterface adapter in nics)
@@ -93,7 +75,7 @@ namespace Kaenx.Konnect.Connections
                         || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
                         continue;
                     IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
-                    if (p == null) continue; // IPv4 is not configured on this adapter
+                    if (null == p) continue; // IPv4 is not configured on this adapter
                     int index = IPAddress.HostToNetworkOrder(p.Index);
 
                     IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
@@ -133,7 +115,6 @@ namespace Kaenx.Konnect.Connections
             return port;
         }
 
-
         public Task Send(byte[] data, byte sequence)
         {
             List<byte> xdata = new List<byte>();
@@ -151,7 +132,6 @@ namespace Kaenx.Konnect.Connections
 
             return Task.CompletedTask;
         }
-
 
         public Task Send(byte[] data, bool ignoreConnected = false)
         {
@@ -190,6 +170,7 @@ namespace Kaenx.Konnect.Connections
         {
             return Task.FromResult<bool>(true);
         }
+
 
         private void ProcessReceivingMessages(UdpClient _udpClient)
         {
@@ -241,6 +222,7 @@ namespace Kaenx.Konnect.Connections
                                     break;
                                 }
 
+
                                 List<string> temp = new List<string>();
                                 var q = from t in Assembly.GetExecutingAssembly().GetTypes()
                                         where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
@@ -258,6 +240,7 @@ namespace Kaenx.Konnect.Connections
                                         break;
                                     }
                                 }
+
 
                                 if (message == null)
                                 {
@@ -285,6 +268,8 @@ namespace Kaenx.Konnect.Connections
                                     OnTunnelRequest?.Invoke(message as IMessageRequest);
 
                                 break;
+
+
 
                             case SearchRequest searchRequest:
                                 {
@@ -409,6 +394,11 @@ namespace Kaenx.Konnect.Connections
                     }
                 }
             });
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 }

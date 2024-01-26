@@ -9,7 +9,7 @@
     <NeutralLanguage>de</NeutralLanguage>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Description>Bibliothek für den Zugriff auf den KNX Bus mittels IP oder USB.</Description>
+    <Description>Connect to a KNX IP (tunneling/routing) or USB Interface</Description>
     <Version>1.0.0</Version>
     <PackageIcon>Logo.png</PackageIcon>
     <PackageIconUrl />
