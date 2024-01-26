@@ -29,7 +29,6 @@ namespace Kaenx.Konnect.Connections
         public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
-
         public int Port;
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
@@ -145,10 +144,8 @@ namespace Kaenx.Konnect.Connections
                 catch { }
             }
 
-
             return IP;
         }
-
 
         private void Init(bool sendBroadcast = false)
         {
@@ -157,7 +154,6 @@ namespace Kaenx.Konnect.Connections
                 NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
                 foreach (NetworkInterface adapter in nics)
                 {
-
                     //TODO try this
                     /*
                      * udpClient = new UdpClient(8088);
@@ -172,7 +168,7 @@ namespace Kaenx.Konnect.Connections
                             || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
                             continue;*/
                         IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
-                        if (null == p) continue; // IPv4 is not configured on this adapter
+                        if (p == null) continue; // IPv4 is not configured on this adapter
                         int index = IPAddress.HostToNetworkOrder(p.Index);
 
                         IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
@@ -197,8 +193,6 @@ namespace Kaenx.Konnect.Connections
                 _udpList.Add(_udpClient);
                 //Debug.WriteLine("Binded to default");
             }
-
-
 
             ProcessSendMessages();
 
@@ -314,7 +308,6 @@ namespace Kaenx.Konnect.Connections
             return IsConnected;
         }
 
-
         private void ProcessReceivingMessages(UdpClient _udpClient)
         {
             //Debug.WriteLine("Höre jetzt auf: " + (_udpClient.Client.LocalEndPoint as IPEndPoint).Port);
@@ -331,7 +324,6 @@ namespace Kaenx.Konnect.Connections
 
                         //if(!(knxResponse is SearchResponse))
                         //    Debug.WriteLine("Telegram angekommen: " + knxResponse?.ToString());
-
 
                         switch (knxResponse)
                         {
@@ -424,7 +416,6 @@ namespace Kaenx.Konnect.Connections
                                         break;
                                     }
                                 }
-
 
                                 if (message == null)
                                 {
@@ -532,7 +523,6 @@ namespace Kaenx.Konnect.Connections
         {
             Task.Run(async () =>
             {
-
                 foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
                 {
                     if (sendMessage is byte[])
@@ -600,7 +590,6 @@ namespace Kaenx.Konnect.Connections
 
                         if(_receivedAcks.Contains(message.SequenceCounter))
                             _receivedAcks.Remove(message.SequenceCounter);
-
 
                         switch (CurrentType)
                         {

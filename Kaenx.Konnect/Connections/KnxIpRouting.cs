@@ -81,13 +81,10 @@ namespace Kaenx.Konnect.Connections
             ProcessReceivingMessages(client);
             */
 
-            
-            
             NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
            
             foreach (NetworkInterface adapter in nics)
             {
-
                 try
                 {
                     IPInterfaceProperties ipprops = adapter.GetIPProperties();
@@ -96,7 +93,7 @@ namespace Kaenx.Konnect.Connections
                         || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
                         continue;
                     IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
-                    if (null == p) continue; // IPv4 is not configured on this adapter
+                    if (p == null) continue; // IPv4 is not configured on this adapter
                     int index = IPAddress.HostToNetworkOrder(p.Index);
 
                     IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
@@ -118,10 +115,8 @@ namespace Kaenx.Konnect.Connections
                 }
             }
 
-
             ProcessSendMessages();
             
-
             foreach (UdpClient client in _udpList)
                 ProcessReceivingMessages(client);
 
@@ -196,7 +191,6 @@ namespace Kaenx.Konnect.Connections
             return Task.FromResult<bool>(true);
         }
 
-
         private void ProcessReceivingMessages(UdpClient _udpClient)
         {
             Debug.WriteLine("Höre jetzt auf: " + (_udpClient.Client.LocalEndPoint as IPEndPoint)?.Port);
@@ -205,7 +199,6 @@ namespace Kaenx.Konnect.Connections
                 int rofl = 0;
                 try
                 {
-
                     while (!StopProcessing)
                     {
                         rofl++;
@@ -248,7 +241,6 @@ namespace Kaenx.Konnect.Connections
                                     break;
                                 }
 
-
                                 List<string> temp = new List<string>();
                                 var q = from t in Assembly.GetExecutingAssembly().GetTypes()
                                         where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
@@ -266,7 +258,6 @@ namespace Kaenx.Konnect.Connections
                                         break;
                                     }
                                 }
-
 
                                 if (message == null)
                                 {
@@ -294,8 +285,6 @@ namespace Kaenx.Konnect.Connections
                                     OnTunnelRequest?.Invoke(message as IMessageRequest);
 
                                 break;
-
-
 
                             case SearchRequest searchRequest:
                                 {
@@ -333,7 +322,6 @@ namespace Kaenx.Konnect.Connections
         {
             Task.Run(() =>
             {
-
                 foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
                 {
                     if (sendMessage is byte[])
@@ -409,7 +397,6 @@ namespace Kaenx.Konnect.Connections
                         Array.Reverse(length);
                         xdata[4] = length[0];
                         xdata[5] = length[1];
-
 
                         //_udp.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
 
