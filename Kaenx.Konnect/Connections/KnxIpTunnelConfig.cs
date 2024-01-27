@@ -15,14 +15,13 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
 using static Kaenx.Konnect.Connections.IKnxConnection;
 
 namespace Kaenx.Konnect.Connections
 {
-    public class KnxIpTunneling : IKnxConnection
+    internal class KnxIpTunnelingConfig : IKnxConnection
     {
         public event TunnelRequestHandler OnTunnelRequest;
         public event TunnelResponseHandler OnTunnelResponse;
@@ -53,108 +52,24 @@ namespace Kaenx.Konnect.Connections
         private CancellationTokenSource tokenSource = new CancellationTokenSource();
 
         private System.Timers.Timer _timer = new System.Timers.Timer(60000);
-        private bool isInConfig = false;
 
-        public KnxIpTunneling(string ip, int port)
+        public KnxIpTunnelingConfig(UdpConnection connection, IPEndPoint receiving)
         {
-            Port = GetFreePort();
-            _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-
-            IPAddress IP = GetIpAddress(ip);
-
-            if (IP == null)
-                throw new Exception("Lokale Ip konnte nicht gefunden werden");
-
-            _receiveEndPoint = new IPEndPoint(IP, Port);
+            _receiveEndPoint = receiving;
+            // _sendEndPoint = sending;
             _sendMessages = new BlockingCollection<object>();
             _receivedAcks = new List<int>();
 
-            Init();
-            _timer.Elapsed += TimerElapsed;
-        }
+            _client = connection;
+            
+            Task.Run(ProcessSendMessages, tokenSource.Token);
 
-        public KnxIpTunneling(IPEndPoint sendEndPoint)
-        {
-            Port = GetFreePort();
-            _sendEndPoint = sendEndPoint;
-            IPAddress ip = GetIpAddress(sendEndPoint.Address.ToString());
-
-            if (ip == null)
-                throw new Exception("Lokale Ip konnte nicht gefunden werden");
-
-            _receiveEndPoint = new IPEndPoint(ip, Port);
-            _sendMessages = new BlockingCollection<object>();
-
-            Init();
             _timer.Elapsed += TimerElapsed;
         }
 
         private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             _ = SendStatusReq();
-        }
-
-        private IPAddress GetIpAddress(string receiver)
-        {
-            if (receiver == "127.0.0.1")
-                return IPAddress.Parse(receiver);
-
-            IPAddress IP = null;
-            int mostipcount = 0;
-            string[] ipParts = receiver.Split('.');
-
-            NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
-
-            foreach(NetworkInterface adapter in adapters)
-            {
-                IPInterfaceProperties properties = adapter.GetIPProperties();
-                foreach(UnicastIPAddressInformation addr in properties.UnicastAddresses)
-                {
-                    int sameCount = 0;
-                    string[] hostParts = addr.Address.ToString().Split('.');
-                    for (int i = 0; i < 4; i++)
-                    {
-                        if (ipParts[i] != hostParts[i])
-                        {
-                            if (sameCount > mostipcount)
-                            {
-                                IP = addr.Address;
-                                mostipcount = sameCount;
-                            }
-                            break;
-                        }
-                        sameCount++;
-                    }
-                    if (sameCount > mostipcount)
-                    {
-                        IP = addr.Address;
-                        mostipcount = sameCount;
-                    }
-                }
-            }
-            
-            if (IP == null)
-            {
-                try
-                {
-                    using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
-                    {
-                        socket.Connect("8.8.8.8", 65530);
-                        IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-                        IP = endPoint.Address;
-                    }
-                }
-                catch { }
-            }
-
-            return IP;
-        }
-
-        private void Init()
-        {
-            _client = new UdpConnection(_receiveEndPoint.Address, _receiveEndPoint.Port, _sendEndPoint);
-            
-            Task.Run(ProcessSendMessages, tokenSource.Token);
         }
 
         public static int GetFreePort()
@@ -173,8 +88,8 @@ namespace Kaenx.Konnect.Connections
             //KNX/IP Header
             xdata.Add(0x06); //Header Length
             xdata.Add(0x10); //Protokoll Version 1.0
-            xdata.Add(0x04); //Service Identifier Family: Tunneling
-            xdata.Add(0x20); //Service Identifier Type: Request
+            xdata.Add(0x03); //Service Identifier Family: Device Management
+            xdata.Add(0x10); //Service Identifier Type: ConfigurationRequest
             xdata.AddRange(BitConverter.GetBytes(Convert.ToInt16(data.Length + 10)).Reverse()); //Total length. Set later
 
             //Connection header
@@ -213,15 +128,10 @@ namespace Kaenx.Konnect.Connections
 
         public async Task Connect()
         {
-            await Connect(false);
-        }
-
-        public async Task Connect(bool connectOnly = false)
-        {
             _client.OnReceived += KnxMessageReceived;
             _flagCRRecieved = false;
             ConnectionRequest builder = new ConnectionRequest();
-            builder.Build(_receiveEndPoint);
+            builder.Build(_receiveEndPoint, true);
             _ackToken = new CancellationTokenSource();
             await Send(builder.GetBytes(), true);
             try{
@@ -238,27 +148,11 @@ namespace Kaenx.Konnect.Connections
                 throw new Exception("Verbindung zur Schnittstelle konnte nicht hergestellt werden! Error: " + LastError);
             }
 
-            // bool state = await SendStatusReq();
-            // if (!state)
-            // {
-            //     throw new Exception("Die Schnittstelle hat keine Verbindung zum Bus! Error: " + LastError);
-            // }
-            
-            _client.OnReceived -= KnxMessageReceived;
-
-            KnxIpTunnelingConfig conf = new KnxIpTunnelingConfig(_client, _receiveEndPoint);
-
-            try{
-                isInConfig = true;
-                await conf.Connect();
-            } catch {
-                //do nothing?
-            } finally {
-                await conf.Disconnect();
-                isInConfig = false;
+            bool state = await SendStatusReq();
+            if (!state)
+            {
+                throw new Exception("Die Schnittstelle hat keine Verbindung zum Bus! Error: " + LastError);
             }
-            
-            _client.OnReceived += KnxMessageReceived;
 
             _timer.Start();
         }
@@ -295,7 +189,6 @@ namespace Kaenx.Konnect.Connections
                 switch (parserMessage)
                 {
                     case ConnectStateResponse connectStateResponse:
-                        if(connectStateResponse.CommunicationChannel != _communicationChannel) return;
                         //Debug.WriteLine("Connection State Response: " + connectStateResponse.Status.ToString());
                         switch (connectStateResponse.Status)
                         {
@@ -336,7 +229,6 @@ namespace Kaenx.Konnect.Connections
                         break;
 
                     case Requests.TunnelRequest tunnelResponse:
-                        if(tunnelResponse.CommunicationChannel != _communicationChannel) return;
                         if (tunnelResponse.APCI.ToString().EndsWith("Request") && tunnelResponse.DestinationAddress != PhysicalAddress)
                         {
                             //Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
@@ -456,7 +348,6 @@ namespace Kaenx.Konnect.Connections
                         break;
 
                     case TunnelAckResponse tunnelAck:
-                        if(tunnelAck.ChannelId != _communicationChannel) return;
                         _receivedAcks.Add(tunnelAck.SequenceCounter);
                         if(_ackToken != null)
                             _ackToken.Cancel();
@@ -473,7 +364,6 @@ namespace Kaenx.Konnect.Connections
                     }
 
                     case DisconnectResponse disconnectResponse:
-                        if(disconnectResponse.CommunicationChannel != _communicationChannel) return;
                         IsConnected = false;
                         _communicationChannel = 0;
                         ConnectionChanged?.Invoke(IsConnected);

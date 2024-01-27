@@ -35,8 +35,17 @@ namespace Kaenx.Konnect.Parser
             if (bytes.Count() == 0) return new ConnectionResponseDataBlock(0x00, 0x01, UnicastAddress.FromString("0.0.0"));
 
             var enumerable = bytes as byte[] ?? bytes.ToArray();
-            return new ConnectionResponseDataBlock(enumerable.ElementAt(0), enumerable.ElementAt(1),
-              UnicastAddress.FromByteArray(enumerable.Skip(2).ToArray()));
+
+            if(enumerable.ElementAt(1) == 0x04)
+            {
+              //Wenn Tunneling
+              return new ConnectionResponseDataBlock(enumerable.ElementAt(0), enumerable.ElementAt(1),
+                UnicastAddress.FromByteArray(enumerable.Skip(2).ToArray()));
+            } else {
+              //Wenn Config
+              return new ConnectionResponseDataBlock(enumerable.ElementAt(0), enumerable.ElementAt(1),
+                UnicastAddress.FromString("0.0.0"));
+            }
         }
 
         private static HostProtocolAddressInformation ParseEndpoint(IEnumerable<byte> bytes)

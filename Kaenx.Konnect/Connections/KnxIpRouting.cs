@@ -35,6 +35,7 @@ namespace Kaenx.Konnect.Connections
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
         public UnicastAddress PhysicalAddress { get; set; }
+        public int MaxFrameLength { get; set; } = 254;
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
         private bool StopProcessing = false;

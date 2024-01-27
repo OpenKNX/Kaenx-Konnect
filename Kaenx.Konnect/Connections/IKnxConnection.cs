@@ -46,6 +46,11 @@ namespace Kaenx.Konnect.Connections
         public UnicastAddress PhysicalAddress { get; set; }
 
         /// <summary>
+        /// Returns the max APDU length of the interface
+        /// </summary>
+        public int MaxFrameLength { get; set; }
+
+        /// <summary>
         /// Connects the interface to the bus.
         /// </summary>
         /// <returns></returns>

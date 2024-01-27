@@ -20,6 +20,7 @@ namespace Kaenx.Konnect.Connections
         {
             client = new UdpClient(new IPEndPoint(ip, port));
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
             Task.Run(ProcessReceive, tokenSource.Token);
             target = _target;
         }

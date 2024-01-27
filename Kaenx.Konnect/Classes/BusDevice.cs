@@ -23,7 +23,7 @@ namespace Kaenx.Konnect.Classes
 
         public ManagmentModels ManagmentModel { get; set; }
         public bool SupportsExtendedFrames { get; set; } = false;
-        private int MaxFrameLength { get; set; } = 15;
+        public int MaxFrameLength { get; set; } = 15;
         public ushort? MaskVersion { get; private set; } = null;
 
         private bool _isConnected = false;
