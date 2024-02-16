@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,22 +13,26 @@ namespace Kaenx.Konnect.Connections
     {
         private CancellationTokenSource tokenSource = new CancellationTokenSource();
         private UdpClient client;
-        private IPEndPoint target;
-        public delegate void ReceivedKnxMessage(IParserMessage message);
+        private IPEndPoint Source { get; set; }
+        private IPEndPoint Target { get; set; }
+        public delegate void ReceivedKnxMessage(UdpConnection sender, IParserMessage message);
         public event ReceivedKnxMessage OnReceived;
+        public NetworkInterface Interface { get; set; }
+        public int InterfaceIndex { get; set; } = 0;
 
-        public UdpConnection(IPAddress ip, int port, IPEndPoint _target)
+        public UdpConnection(IPAddress ip, int port, IPEndPoint _target, IPEndPoint _source = null)
         {
             client = new UdpClient(new IPEndPoint(ip, port));
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
             Task.Run(ProcessReceive, tokenSource.Token);
-            target = _target;
+            Target = _target;
+            Source = _source;
         }
 
         public async Task SendAsync(byte[] data)
         {
-            await client.SendAsync(data, data.Length, target);
+            await client.SendAsync(data, data.Length, Target);
         }
 
         public IPEndPoint GetLocalEndpoint()
@@ -41,7 +46,7 @@ namespace Kaenx.Konnect.Connections
             {
                 var result = await client.ReceiveAsync();
                 var knxResponse = ReceiverParserDispatcher.Instance.Build(result.Buffer);
-                OnReceived?.Invoke(knxResponse);
+                OnReceived?.Invoke(this, knxResponse);
             }
         }
 

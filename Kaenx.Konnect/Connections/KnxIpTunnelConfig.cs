@@ -182,7 +182,7 @@ namespace Kaenx.Konnect.Connections
             return IsConnected;
         }
 
-        private void KnxMessageReceived(IParserMessage parserMessage)
+        private void KnxMessageReceived(UdpConnection sender, IParserMessage parserMessage)
         {
             try
             {
