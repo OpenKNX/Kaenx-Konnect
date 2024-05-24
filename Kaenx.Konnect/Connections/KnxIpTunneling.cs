@@ -237,28 +237,31 @@ namespace Kaenx.Konnect.Connections
             {
                 throw new Exception("Verbindung zur Schnittstelle konnte nicht hergestellt werden! Error: " + LastError);
             }
-
+            
             // bool state = await SendStatusReq();
             // if (!state)
             // {
             //     throw new Exception("Die Schnittstelle hat keine Verbindung zum Bus! Error: " + LastError);
             // }
             
-            _client.OnReceived -= KnxMessageReceived;
+            if(!connectOnly)
+            {
+                _client.OnReceived -= KnxMessageReceived;
 
-            KnxIpTunnelingConfig conf = new KnxIpTunnelingConfig(_client, _receiveEndPoint);
+                KnxIpTunnelingConfig conf = new KnxIpTunnelingConfig(_client, _receiveEndPoint);
 
-            try{
-                isInConfig = true;
-                await conf.Connect();
-            } catch {
-                //do nothing?
-            } finally {
-                await conf.Disconnect();
-                isInConfig = false;
+                try{
+                    isInConfig = true;
+                    await conf.Connect();
+                } catch {
+                    //do nothing?
+                } finally {
+                    await conf.Disconnect();
+                    isInConfig = false;
+                }
+                
+                _client.OnReceived += KnxMessageReceived;
             }
-            
-            _client.OnReceived += KnxMessageReceived;
 
             _timer.Start();
         }
