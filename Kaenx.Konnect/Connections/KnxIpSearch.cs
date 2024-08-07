@@ -115,11 +115,11 @@ namespace Kaenx.Konnect.Connections
 
         public static int GetFreePort()
         {
-            TcpListener l = new TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            int port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            return port;
+            // TcpListener l = new TcpListener(IPAddress.Loopback, 0);
+            // l.Start();
+            // int port = ((IPEndPoint)l.LocalEndpoint).Port;
+            // l.Stop();
+            return 0;//port;
         }
 
         public Task Send(byte[] data, byte sequence)
@@ -178,11 +178,10 @@ namespace Kaenx.Konnect.Connections
                 udp.OnReceived += KnxMessageReceived;
         }
 
-        public Task Disconnect()
+        public async Task Disconnect()
         {
             foreach(UdpConnection udp in _clients)
                 udp.OnReceived -= KnxMessageReceived;
-            return Task.CompletedTask;
         }
 
         public async Task<bool> SendStatusReq()

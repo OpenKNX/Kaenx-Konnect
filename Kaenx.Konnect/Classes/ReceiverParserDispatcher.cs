@@ -9,7 +9,16 @@ namespace Kaenx.Konnect.Classes
 {
     class ReceiverParserDispatcher
     {
-        public static ReceiverParserDispatcher Instance { get; set; } = new ReceiverParserDispatcher();
+        private static ReceiverParserDispatcher _instance;
+        public static ReceiverParserDispatcher Instance
+        {
+            get {
+                if( _instance == null)
+                    _instance = new ReceiverParserDispatcher();
+                return _instance;
+            }
+        }
+
         private readonly List<IReceiveParser> _responseParsers;
 
         public ReceiverParserDispatcher()
@@ -40,7 +49,7 @@ namespace Kaenx.Konnect.Classes
 
             //Console.WriteLine($"ServiceType: {serviceTypeIdentifier} {responseBytes[2]:X}-{responseBytes[3]:X}");
 
-            IReceiveParser parser = _responseParsers.AsQueryable().SingleOrDefault(x => x.ServiceTypeIdentifier == serviceTypeIdentifier);
+            IReceiveParser parser = _responseParsers.SingleOrDefault(x => x.ServiceTypeIdentifier == serviceTypeIdentifier);
             IParserMessage result = parser?.Build(headerLength, protocolVersion, totalLength, responseBytes.Skip(6).ToArray());
             return result;
         }
