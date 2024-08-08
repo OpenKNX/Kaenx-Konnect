@@ -159,11 +159,11 @@ namespace Kaenx.Konnect.Connections
 
         public static int GetFreePort()
         {
-            TcpListener l = new TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            int port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            return port;
+            // TcpListener l = new TcpListener(IPAddress.Loopback, 0);
+            // l.Start();
+            // int port = ((IPEndPoint)l.LocalEndpoint).Port;
+            // l.Stop();
+            return 0;
         }
 
         public Task Send(byte[] data, byte sequence)

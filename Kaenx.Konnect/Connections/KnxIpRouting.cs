@@ -80,7 +80,7 @@ namespace Kaenx.Konnect.Connections
                     int index = IPAddress.HostToNetworkOrder(p.Index);
 
                     IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
-                    UdpClient _udpClient = new UdpClient();
+                    UdpClient _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
                     _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                     _udpClient.Client.Bind(new IPEndPoint(addr, 3671));
                     _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, index);
@@ -109,11 +109,11 @@ namespace Kaenx.Konnect.Connections
 
         public static int GetFreePort()
         {
-            TcpListener l = new TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            int port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            return port;
+            // TcpListener l = new TcpListener(IPAddress.Loopback, 0);
+            // l.Start();
+            // int port = ((IPEndPoint)l.LocalEndpoint).Port;
+            // l.Stop();
+            return 0;
         }
 
         public Task Send(byte[] data, byte sequence)
