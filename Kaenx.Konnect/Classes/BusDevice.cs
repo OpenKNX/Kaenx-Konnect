@@ -157,6 +157,11 @@ namespace Kaenx.Konnect.Classes
 
 
         #region Helper Functions
+        public void SetMaxFrameLength(int maxFrameLength)
+        {
+            MaxFrameLength = maxFrameLength;
+        }
+
         private async Task<string> GetMaskVersion()
         {
             if (_mask != "") return _mask;
