@@ -27,8 +27,6 @@ namespace Kaenx.Konnect.Connections
         public event TunnelRequestHandler OnTunnelRequest;
         public event TunnelResponseHandler OnTunnelResponse;
         public event TunnelAckHandler OnTunnelAck;
-        public event SearchResponseHandler OnSearchResponse;
-        public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
         public int Port;
@@ -439,7 +437,29 @@ namespace Kaenx.Konnect.Connections
 
                         break;
 
+                    case Requests.SearchRequest searchRequest:
+                    {
+                        MsgSearchReq msg = new MsgSearchReq(searchRequest.responseBytes);
+                        switch (CurrentType)
+                        {
+                            case ProtocolTypes.cEmi:
+                                msg.ParseDataCemi();
+                                break;
+                            case ProtocolTypes.Emi1:
+                                msg.ParseDataEmi1();
+                                break;
+                            case ProtocolTypes.Emi2:
+                                msg.ParseDataEmi2();
+                                break;
+                            default:
+                                throw new NotImplementedException("Unbekanntes Protokoll - SearchResponse KnxIpTunneling");
+                        }
+                        OnTunnelRequest?.Invoke(msg);
+                        break;
+                    }
+
                     case SearchResponse searchResponse:
+                    {
                         MsgSearchRes msg = new MsgSearchRes(searchResponse.responseBytes);
                         switch (CurrentType)
                         {
@@ -455,8 +475,9 @@ namespace Kaenx.Konnect.Connections
                             default:
                                 throw new NotImplementedException("Unbekanntes Protokoll - SearchResponse KnxIpTunneling");
                         }
-                        OnSearchResponse?.Invoke(msg);
+                        OnTunnelResponse?.Invoke(msg);
                         break;
+                    }
 
                     case TunnelAckResponse tunnelAck:
                         if(tunnelAck.ChannelId != _communicationChannel) return;

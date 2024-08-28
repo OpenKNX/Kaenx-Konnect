@@ -24,6 +24,9 @@ namespace Kaenx.Konnect.Connections
 {
     public class KnxIpSearch : IKnxConnection
     {
+        public delegate void SearchResponseHandler(MsgSearchRes message, NetworkInterface netInterface, int netIndex);
+        public delegate void SearchRequestHandler(MsgSearchReq message);
+
         public event TunnelRequestHandler OnTunnelRequest;
         public event TunnelResponseHandler OnTunnelResponse;
         public event TunnelAckHandler OnTunnelAck;
@@ -69,9 +72,6 @@ namespace Kaenx.Konnect.Connections
 
         private void Init()
         {
-            //_client = new UdpConnection(_receiveEndPoint.Address, _receiveEndPoint.Port, _sendEndPoint);
-
-
             NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
            
             foreach (NetworkInterface adapter in nics)
@@ -211,7 +211,7 @@ namespace Kaenx.Konnect.Connections
                             default:
                                 throw new NotImplementedException("Unbekanntes Protokoll - SearchResponse KnxIpTunneling");
                         }
-                        OnSearchResponse?.Invoke(msg);
+                        OnSearchResponse?.Invoke(msg, sender.Interface, sender.InterfaceIndex);
                         break;
 
                     case TunnelAckResponse tunnelAck:

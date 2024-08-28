@@ -28,8 +28,6 @@ namespace Kaenx.Konnect.Connections
         public event TunnelRequestHandler OnTunnelRequest;
         public event TunnelResponseHandler OnTunnelResponse;
         public event TunnelAckHandler OnTunnelAck;
-        public event SearchResponseHandler OnSearchResponse;
-        public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
         public bool IsConnected { get; set; }
@@ -276,7 +274,7 @@ namespace Kaenx.Konnect.Connections
                                 {
                                     MsgSearchReq msg = new MsgSearchReq(searchRequest.responseBytes);
                                     msg.ParseDataCemi();
-                                    OnSearchRequest?.Invoke(msg);
+                                    OnTunnelRequest?.Invoke(msg);
                                     break;
                                 }
 
@@ -284,7 +282,7 @@ namespace Kaenx.Konnect.Connections
                                 {
                                     MsgSearchRes msg = new MsgSearchRes(searchResponse.responseBytes);
                                     msg.ParseDataCemi();
-                                    OnSearchResponse?.Invoke(msg);
+                                    OnTunnelResponse?.Invoke(msg);
                                     break;
                                 }
 

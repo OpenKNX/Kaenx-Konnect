@@ -26,8 +26,6 @@ namespace Kaenx.Konnect.Connections
         public event TunnelRequestHandler OnTunnelRequest;
         public event TunnelResponseHandler OnTunnelResponse;
         public event TunnelAckHandler OnTunnelAck;
-        public event SearchResponseHandler OnSearchResponse;
-        public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
         public int Port;
@@ -328,6 +326,7 @@ namespace Kaenx.Konnect.Connections
 
                         break;
 
+                    //TODO SearchRequest?
                     case SearchResponse searchResponse:
                         MsgSearchRes msg = new MsgSearchRes(searchResponse.responseBytes);
                         switch (CurrentType)
@@ -344,7 +343,7 @@ namespace Kaenx.Konnect.Connections
                             default:
                                 throw new NotImplementedException("Unbekanntes Protokoll - SearchResponse KnxIpTunneling");
                         }
-                        OnSearchResponse?.Invoke(msg);
+                        OnTunnelResponse?.Invoke(msg);
                         break;
 
                     case TunnelAckResponse tunnelAck:
