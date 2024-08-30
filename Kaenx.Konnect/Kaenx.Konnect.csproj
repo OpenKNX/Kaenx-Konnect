@@ -7,10 +7,10 @@
     <TargetFramework>net7.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <NeutralLanguage>de</NeutralLanguage>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
     <Description>Connect to a KNX IP (tunneling/routing) or USB Interface</Description>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <PackageIcon>Logo.png</PackageIcon>
     <PackageIconUrl />
     <PackageTags>knx, bus, communication</PackageTags>
@@ -20,7 +20,7 @@
     <RepositoryUrl>https://github.com/OpenKnx/Kaenx-Konnect</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Copyright>2023 - Mike Gerst</Copyright>
+    <Copyright>2024 - Mike Gerst</Copyright>
     <LangVersion>8.0</LangVersion>
     <ApplicationIcon>Logo.ico</ApplicationIcon>
   </PropertyGroup>
