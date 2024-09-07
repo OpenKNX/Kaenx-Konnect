@@ -56,50 +56,46 @@ namespace Kaenx.Konnect.Connections
 
         private void Init(string ip, int port)
         {
-// https://stackoverflow.com/questions/1096142/broadcasting-udp-message-to-all-the-available-network-cards
 // https://stackoverflow.com/questions/61661301/c-sharp-receive-multicast-udp-in-multiple-programs-on-the-same-machine
 // https://www.winsocketdotnetworkprogramming.com/clientserversocketnetworkcommunication8l.html
 // https://github.com/ChrisTTian667/knx-dotnet/blob/main/Knx/KnxNetIp/KnxNetIpRoutingClient.cs#L82
 // https://github.com/lifeemotions/knx.net/blob/master/src/KNXLib/KnxConnectionRouting.cs#L75
-            
-            NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
-           
-            foreach (NetworkInterface adapter in nics)
+
+            // UdpClient _udpClient = new UdpClient
+            // {
+            //     MulticastLoopback = false,
+            //     ExclusiveAddressUse = false
+            // };
+            // _udpClient.Client.MulticastLoopback = false;
+
+            // _udpClient.Client.SetSocketOption(
+            //     SocketOptionLevel.Socket,
+            //     SocketOptionName.ReuseAddress,
+            //     true);
+
+            // _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, 3671));
+            // _udpClient.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"), IPAddress.Any);
+            // _udpList.Add(_udpClient);
+
+            IEnumerable<IPAddress> ipv4Addresses =
+                    Dns
+                        .GetHostAddresses(Dns.GetHostName())
+                        .Where(i => i.AddressFamily == AddressFamily.InterNetwork);
+
+            foreach (IPAddress localIp in ipv4Addresses)
             {
-                try
-                {
-                    IPInterfaceProperties ipprops = adapter.GetIPProperties();
-                    if (ipprops.MulticastAddresses.Count == 0 // most of VPN adapters will be skipped
-                        || !adapter.SupportsMulticast // multicast is meaningless for this type of connection
-                        || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
-                        continue;
-                    IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
-                    if (null == p) continue; // IPv4 is not configured on this adapter
-                    int index = IPAddress.HostToNetworkOrder(p.Index);
-
-                    IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
-                    UdpClient _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
-                    _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    _udpClient.Client.Bind(new IPEndPoint(addr, 3671));
-                    _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, index);
-                    _udpClient.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"), IPAddress.Any);
-                    _udpClient.MulticastLoopback = true;
-                    _udpClient.Client.MulticastLoopback = true;
-                    _udpList.Add(_udpClient);
-
-                    Debug.WriteLine("Binded to " + adapter.Name + " - " + addr.ToString() + " - 3671 -> " + index);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("Exception binding to " + adapter.Name);
-                    Debug.WriteLine(ex.Message);
-                }
+                var client = new UdpClient(new IPEndPoint(localIp, 3671));
+                client.Client.MulticastLoopback = false;
+                client.MulticastLoopback = false;
+                _udpList.Add(client);
+                client.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"), localIp);
             }
 
             ProcessSendMessages();
             
+            int x = 0;
             foreach (UdpClient client in _udpList)
-                ProcessReceivingMessages(client);
+                ProcessReceivingMessages(client, x++);
 
             IsConnected = true;
             ConnectionChanged?.Invoke(true);
@@ -170,21 +166,19 @@ namespace Kaenx.Konnect.Connections
             return Task.FromResult<bool>(true);
         }
 
-
-        private void ProcessReceivingMessages(UdpClient _udpClient)
+        private void ProcessReceivingMessages(UdpClient _udpClient, int index)
         {
             Debug.WriteLine("Höre jetzt auf: " + (_udpClient.Client.LocalEndPoint as IPEndPoint)?.Port);
             Task.Run(async () =>
             {
-                int rofl = 0;
                 try
                 {
                     while (!StopProcessing)
                     {
-                        rofl++;
                         var result = await _udpClient.ReceiveAsync();
                         var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
                         if(knxResponse == null) continue;
+
 
                         switch (knxResponse)
                         {
@@ -197,6 +191,7 @@ namespace Kaenx.Konnect.Connections
                                     Debug.WriteLine("Adressiert an:  " + tunnelResponse.DestinationAddress.ToString());
                                     break;
                                 }
+                                Debug.WriteLine($"Received: {index} {tunnelResponse.APCI}");
 
                                 if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                                 {
