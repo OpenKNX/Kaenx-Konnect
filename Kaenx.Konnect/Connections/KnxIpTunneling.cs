@@ -29,7 +29,6 @@ namespace Kaenx.Konnect.Connections
         public event TunnelAckHandler OnTunnelAck;
         public event ConnectionChangedHandler ConnectionChanged;
 
-        public int Port;
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
         public UnicastAddress PhysicalAddress { get; set; }
@@ -55,7 +54,6 @@ namespace Kaenx.Konnect.Connections
 
         public KnxIpTunneling(string ip, int port)
         {
-            Port = GetFreePort();
             _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
             IPAddress IP = GetIpAddress(ip);
@@ -63,7 +61,7 @@ namespace Kaenx.Konnect.Connections
             if (IP == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
 
-            _receiveEndPoint = new IPEndPoint(IP, Port);
+            _receiveEndPoint = new IPEndPoint(IP, 0);
             _sendMessages = new BlockingCollection<object>();
             _receivedAcks = new List<int>();
 
@@ -73,14 +71,13 @@ namespace Kaenx.Konnect.Connections
 
         public KnxIpTunneling(IPEndPoint sendEndPoint)
         {
-            Port = GetFreePort();
             _sendEndPoint = sendEndPoint;
             IPAddress ip = GetIpAddress(sendEndPoint.Address.ToString());
 
             if (ip == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
 
-            _receiveEndPoint = new IPEndPoint(ip, Port);
+            _receiveEndPoint = new IPEndPoint(ip, 0);
             _sendMessages = new BlockingCollection<object>();
 
             Init();
@@ -153,15 +150,6 @@ namespace Kaenx.Konnect.Connections
             _client = new UdpConnection(_receiveEndPoint.Address, _receiveEndPoint.Port, _sendEndPoint);
             
             Task.Run(ProcessSendMessages, tokenSource.Token);
-        }
-
-        public static int GetFreePort()
-        {
-            // TcpListener l = new TcpListener(IPAddress.Loopback, 0);
-            // l.Start();
-            // int port = ((IPEndPoint)l.LocalEndpoint).Port;
-            // l.Stop();
-            return 0;
         }
 
         public Task Send(byte[] data, byte sequence)

@@ -34,7 +34,6 @@ namespace Kaenx.Konnect.Connections
         public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
-        public int Port;
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
         public UnicastAddress PhysicalAddress { get; set; }
@@ -56,7 +55,6 @@ namespace Kaenx.Konnect.Connections
 
         public KnxIpSearch()
         {
-            Port = GetFreePort();
             _sendEndPoint = new IPEndPoint(IPAddress.Parse("224.0.23.12"), 3671);
 
             _sendMessages = new BlockingCollection<object>();
@@ -96,12 +94,12 @@ namespace Kaenx.Konnect.Connections
                     
                     IPAddress addr = ipprops.UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
                     
-                    UdpConnection udp = new UdpConnection(addr, Port, _sendEndPoint); //TODO set source?
+                    UdpConnection udp = new UdpConnection(addr, _sendEndPoint); //TODO set source?
                     udp.InterfaceIndex = IPAddress.HostToNetworkOrder(p.Index);
                     udp.Interface = adapter;
                     _clients.Add(udp);
 
-                    Debug.WriteLine("Binded to " + adapter.Name + " - " + addr.ToString() + " - " + Port + " -> " + udp.InterfaceIndex);
+                    Debug.WriteLine("Binded to " + adapter.Name + " - " + addr.ToString() + " - " + udp.GetLocalEndpoint().Port + " -> " + udp.InterfaceIndex);
                 }
                 catch (Exception ex)
                 {
@@ -111,15 +109,6 @@ namespace Kaenx.Konnect.Connections
             }
             
             Task.Run(ProcessSendMessages, tokenSource.Token);
-        }
-
-        public static int GetFreePort()
-        {
-            // TcpListener l = new TcpListener(IPAddress.Loopback, 0);
-            // l.Start();
-            // int port = ((IPEndPoint)l.LocalEndpoint).Port;
-            // l.Stop();
-            return 0;//port;
         }
 
         public Task Send(byte[] data, byte sequence)

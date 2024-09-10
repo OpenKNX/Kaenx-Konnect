@@ -20,11 +20,31 @@ namespace Kaenx.Konnect.Connections
         public NetworkInterface Interface { get; set; }
         public int InterfaceIndex { get; set; } = 0;
 
-        public UdpConnection(IPAddress ip, int port, IPEndPoint _target, IPEndPoint _source = null)
+        public UdpConnection(IPAddress ip, IPEndPoint _target, bool isMulticast = false, IPEndPoint _source = null)
+        {
+            client = new UdpClient(new IPEndPoint(ip, 0));
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
+            if(isMulticast) {
+                client.Client.MulticastLoopback = false;
+                client.MulticastLoopback = false;
+                client.JoinMulticastGroup(_target.Address, ip);
+            }
+            Task.Run(ProcessReceive, tokenSource.Token);
+            Target = _target;
+            Source = _source;
+        }
+
+        public UdpConnection(IPAddress ip, int port, IPEndPoint _target, bool isMulticast = false, IPEndPoint _source = null)
         {
             client = new UdpClient(new IPEndPoint(ip, port));
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
+            if(isMulticast) {
+                client.Client.MulticastLoopback = false;
+                client.MulticastLoopback = false;
+                client.JoinMulticastGroup(_target.Address, ip);
+            }
             Task.Run(ProcessReceive, tokenSource.Token);
             Target = _target;
             Source = _source;
