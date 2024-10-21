@@ -48,7 +48,6 @@ namespace Kaenx.Konnect.Connections
         private List<UdpConnection> _clients = new List<UdpConnection>();
         private readonly BlockingCollection<object> _sendMessages;
         
-        private bool _flagCRRecieved = false;
         private List<int> _receivedAcks;
         private CancellationTokenSource _ackToken = null;
         private CancellationTokenSource tokenSource = new CancellationTokenSource();
@@ -61,6 +60,9 @@ namespace Kaenx.Konnect.Connections
             _receivedAcks = new List<int>();
 
             Init();
+
+            if(OnTunnelResponse != null && OnTunnelRequest != null && OnTunnelAck != null && OnSearchRequest != null)
+                return;
         }
 
         private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -175,7 +177,7 @@ namespace Kaenx.Konnect.Connections
 
         public async Task<bool> SendStatusReq()
         {
-            return false;
+            return true;
         }
 
         private void KnxMessageReceived(UdpConnection sender, IParserMessage parserMessage)

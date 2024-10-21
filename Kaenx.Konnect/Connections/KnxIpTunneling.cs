@@ -36,18 +36,17 @@ namespace Kaenx.Konnect.Connections
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
         private byte _communicationChannel;
-        private bool StopProcessing = false;
         private byte _sequenceCounter = 0;
 
         private readonly IPEndPoint _receiveEndPoint;
         private readonly IPEndPoint _sendEndPoint;
         private UdpConnection _client;
-        private readonly BlockingCollection<object> _sendMessages;
+        private readonly Queue<object> _sendMessages;
         
         private bool _flagCRRecieved = false;
         private List<int> _receivedAcks;
         private CancellationTokenSource _ackToken = null;
-        private CancellationTokenSource tokenSource = new CancellationTokenSource();
+        private CancellationTokenSource tokenSource;
 
         private System.Timers.Timer _timer = new System.Timers.Timer(60000);
         private bool isInConfig = false;
@@ -62,7 +61,7 @@ namespace Kaenx.Konnect.Connections
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
 
             _receiveEndPoint = new IPEndPoint(IP, 0);
-            _sendMessages = new BlockingCollection<object>();
+            _sendMessages = new Queue<object>();
             _receivedAcks = new List<int>();
 
             Init();
@@ -78,7 +77,7 @@ namespace Kaenx.Konnect.Connections
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
 
             _receiveEndPoint = new IPEndPoint(ip, 0);
-            _sendMessages = new BlockingCollection<object>();
+            _sendMessages = new Queue<object>();
 
             Init();
             _timer.Elapsed += TimerElapsed;
@@ -148,8 +147,6 @@ namespace Kaenx.Konnect.Connections
         private void Init()
         {
             _client = new UdpConnection(_receiveEndPoint.Address, _receiveEndPoint.Port, _sendEndPoint);
-            
-            Task.Run(ProcessSendMessages, tokenSource.Token);
         }
 
         public Task Send(byte[] data, byte sequence)
@@ -170,7 +167,7 @@ namespace Kaenx.Konnect.Connections
             xdata.Add(0x00); // Reserved
             xdata.AddRange(data);
 
-            _sendMessages.Add(xdata.ToArray());
+            _sendMessages.Enqueue(xdata.ToArray());
 
             return Task.CompletedTask;
         }
@@ -180,7 +177,7 @@ namespace Kaenx.Konnect.Connections
             if (!ignoreConnected && !IsConnected)
                 throw new Exception("Not connected with interface");
 
-            _sendMessages.Add(data);
+            _sendMessages.Enqueue(data);
 
             return Task.CompletedTask;
         }
@@ -192,7 +189,7 @@ namespace Kaenx.Konnect.Connections
 
             byte seq = _sequenceCounter++;
             message.SequenceCounter = seq;
-            _sendMessages.Add(message);
+            _sendMessages.Enqueue(message);
 
             return Task.FromResult(seq);
         }
@@ -211,7 +208,7 @@ namespace Kaenx.Konnect.Connections
             _ackToken = new CancellationTokenSource();
             await Send(builder.GetBytes(), true);
             try{
-            await Task.Delay(500, _ackToken.Token);
+                await Task.Delay(500, _ackToken.Token);
             }catch{}
 
             if (!_flagCRRecieved)
@@ -249,6 +246,9 @@ namespace Kaenx.Konnect.Connections
                 _client.OnReceived += KnxMessageReceived;
             }
 
+            tokenSource = new CancellationTokenSource();
+            _ = Task.Run(ProcessSendMessages, tokenSource.Token);
+
             _timer.Start();
         }
 
@@ -262,7 +262,13 @@ namespace Kaenx.Konnect.Connections
             builder.Build(_receiveEndPoint, _communicationChannel);
             Send(builder.GetBytes(), true);
 
-            StopProcessing = true;
+            tokenSource.Cancel();
+
+            if(isInConfig)
+            {
+                // Really disconnect?
+            }
+
             _timer.Stop();
             return Task.CompletedTask;
         }
@@ -334,7 +340,7 @@ namespace Kaenx.Konnect.Connections
                             break;
                         }
 
-                        _sendMessages.Add(new Responses.TunnelResponse(0x06, 0x10, 0x0A, 0x04, _communicationChannel, tunnelResponse.SequenceCounter, 0x00).GetBytes());
+                        _sendMessages.Enqueue(new Responses.TunnelResponse(0x06, 0x10, 0x0A, 0x04, _communicationChannel, tunnelResponse.SequenceCounter, 0x00).GetBytes());
 
                         //Debug.WriteLine("Telegram APCI: " + tunnelResponse.APCI.ToString());
 
@@ -500,119 +506,121 @@ namespace Kaenx.Konnect.Connections
 
         private async Task ProcessSendMessages()
         {
-            while (!StopProcessing)
+            while (!tokenSource.IsCancellationRequested)
             {
-                foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
+                if(_sendMessages.Count == 0)
+                    continue;
+                
+                var sendMessage = _sendMessages.Dequeue();
+                
+                if (sendMessage is byte[])
                 {
-                    if (sendMessage is byte[])
-                    {
 
-                        byte[] data = sendMessage as byte[];
-                        await _client.SendAsync(data);
+                    byte[] data = sendMessage as byte[];
+                    await _client.SendAsync(data);
+                }
+                else if (sendMessage is MsgSearchReq || sendMessage is MsgSearchRes)
+                {
+                    IMessage message = (IMessage)sendMessage;
+                    if(message is MsgSearchReq msr)
+                        msr.Endpoint = _receiveEndPoint;
+
+                    byte[] xdata;
+
+                    switch (CurrentType)
+                    {
+                        case ProtocolTypes.Emi1:
+                            xdata = message.GetBytesEmi1();
+                            break;
+
+                        case ProtocolTypes.Emi2:
+                            xdata = message.GetBytesEmi1(); //Todo check diffrences to emi1
+                            //xdata.AddRange(message.GetBytesEmi2());
+                            break;
+
+                        case ProtocolTypes.cEmi:
+                            xdata = message.GetBytesCemi();
+                            break;
+
+                        default:
+                            throw new Exception("Unbekanntes Protokoll");
                     }
-                    else if (sendMessage is MsgSearchReq || sendMessage is MsgSearchRes)
+
+                    await _client.SendAsync(xdata);
+                }
+                else if (sendMessage is IMessage)
+                {
+                    IMessage message = sendMessage as IMessage;
+                    message.SourceAddress = UnicastAddress.FromString("0.0.0");
+                    List<byte> xdata = new List<byte>
                     {
-                        IMessage message = (IMessage)sendMessage;
-                        if(message is MsgSearchReq msr)
-                            msr.Endpoint = _receiveEndPoint;
+                        //KNX/IP Header
+                        0x06, //Header Length
+                        0x10, //Protokoll Version 1.0
+                        0x04, //Service Identifier Family: Tunneling
+                        0x20, //Service Identifier Type: Request
+                        0x00, //Total length. Set later
+                        0x00, //Total length. Set later
+                        
+                        //Connection header
+                        0x04, // Body Structure Length
+                        _communicationChannel, // Channel Id
+                        message.SequenceCounter, // Sequenz Counter
+                        0x00  //Reserved
+                    };
 
-                        byte[] xdata;
+                    if(_receivedAcks.Contains(message.SequenceCounter))
+                        _receivedAcks.Remove(message.SequenceCounter);
 
-                        switch (CurrentType)
+                    switch (CurrentType)
+                    {
+                        case ProtocolTypes.Emi1:
+                            xdata.AddRange(message.GetBytesEmi1());
+                            break;
+
+                        case ProtocolTypes.Emi2:
+                            xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
+                                                                    //xdata.AddRange(message.GetBytesEmi2());
+                            break;
+
+                        case ProtocolTypes.cEmi:
+                            xdata.AddRange(message.GetBytesCemi());
+                            break;
+
+                        default:
+                            throw new Exception("Unbekanntes Protokoll");
+                    }
+
+                    byte[] length = BitConverter.GetBytes((ushort)xdata.Count);
+                    Array.Reverse(length);
+                    xdata[4] = length[0];
+                    xdata[5] = length[1];
+
+                    int repeatCounter = 0;
+                    do 
+                    {
+                        if(repeatCounter > 0)
                         {
-                            case ProtocolTypes.Emi1:
-                                xdata = message.GetBytesEmi1();
-                                break;
-
-                            case ProtocolTypes.Emi2:
-                                xdata = message.GetBytesEmi1(); //Todo check diffrences to emi1
-                                //xdata.AddRange(message.GetBytesEmi2());
-                                break;
-
-                            case ProtocolTypes.cEmi:
-                                xdata = message.GetBytesCemi();
-                                break;
-
-                            default:
-                                throw new Exception("Unbekanntes Protokoll");
+                            Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
                         }
+                        if(repeatCounter > 3)
+                            throw new Exception("Zu viele wiederholungen eines Telegramms auf kein OK");
 
-                        await _client.SendAsync(xdata);
-                    }
-                    else if (sendMessage is IMessage)
-                    {
-                        IMessage message = sendMessage as IMessage;
-                        message.SourceAddress = UnicastAddress.FromString("0.0.0");
-                        List<byte> xdata = new List<byte>
-                        {
-                            //KNX/IP Header
-                            0x06, //Header Length
-                            0x10, //Protokoll Version 1.0
-                            0x04, //Service Identifier Family: Tunneling
-                            0x20, //Service Identifier Type: Request
-                            0x00, //Total length. Set later
-                            0x00, //Total length. Set later
-                            
-                            //Connection header
-                            0x04, // Body Structure Length
-                            _communicationChannel, // Channel Id
-                            message.SequenceCounter, // Sequenz Counter
-                            0x00  //Reserved
-                        };
+                        await _client.SendAsync(xdata.ToArray());
+                        
+                        _ackToken = new CancellationTokenSource();
+                        
+                        try{
+                            await Task.Delay(1000, _ackToken.Token);
+                        }catch{}
+                        _ackToken = null;
 
-                        if(_receivedAcks.Contains(message.SequenceCounter))
-                            _receivedAcks.Remove(message.SequenceCounter);
-
-                        switch (CurrentType)
-                        {
-                            case ProtocolTypes.Emi1:
-                                xdata.AddRange(message.GetBytesEmi1());
-                                break;
-
-                            case ProtocolTypes.Emi2:
-                                xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
-                                                                        //xdata.AddRange(message.GetBytesEmi2());
-                                break;
-
-                            case ProtocolTypes.cEmi:
-                                xdata.AddRange(message.GetBytesCemi());
-                                break;
-
-                            default:
-                                throw new Exception("Unbekanntes Protokoll");
-                        }
-
-                        byte[] length = BitConverter.GetBytes((ushort)xdata.Count);
-                        Array.Reverse(length);
-                        xdata[4] = length[0];
-                        xdata[5] = length[1];
-
-                        int repeatCounter = 0;
-                        do 
-                        {
-                            if(repeatCounter > 0)
-                            {
-                                Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
-                            }
-                            if(repeatCounter > 3)
-                                throw new Exception("Zu viele wiederholungen eines Telegramms auf kein OK");
-
-                            await _client.SendAsync(xdata.ToArray());
-                            
-                            _ackToken = new CancellationTokenSource();
-                            
-                            try{
-                                await Task.Delay(1000, _ackToken.Token);
-                            }catch{}
-                            _ackToken = null;
-
-                            repeatCounter++;
-                        } while(!_receivedAcks.Contains(message.SequenceCounter));
-                    }
-                    else
-                    {
-                        throw new Exception("Unbekanntes Element in SendQueue! " + sendMessage.GetType().FullName);
-                    }
+                        repeatCounter++;
+                    } while(!_receivedAcks.Contains(message.SequenceCounter));
+                }
+                else
+                {
+                    throw new Exception("Unbekanntes Element in SendQueue! " + sendMessage.GetType().FullName);
                 }
             }
         }

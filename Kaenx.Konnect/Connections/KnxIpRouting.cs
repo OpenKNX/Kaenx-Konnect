@@ -36,18 +36,18 @@ namespace Kaenx.Konnect.Connections
         public int MaxFrameLength { get; set; } = 254;
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
-        private bool StopProcessing = false;
         private byte _sequenceCounter = 0;
 
         private readonly IPEndPoint _sendEndPoint;
         private List<UdpConnection> _clients = new List<UdpConnection>();
-        private readonly BlockingCollection<object> _sendMessages;
+        private readonly Queue<object> _sendMessages;
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
+        private CancellationTokenSource tokenSource;
 
         public KnxIpRouting(UnicastAddress physicalAddress, string ip = "224.0.23.12", int port = 3671)
         {
             _receiveParserDispatcher = new ReceiverParserDispatcher();
-            _sendMessages = new BlockingCollection<object>();
+            _sendMessages = new Queue<object>();
             PhysicalAddress = physicalAddress;
             _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
@@ -127,8 +127,6 @@ namespace Kaenx.Konnect.Connections
                 }
             }
 
-            ProcessSendMessages();
-            
             IsConnected = true;
             ConnectionChanged?.Invoke(true);
         }
@@ -146,14 +144,14 @@ namespace Kaenx.Konnect.Connections
 
             xdata.AddRange(data);
 
-            _sendMessages.Add(xdata.ToArray());
+            _sendMessages.Enqueue(xdata.ToArray());
 
             return Task.CompletedTask;
         }
 
         public Task Send(byte[] data, bool ignoreConnected = false)
         {
-            _sendMessages.Add(data);
+            _sendMessages.Enqueue(data);
             return Task.CompletedTask;
         }
 
@@ -161,7 +159,7 @@ namespace Kaenx.Konnect.Connections
         {
             byte seq = _sequenceCounter++;
             message.SequenceCounter = seq;
-            _sendMessages.Add(message);
+            _sendMessages.Enqueue(message);
 
             return Task.FromResult(seq);
         }
@@ -178,6 +176,9 @@ namespace Kaenx.Konnect.Connections
             foreach(UdpConnection conn in _clients)
                 conn.OnReceived += KnxMessageReceived;
 
+            tokenSource = new CancellationTokenSource();
+            Task.Run(ProcessSendMessages, tokenSource.Token);
+
             return Task.CompletedTask;
         }
 
@@ -186,6 +187,9 @@ namespace Kaenx.Konnect.Connections
             //Nothing to do here
             foreach(UdpConnection conn in _clients)
                 conn.OnReceived -= KnxMessageReceived;
+
+            tokenSource.Cancel();
+
             return Task.CompletedTask;
         }
 
@@ -310,100 +314,103 @@ namespace Kaenx.Konnect.Connections
 
         private void ProcessSendMessages()
         {
-            Task.Run(() =>
+            while(!tokenSource.IsCancellationRequested)
             {
-                foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
+                if(_sendMessages.Count == 0)
+                    continue;
+                
+                var sendMessage = _sendMessages.Dequeue();
+                
+                if (sendMessage is byte[])
                 {
-                    if (sendMessage is byte[])
+                    Debug.WriteLine("Sending bytes");
+                    byte[] data = sendMessage as byte[];
+                    foreach (UdpConnection client in _clients)
+                        _ = client.SendAsync(data);
+                }
+                else if (sendMessage is MsgSearchReq)
+                {
+                    MsgSearchReq message = sendMessage as MsgSearchReq;
+
+                    foreach(UdpConnection _udp in _clients)
                     {
-                        Debug.WriteLine("Sending bytes");
-                        byte[] data = sendMessage as byte[];
-                        foreach (UdpClient client in _udpList)
-                            client.SendAsync(data, data.Length, _sendEndPoint);
-                    }
-                    else if (sendMessage is MsgSearchReq)
-                    {
-                        MsgSearchReq message = sendMessage as MsgSearchReq;
-
-                        foreach(UdpClient _udp in _udpList)
-                        {
-                            message.Endpoint = _udp.Client.LocalEndPoint as IPEndPoint;
-                            byte[] xdata;
-
-                            switch (CurrentType)
-                            {
-                                case ProtocolTypes.Emi1:
-                                    xdata = message.GetBytesEmi1();
-                                    break;
-
-                                case ProtocolTypes.Emi2:
-                                    xdata = message.GetBytesEmi2(); //Todo check diffrences to emi1
-                                                                    //xdata.AddRange(message.GetBytesEmi2());
-                                    break;
-
-                                case ProtocolTypes.cEmi:
-                                    xdata = message.GetBytesCemi();
-                                    break;
-
-                                default:
-                                    throw new Exception("Unbekanntes Protokoll");
-                            }
-
-                            _udp.SendAsync(xdata, xdata.Length, _sendEndPoint);
-                        }
-                    } else if(sendMessage is IMessage) { 
-                        Debug.WriteLine("Sending IMessage " + sendMessage.GetType());
-                        IMessage message = sendMessage as IMessage;
-                        message.SourceAddress = PhysicalAddress;
-                        List<byte> xdata = new List<byte>();
-
-                        //KNX/IP Header
-                        xdata.Add(0x06); //Header Length
-                        xdata.Add(0x10); //Protokoll Version 1.0
-                        xdata.Add(0x05); //Service Identifier Family: Tunneling
-                        xdata.Add(0x30); //Service Identifier Type: Request
-                        xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
+                        message.Endpoint = _udp.GetLocalEndpoint();
+                        byte[] xdata;
 
                         switch (CurrentType)
                         {
                             case ProtocolTypes.Emi1:
-                                xdata.AddRange(message.GetBytesEmi1());
+                                xdata = message.GetBytesEmi1();
                                 break;
 
                             case ProtocolTypes.Emi2:
-                                xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
-                                                                        //xdata.AddRange(message.GetBytesEmi2());
+                                xdata = message.GetBytesEmi2(); //Todo check diffrences to emi1
+                                                                //xdata.AddRange(message.GetBytesEmi2());
                                 break;
 
                             case ProtocolTypes.cEmi:
-                                xdata.AddRange(message.GetBytesCemi());
+                                xdata = message.GetBytesCemi();
                                 break;
 
                             default:
                                 throw new Exception("Unbekanntes Protokoll");
                         }
 
-                        byte[] length = BitConverter.GetBytes((ushort)(xdata.Count));
-                        Array.Reverse(length);
-                        xdata[4] = length[0];
-                        xdata[5] = length[1];
-
-                        //_udp.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
-
-                        foreach (UdpClient client in _udpList)
-                            client.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
+                        _ = _udp.SendAsync(xdata);
                     }
-                    else
+                } else if(sendMessage is IMessage) { 
+                    Debug.WriteLine("Sending IMessage " + sendMessage.GetType());
+                    IMessage message = sendMessage as IMessage;
+                    message.SourceAddress = PhysicalAddress;
+                    List<byte> xdata = new List<byte>();
+
+                    //KNX/IP Header
+                    xdata.Add(0x06); //Header Length
+                    xdata.Add(0x10); //Protokoll Version 1.0
+                    xdata.Add(0x05); //Service Identifier Family: Tunneling
+                    xdata.Add(0x30); //Service Identifier Type: Request
+                    xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
+
+                    switch (CurrentType)
                     {
-                        throw new Exception("Unbekanntes Element in SendQueue! " + sendMessage.GetType().FullName);
+                        case ProtocolTypes.Emi1:
+                            xdata.AddRange(message.GetBytesEmi1());
+                            break;
+
+                        case ProtocolTypes.Emi2:
+                            xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
+                                                                    //xdata.AddRange(message.GetBytesEmi2());
+                            break;
+
+                        case ProtocolTypes.cEmi:
+                            xdata.AddRange(message.GetBytesCemi());
+                            break;
+
+                        default:
+                            throw new Exception("Unbekanntes Protokoll");
                     }
+
+                    byte[] length = BitConverter.GetBytes((ushort)(xdata.Count));
+                    Array.Reverse(length);
+                    xdata[4] = length[0];
+                    xdata[5] = length[1];
+
+                    foreach (UdpConnection client in _clients)
+                        _ = client.SendAsync(xdata.ToArray());
                 }
-            });
+                else
+                {
+                    throw new Exception("Unbekanntes Element in SendQueue! " + sendMessage.GetType().FullName);
+                }
+            }
         }
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            Disconnect();
+
+            foreach (UdpConnection client in _clients)
+                client.Dispose();
         }
     }
 }

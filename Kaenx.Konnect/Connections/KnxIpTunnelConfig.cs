@@ -28,7 +28,6 @@ namespace Kaenx.Konnect.Connections
         public event TunnelAckHandler OnTunnelAck;
         public event ConnectionChangedHandler ConnectionChanged;
 
-        public int Port;
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
         public UnicastAddress PhysicalAddress { get; set; }
@@ -40,7 +39,6 @@ namespace Kaenx.Konnect.Connections
         private byte _sequenceCounter = 0;
 
         private readonly IPEndPoint _receiveEndPoint;
-        private readonly IPEndPoint _sendEndPoint;
         private UdpConnection _client;
         private readonly BlockingCollection<object> _sendMessages;
         
