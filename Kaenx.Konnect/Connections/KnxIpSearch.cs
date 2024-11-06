@@ -333,10 +333,10 @@ namespace Kaenx.Konnect.Connections
                         int repeatCounter = 0;
                         do 
                         {
-                            if(repeatCounter > 0)
-                            {
-                                Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
-                            }
+                            // if(repeatCounter > 0)
+                            // {
+                            //     Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
+                            // }
                             if(repeatCounter > 3)
                                 throw new Exception("Zu viele wiederholungen eines Telegramms auf kein OK");
 

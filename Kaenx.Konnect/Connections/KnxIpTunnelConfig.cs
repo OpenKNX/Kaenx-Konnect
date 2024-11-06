@@ -129,7 +129,7 @@ namespace Kaenx.Konnect.Connections
             ConnectionRequest builder = new ConnectionRequest();
             builder.Build(_receiveEndPoint, true);
             _ackToken = new CancellationTokenSource();
-            await Send(builder.GetBytes(), true);
+            await _client.SendAsync(builder.GetBytes());
             try{
             await Task.Delay(500, _ackToken.Token);
             }catch{}
@@ -465,10 +465,10 @@ namespace Kaenx.Konnect.Connections
                         int repeatCounter = 0;
                         do 
                         {
-                            if(repeatCounter > 0)
-                            {
-                                Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
-                            }
+                            // if(repeatCounter > 0)
+                            // {
+                            //     Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
+                            // }
                             if(repeatCounter > 3)
                                 throw new Exception("Zu viele wiederholungen eines Telegramms auf kein OK");
 
