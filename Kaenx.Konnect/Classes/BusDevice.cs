@@ -94,6 +94,10 @@ namespace Kaenx.Konnect.Classes
             timeoutForData = timeout;
         }
 
+        public bool IsConnected()
+        {
+            return _isConnected;
+        }
 
         #region Waiters
         private void _conn_OnTunnelAck(MsgAckRes response)
@@ -227,6 +231,9 @@ namespace Kaenx.Konnect.Classes
         /// </summary>
         public async Task Connect(bool onlyConnect = false)
         {
+            if(_isConnected)
+                await Disconnect(); //reset the connection
+
             _currentSeqNum = 0;
             _lastNumb = -1;
 
