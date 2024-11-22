@@ -33,6 +33,7 @@ namespace Kaenx.Konnect.Classes
         private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
         private Dictionary<int, bool> acks = new Dictionary<int, bool>();
         private Dictionary<string, string> features;
+        private int timeoutForData = 4000;
 
         private int _seqNum = 0;
         private int _currentSeqNum
@@ -88,6 +89,10 @@ namespace Kaenx.Konnect.Classes
                 acks.Add(i, false);
         }
 
+        public void SetTimeout(int timeout)
+        {
+            timeoutForData = timeout;
+        }
 
 
         #region Waiters
@@ -404,7 +409,7 @@ namespace Kaenx.Konnect.Classes
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
 
-            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
             MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message.SequenceNumber, tokenS.Token);
             return resp.Get<T>();
         }
@@ -494,9 +499,9 @@ namespace Kaenx.Konnect.Classes
         /// <param name="length">Anzahl der zu lesenden Bytes</param>
         /// <param name="start">Startindex</param>
         /// <returns>Property Wert</returns>
-        public async Task<byte[]> PropertyRead(byte objIdx, byte propId, int timeout = 4000)
+        public async Task<byte[]> PropertyRead(byte objIdx, byte propId)
         {
-            return await PropertyRead<byte[]>(objIdx, propId, timeout);
+            return await PropertyRead<byte[]>(objIdx, propId);
         }
 
         /// <summary>
@@ -508,7 +513,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="start">Startindex</param>
         /// <returns>Property Wert</returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<T> PropertyRead<T>(byte objIdx, byte propId, int timeout = 4000)
+        public async Task<T> PropertyRead<T>(byte objIdx, byte propId)
         {
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
@@ -518,7 +523,7 @@ namespace Kaenx.Konnect.Classes
             message.SequenceNumber = _currentSeqNum++;
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
             //Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + message.SequenceNumber);
             MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message.SequenceNumber, tokenS.Token);
             //Debug.WriteLine("Ended waiting");
@@ -542,7 +547,7 @@ namespace Kaenx.Konnect.Classes
             message.SequenceNumber = _currentSeqNum++;
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
             //Debug.WriteLine("Wating for Description " + objIdx + "/" + propId + ": " + message.SequenceNumber);
             MsgPropertyDescriptionRes resp = (MsgPropertyDescriptionRes)await WaitForData(message.SequenceNumber, tokenS.Token);
             //Debug.WriteLine("Ended waiting");
@@ -559,7 +564,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die geschrieben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
+        public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
         {
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
@@ -570,7 +575,7 @@ namespace Kaenx.Konnect.Classes
             message.SequenceNumber = seq1;
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
 
             if (waitForResp)
                 await WaitForData(message.SequenceNumber, tokenS.Token);
@@ -586,8 +591,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die übergeben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<MsgFunctionPropertyStateRes> InvokeFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
-        {
+        public async Task<MsgFunctionPropertyStateRes> InvokeFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false)        {
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
 
@@ -601,7 +605,7 @@ namespace Kaenx.Konnect.Classes
             message.SequenceNumber = seq1;
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
 
             if (waitForResp) {
                 var response = (MsgFunctionPropertyStateRes)await WaitForData(message.SequenceNumber, tokenS.Token);
@@ -623,7 +627,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die übergeben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<MsgFunctionPropertyStateRes> ReadFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false, int timeout = 4000)
+        public async Task<MsgFunctionPropertyStateRes> ReadFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
         {
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
@@ -637,7 +641,7 @@ namespace Kaenx.Konnect.Classes
             message.SequenceNumber = seq1;
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeout);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
 
             if (waitForResp)
                 return (MsgFunctionPropertyStateRes)await WaitForData(message.SequenceNumber, tokenS.Token);
@@ -717,7 +721,7 @@ namespace Kaenx.Konnect.Classes
                 var seq = message.SequenceNumber;
                 CheckForData(message.SequenceNumber);
                 await _conn.Send(message);
-                CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+                CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
                 if (verify)
                 {
                     if (verifyMode == VerifyMode.NotSupported)
@@ -789,7 +793,7 @@ namespace Kaenx.Konnect.Classes
                 await _conn.Send(msg);
 
                 //Debug.WriteLine("Warten auf: " + seq);
-                CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+                CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
                 IMessageResponse resp = await WaitForData(msg.SequenceNumber, tokenS.Token);
                 readed.AddRange(resp.Raw.Skip(2));
                 currentPosition += toRead;
@@ -841,7 +845,7 @@ namespace Kaenx.Konnect.Classes
             message.SequenceNumber = _currentSeqNum++;
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
             MsgAuthorizeRes resp = (MsgAuthorizeRes)await WaitForData(message.SequenceNumber, tokenS.Token);
             return resp.Level;
         }
@@ -861,7 +865,7 @@ namespace Kaenx.Konnect.Classes
             CheckForData(message.SequenceNumber);
             await _conn.Send(message);
             //Debug.WriteLine("Warten auf: " + seq);
-            CancellationTokenSource tokenS = new CancellationTokenSource(10000);
+            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
             //Todo MsgDeviceDescriptorReadRes convert benutzen
             IMessageResponse resp = await WaitForData(message.SequenceNumber, tokenS.Token);
             MaskVersion = (ushort)(resp.Raw[0] << 8 | resp.Raw[1]);
