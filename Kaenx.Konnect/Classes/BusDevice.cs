@@ -450,7 +450,7 @@ namespace Kaenx.Konnect.Classes
             }
             catch
             {
-                throw new NotSupportedException("Mask '" + maskId + "' does not support this Resource: " + resourceId);
+                throw new Exceptions.NotSupportedException("Mask '" + maskId + "' does not support this Resource: " + resourceId);
             }
 
             XElement loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
