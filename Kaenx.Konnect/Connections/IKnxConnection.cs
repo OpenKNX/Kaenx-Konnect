@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Connections
 {
-    public interface IKnxConnection
+    public interface IKnxConnection : IDisposable
     {
         public delegate void TunnelRequestHandler(IMessageRequest message);
         public event TunnelRequestHandler OnTunnelRequest;
@@ -20,11 +20,6 @@ namespace Kaenx.Konnect.Connections
         public event TunnelResponseHandler OnTunnelResponse;
         public delegate void TunnelAckHandler(MsgAckRes message);
         public event TunnelAckHandler OnTunnelAck;
-
-        public delegate void SearchResponseHandler(MsgSearchRes message);
-        public event SearchResponseHandler OnSearchResponse;
-        public delegate void SearchRequestHandler(MsgSearchReq message);
-        public event SearchRequestHandler OnSearchRequest;
 
         public delegate void ConnectionChangedHandler(bool isConnected);
         public event ConnectionChangedHandler ConnectionChanged;
@@ -44,6 +39,11 @@ namespace Kaenx.Konnect.Connections
         /// Returns the Physical Address of the Interface
         /// </summary>
         public UnicastAddress PhysicalAddress { get; set; }
+
+        /// <summary>
+        /// Returns the max APDU length of the interface
+        /// </summary>
+        public int MaxFrameLength { get; set; }
 
         /// <summary>
         /// Connects the interface to the bus.

@@ -28,37 +28,26 @@ namespace Kaenx.Konnect.Connections
         public event TunnelRequestHandler OnTunnelRequest;
         public event TunnelResponseHandler OnTunnelResponse;
         public event TunnelAckHandler OnTunnelAck;
-        public event SearchResponseHandler OnSearchResponse;
-        public event SearchRequestHandler OnSearchRequest;
         public event ConnectionChangedHandler ConnectionChanged;
 
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
         public UnicastAddress PhysicalAddress { get; set; }
+        public int MaxFrameLength { get; set; } = 254;
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
-        private bool StopProcessing = false;
         private byte _sequenceCounter = 0;
 
         private readonly IPEndPoint _sendEndPoint;
-        private List<UdpClient> _udpList = new List<UdpClient>();
-        private readonly BlockingCollection<object> _sendMessages;
+        private List<UdpConnection> _clients = new List<UdpConnection>();
+        private readonly Queue<object> _sendMessages;
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
-
-/*
-        public KnxIpRouting(string ip = "224.0.23.12", int port = 3671)
-        {
-            _receiveParserDispatcher = new ReceiverParserDispatcher();
-            _sendMessages = new BlockingCollection<object>();
-
-            Init(ip, port);
-        }
-*/
+        private CancellationTokenSource tokenSource;
 
         public KnxIpRouting(UnicastAddress physicalAddress, string ip = "224.0.23.12", int port = 3671)
         {
             _receiveParserDispatcher = new ReceiverParserDispatcher();
-            _sendMessages = new BlockingCollection<object>();
+            _sendMessages = new Queue<object>();
             PhysicalAddress = physicalAddress;
             _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
@@ -67,19 +56,40 @@ namespace Kaenx.Konnect.Connections
 
         private void Init(string ip, int port)
         {
-            /*UdpClient client = new UdpClient();
+// https://stackoverflow.com/questions/61661301/c-sharp-receive-multicast-udp-in-multiple-programs-on-the-same-machine
+// https://www.winsocketdotnetworkprogramming.com/clientserversocketnetworkcommunication8l.html
+// https://github.com/ChrisTTian667/knx-dotnet/blob/main/Knx/KnxNetIp/KnxNetIpRoutingClient.cs#L82
+// https://github.com/lifeemotions/knx.net/blob/master/src/KNXLib/KnxConnectionRouting.cs#L75
 
-            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            client.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-            //client.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, 100663296);
-            client.JoinMulticastGroup(IPAddress.Parse(ip), IPAddress.Any);
-            client.MulticastLoopback = true;
-            client.Client.MulticastLoopback = true;
-            _udpList.Add(client);
+            // UdpClient _udpClient = new UdpClient
+            // {
+            //     MulticastLoopback = false,
+            //     ExclusiveAddressUse = false
+            // };
+            // _udpClient.Client.MulticastLoopback = false;
 
-            ProcessSendMessages();
-            ProcessReceivingMessages(client);
-            */
+            // _udpClient.Client.SetSocketOption(
+            //     SocketOptionLevel.Socket,
+            //     SocketOptionName.ReuseAddress,
+            //     true);
+
+            // _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, 3671));
+            // _udpClient.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"), IPAddress.Any);
+            // _udpList.Add(_udpClient);
+
+            // IEnumerable<IPAddress> ipv4Addresses =
+            //         Dns
+            //             .GetHostAddresses(Dns.GetHostName())
+            //             .Where(i => i.AddressFamily == AddressFamily.InterNetwork);
+
+            // foreach (IPAddress localIp in ipv4Addresses)
+            // {
+            //     var client = new UdpClient(new IPEndPoint(localIp, 3671));
+            //     client.Client.MulticastLoopback = false;
+            //     client.MulticastLoopback = false;
+            //     _udpList.Add(client);
+            //     client.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"), localIp);
+            // }
 
             NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
            
@@ -91,22 +101,24 @@ namespace Kaenx.Konnect.Connections
                     if (ipprops.MulticastAddresses.Count == 0 // most of VPN adapters will be skipped
                         || !adapter.SupportsMulticast // multicast is meaningless for this type of connection
                         || OperationalStatus.Up != adapter.OperationalStatus) // this adapter is off or not connected
+                    {
+                        Debug.WriteLine("Skipped " + adapter.Name + " maybe vpn or off");
                         continue;
+                    }
+                        
                     IPv4InterfaceProperties p = ipprops.GetIPv4Properties();
-                    if (p == null) continue; // IPv4 is not configured on this adapter
-                    int index = IPAddress.HostToNetworkOrder(p.Index);
+                    if (null == p) // IPv4 is not configured on this adapter
+                    {
+                        Debug.WriteLine("Skipped " + adapter.Name + " ip4 not configured");
+                        continue;
+                    }
+                    
+                    IPAddress localIp = ipprops.UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
+                    
+                    UdpConnection udp = new UdpConnection(localIp, port, new IPEndPoint(IPAddress.Parse(ip), port));
+                    _clients.Add(udp);
 
-                    IPAddress addr = adapter.GetIPProperties().UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
-                    UdpClient _udpClient = new UdpClient();
-                    _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    _udpClient.Client.Bind(new IPEndPoint(addr, 3671));
-                    _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, index);
-                    _udpClient.JoinMulticastGroup(IPAddress.Parse("224.0.23.12"), IPAddress.Any);
-                    _udpClient.MulticastLoopback = true;
-                    _udpClient.Client.MulticastLoopback = true;
-                    _udpList.Add(_udpClient);
-
-                    Debug.WriteLine("Binded to " + adapter.Name + " - " + addr.ToString() + " - 3671 -> " + index);
+                    Debug.WriteLine("Binded to " + adapter.Name + " - " + localIp.ToString() + " - " + 3671 + " -> " + udp.InterfaceIndex);
                 }
                 catch (Exception ex)
                 {
@@ -115,24 +127,9 @@ namespace Kaenx.Konnect.Connections
                 }
             }
 
-            ProcessSendMessages();
-            
-            foreach (UdpClient client in _udpList)
-                ProcessReceivingMessages(client);
-
             IsConnected = true;
             ConnectionChanged?.Invoke(true);
         }
-
-        public static int GetFreePort()
-        {
-            TcpListener l = new TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            int port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            return port;
-        }
-
 
         public Task Send(byte[] data, byte sequence)
         {
@@ -147,15 +144,14 @@ namespace Kaenx.Konnect.Connections
 
             xdata.AddRange(data);
 
-            _sendMessages.Add(xdata.ToArray());
+            _sendMessages.Enqueue(xdata.ToArray());
 
             return Task.CompletedTask;
         }
 
-
         public Task Send(byte[] data, bool ignoreConnected = false)
         {
-            _sendMessages.Add(data);
+            _sendMessages.Enqueue(data);
             return Task.CompletedTask;
         }
 
@@ -163,7 +159,7 @@ namespace Kaenx.Konnect.Connections
         {
             byte seq = _sequenceCounter++;
             message.SequenceCounter = seq;
-            _sendMessages.Add(message);
+            _sendMessages.Enqueue(message);
 
             return Task.FromResult(seq);
         }
@@ -177,12 +173,23 @@ namespace Kaenx.Konnect.Connections
         public Task Connect()
         {
             //Nothing to do here
+            foreach(UdpConnection conn in _clients)
+                conn.OnReceived += KnxMessageReceived;
+
+            tokenSource = new CancellationTokenSource();
+            Task.Run(ProcessSendMessages, tokenSource.Token);
+
             return Task.CompletedTask;
         }
 
         public Task Disconnect()
         {
             //Nothing to do here
+            foreach(UdpConnection conn in _clients)
+                conn.OnReceived -= KnxMessageReceived;
+
+            tokenSource.Cancel();
+
             return Task.CompletedTask;
         }
 
@@ -191,224 +198,219 @@ namespace Kaenx.Konnect.Connections
             return Task.FromResult<bool>(true);
         }
 
-        private void ProcessReceivingMessages(UdpClient _udpClient)
+        private void KnxMessageReceived(UdpConnection sender, IParserMessage parserMessage)
         {
-            Debug.WriteLine("Höre jetzt auf: " + (_udpClient.Client.LocalEndPoint as IPEndPoint)?.Port);
-            Task.Run(async () =>
+            try
             {
-                int rofl = 0;
-                try
+                switch (parserMessage)
                 {
-                    while (!StopProcessing)
-                    {
-                        rofl++;
-                        var result = await _udpClient.ReceiveAsync();
-                        var knxResponse = _receiveParserDispatcher.Build(result.Buffer);
-                        if(knxResponse == null) continue;
-
-                        switch (knxResponse)
+                    case Responses.RoutingResponse tunnelResponse:
+                        if (tunnelResponse.DestinationAddress.ToString() != PhysicalAddress.ToString())
                         {
-                            case Responses.RoutingResponse tunnelResponse:
-                                if (tunnelResponse.DestinationAddress.ToString() != PhysicalAddress.ToString())
-                                {
-                                    Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
-                                    Debug.WriteLine("Typ: " + tunnelResponse.APCI);
-                                    Debug.WriteLine("Eigene Adresse: " + PhysicalAddress.ToString());
-                                    Debug.WriteLine("Adressiert an:  " + tunnelResponse.DestinationAddress.ToString());
-                                    break;
-                                }
-
-                                if (tunnelResponse.APCI.ToString().EndsWith("Response"))
-                                {
-                                    List<byte> data = new List<byte>() { 0x11, 0x00 };
-                                    Builders.TunnelRequest builder = new Builders.TunnelRequest();
-                                    builder.Build(PhysicalAddress, tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
-                                    data.AddRange(builder.GetBytes());
-                                    _=Send(data.ToArray(), _sequenceCounter);
-                                    _sequenceCounter++;
-                                    
-                                }
-                                else if (tunnelResponse.APCI == ApciTypes.Ack)
-                                {
-                                    OnTunnelAck?.Invoke(new MsgAckRes()
-                                    {
-                                        //ChannelId = tunnelResponse.CommunicationChannel,
-                                        //SequenceCounter = tunnelResponse.SequenceCounter,
-                                        SequenceNumber = tunnelResponse.SequenceNumber,
-                                        SourceAddress = tunnelResponse.SourceAddress,
-                                        DestinationAddress = tunnelResponse.DestinationAddress
-                                    });
-                                    break;
-                                }
-
-                                List<string> temp = new List<string>();
-                                var q = from t in Assembly.GetExecutingAssembly().GetTypes()
-                                        where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
-                                        select t;
-
-                                IMessage message = null;
-
-                                foreach (Type t in q.ToList())
-                                {
-                                    IMessage resp = (IMessage)Activator.CreateInstance(t);
-
-                                    if (resp.ApciType == tunnelResponse.APCI)
-                                    {
-                                        message = resp;
-                                        break;
-                                    }
-                                }
-
-                                if (message == null)
-                                {
-                                    //throw new Exception("Kein MessageParser für den APCI " + tunnelResponse.APCI);
-                                    message = new MsgDefaultRes()
-                                    {
-                                        ApciType = tunnelResponse.APCI
-                                    };
-                                    Debug.WriteLine("Kein MessageParser für den APCI " + tunnelResponse.APCI);
-                                }
-
-                                message.Raw = tunnelResponse.Data;
-                                //message.ChannelId = tunnelResponse.CommunicationChannel;
-                                //message.SequenceCounter = tunnelResponse.SequenceCounter;
-                                message.SequenceNumber = tunnelResponse.SequenceNumber;
-                                message.SourceAddress = tunnelResponse.SourceAddress;
-                                message.DestinationAddress = tunnelResponse.DestinationAddress;
-
-                                //routing is only allowed with cemi
-                                message.ParseDataCemi();
-
-                                if (tunnelResponse.APCI.ToString().EndsWith("Response"))
-                                    OnTunnelResponse?.Invoke(message as IMessageResponse);
-                                else
-                                    OnTunnelRequest?.Invoke(message as IMessageRequest);
-
-                                break;
-
-                            case SearchRequest searchRequest:
-                                {
-                                    MsgSearchReq msg = new MsgSearchReq(searchRequest.responseBytes);
-                                    msg.ParseDataCemi();
-                                    OnSearchRequest?.Invoke(msg);
-                                    break;
-                                }
-
-                            case SearchResponse searchResponse:
-                                {
-                                    MsgSearchRes msg = new MsgSearchRes(searchResponse.responseBytes);
-                                    msg.ParseDataCemi();
-                                    OnSearchResponse?.Invoke(msg);
-                                    break;
-                                }
-
-                            default:
-                                throw new Exception("Not handled Telegram Type: " + knxResponse.GetType().ToString());
+                            Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
+                            Debug.WriteLine("Typ: " + tunnelResponse.APCI);
+                            Debug.WriteLine("Eigene Adresse: " + PhysicalAddress.ToString());
+                            Debug.WriteLine("Adressiert an:  " + tunnelResponse.DestinationAddress.ToString());
+                            break;
                         }
-                    }
+                        Debug.WriteLine($"Received: {sender.Interface.Name} {tunnelResponse.APCI}");
 
-                    Debug.WriteLine("Stopped Processing Messages " + _udpClient.Client.LocalEndPoint.ToString());
-                    _udpClient.Close();
-                    _udpClient.Dispose();
+                        if (tunnelResponse.APCI.ToString().EndsWith("Response"))
+                        {
+                            List<byte> data = new List<byte>() { 0x11, 0x00 };
+                            Builders.TunnelRequest builder = new Builders.TunnelRequest();
+                            builder.Build(PhysicalAddress, tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
+                            data.AddRange(builder.GetBytes());
+                            _=Send(data.ToArray(), _sequenceCounter);
+                            _sequenceCounter++;
+                            
+                        }
+                        else if (tunnelResponse.APCI == ApciTypes.Ack)
+                        {
+                            OnTunnelAck?.Invoke(new MsgAckRes()
+                            {
+                                //ChannelId = tunnelResponse.CommunicationChannel,
+                                //SequenceCounter = tunnelResponse.SequenceCounter,
+                                SequenceNumber = tunnelResponse.SequenceNumber,
+                                SourceAddress = tunnelResponse.SourceAddress,
+                                DestinationAddress = tunnelResponse.DestinationAddress
+                            });
+                            break;
+                        }
+
+
+                        List<string> temp = new List<string>();
+                        var q = from t in Assembly.GetExecutingAssembly().GetTypes()
+                                where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
+                                select t;
+
+                        IMessage message = null;
+
+                        foreach (Type t in q.ToList())
+                        {
+                            IMessage resp = (IMessage)Activator.CreateInstance(t);
+
+                            if (resp.ApciType == tunnelResponse.APCI)
+                            {
+                                message = resp;
+                                break;
+                            }
+                        }
+
+
+                        if (message == null)
+                        {
+                            //throw new Exception("Kein MessageParser für den APCI " + tunnelResponse.APCI);
+                            message = new MsgDefaultRes()
+                            {
+                                ApciType = tunnelResponse.APCI
+                            };
+                            Debug.WriteLine("Kein MessageParser für den APCI " + tunnelResponse.APCI);
+                        }
+
+                        message.Raw = tunnelResponse.Data;
+                        //message.ChannelId = tunnelResponse.CommunicationChannel;
+                        //message.SequenceCounter = tunnelResponse.SequenceCounter;
+                        message.SequenceNumber = tunnelResponse.SequenceNumber;
+                        message.SourceAddress = tunnelResponse.SourceAddress;
+                        message.DestinationAddress = tunnelResponse.DestinationAddress;
+
+                        //routing is only allowed with cemi
+                        message.ParseDataCemi();
+
+                        if (tunnelResponse.APCI.ToString().EndsWith("Response"))
+                            OnTunnelResponse?.Invoke(message as IMessageResponse);
+                        else
+                            OnTunnelRequest?.Invoke(message as IMessageRequest);
+
+                        break;
+
+
+
+                    case SearchRequest searchRequest:
+                        {
+                            MsgSearchReq msg = new MsgSearchReq(searchRequest.responseBytes);
+                            msg.ParseDataCemi();
+                            OnTunnelRequest?.Invoke(msg);
+                            break;
+                        }
+
+                    case SearchResponse searchResponse:
+                        {
+                            MsgSearchRes msg = new MsgSearchRes(searchResponse.responseBytes);
+                            msg.ParseDataCemi();
+                            OnTunnelResponse?.Invoke(msg);
+                            break;
+                        }
+
+                    default:
+                        throw new Exception("Not handled Telegram Type: " + parserMessage.GetType().ToString());
                 }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("Processing Messages Exception:" + ex.Message);
-                }
-            });
+            } catch (Exception ex)
+            {
+                Debug.WriteLine("Exception ProcessSendMessage: " + ex.Message);
+            }
         }
 
         private void ProcessSendMessages()
         {
-            Task.Run(() =>
+            while(!tokenSource.IsCancellationRequested)
             {
-                foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
+                if(_sendMessages.Count == 0)
+                    continue;
+                
+                var sendMessage = _sendMessages.Dequeue();
+                
+                if (sendMessage is byte[])
                 {
-                    if (sendMessage is byte[])
+                    Debug.WriteLine("Sending bytes");
+                    byte[] data = sendMessage as byte[];
+                    foreach (UdpConnection client in _clients)
+                        _ = client.SendAsync(data);
+                }
+                else if (sendMessage is MsgSearchReq)
+                {
+                    MsgSearchReq message = sendMessage as MsgSearchReq;
+
+                    foreach(UdpConnection _udp in _clients)
                     {
-                        Debug.WriteLine("Sending bytes");
-                        byte[] data = sendMessage as byte[];
-                        foreach (UdpClient client in _udpList)
-                            client.SendAsync(data, data.Length, _sendEndPoint);
-                    }
-                    else if (sendMessage is MsgSearchReq)
-                    {
-                        MsgSearchReq message = sendMessage as MsgSearchReq;
-
-                        foreach(UdpClient _udp in _udpList)
-                        {
-                            message.Endpoint = _udp.Client.LocalEndPoint as IPEndPoint;
-                            byte[] xdata;
-
-                            switch (CurrentType)
-                            {
-                                case ProtocolTypes.Emi1:
-                                    xdata = message.GetBytesEmi1();
-                                    break;
-
-                                case ProtocolTypes.Emi2:
-                                    xdata = message.GetBytesEmi2(); //Todo check diffrences to emi1
-                                                                    //xdata.AddRange(message.GetBytesEmi2());
-                                    break;
-
-                                case ProtocolTypes.cEmi:
-                                    xdata = message.GetBytesCemi();
-                                    break;
-
-                                default:
-                                    throw new Exception("Unbekanntes Protokoll");
-                            }
-
-                            _udp.SendAsync(xdata, xdata.Length, _sendEndPoint);
-                        }
-                    } else if(sendMessage is IMessage) { 
-                        Debug.WriteLine("Sending IMessage " + sendMessage.GetType());
-                        IMessage message = sendMessage as IMessage;
-                        message.SourceAddress = PhysicalAddress;
-                        List<byte> xdata = new List<byte>();
-
-                        //KNX/IP Header
-                        xdata.Add(0x06); //Header Length
-                        xdata.Add(0x10); //Protokoll Version 1.0
-                        xdata.Add(0x05); //Service Identifier Family: Tunneling
-                        xdata.Add(0x30); //Service Identifier Type: Request
-                        xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
+                        message.Endpoint = _udp.GetLocalEndpoint();
+                        byte[] xdata;
 
                         switch (CurrentType)
                         {
                             case ProtocolTypes.Emi1:
-                                xdata.AddRange(message.GetBytesEmi1());
+                                xdata = message.GetBytesEmi1();
                                 break;
 
                             case ProtocolTypes.Emi2:
-                                xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
-                                                                        //xdata.AddRange(message.GetBytesEmi2());
+                                xdata = message.GetBytesEmi2(); //Todo check diffrences to emi1
+                                                                //xdata.AddRange(message.GetBytesEmi2());
                                 break;
 
                             case ProtocolTypes.cEmi:
-                                xdata.AddRange(message.GetBytesCemi());
+                                xdata = message.GetBytesCemi();
                                 break;
 
                             default:
                                 throw new Exception("Unbekanntes Protokoll");
                         }
 
-                        byte[] length = BitConverter.GetBytes((ushort)(xdata.Count));
-                        Array.Reverse(length);
-                        xdata[4] = length[0];
-                        xdata[5] = length[1];
-
-                        //_udp.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
-
-                        foreach (UdpClient client in _udpList)
-                            client.SendAsync(xdata.ToArray(), xdata.Count, _sendEndPoint);
+                        _ = _udp.SendAsync(xdata);
                     }
-                    else
+                } else if(sendMessage is IMessage) { 
+                    Debug.WriteLine("Sending IMessage " + sendMessage.GetType());
+                    IMessage message = sendMessage as IMessage;
+                    message.SourceAddress = PhysicalAddress;
+                    List<byte> xdata = new List<byte>();
+
+                    //KNX/IP Header
+                    xdata.Add(0x06); //Header Length
+                    xdata.Add(0x10); //Protokoll Version 1.0
+                    xdata.Add(0x05); //Service Identifier Family: Tunneling
+                    xdata.Add(0x30); //Service Identifier Type: Request
+                    xdata.AddRange(new byte[] { 0x00, 0x00 }); //Total length. Set later
+
+                    switch (CurrentType)
                     {
-                        throw new Exception("Unbekanntes Element in SendQueue! " + sendMessage.GetType().FullName);
+                        case ProtocolTypes.Emi1:
+                            xdata.AddRange(message.GetBytesEmi1());
+                            break;
+
+                        case ProtocolTypes.Emi2:
+                            xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
+                                                                    //xdata.AddRange(message.GetBytesEmi2());
+                            break;
+
+                        case ProtocolTypes.cEmi:
+                            xdata.AddRange(message.GetBytesCemi());
+                            break;
+
+                        default:
+                            throw new Exception("Unbekanntes Protokoll");
                     }
+
+                    byte[] length = BitConverter.GetBytes((ushort)(xdata.Count));
+                    Array.Reverse(length);
+                    xdata[4] = length[0];
+                    xdata[5] = length[1];
+
+                    foreach (UdpConnection client in _clients)
+                        _ = client.SendAsync(xdata.ToArray());
                 }
-            });
+                else
+                {
+                    throw new Exception("Unbekanntes Element in SendQueue! " + sendMessage.GetType().FullName);
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            Disconnect();
+
+            foreach (UdpConnection client in _clients)
+                client.Dispose();
         }
     }
 }

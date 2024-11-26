@@ -9,7 +9,7 @@ namespace Kaenx.Konnect.Builders
     {
         private List<byte> bytes = new List<byte>();
 
-        public void Build(IPEndPoint source, byte communicationChannel)
+        public void Build(IPEndPoint source, bool isConfig = false)
         {
             byte[] header = { 0x06, 0x10, 0x02, 0x05 };
             bytes.AddRange(header);
@@ -31,10 +31,16 @@ namespace Kaenx.Konnect.Builders
             bytes.AddRange(port); // IP Adress Port
 
 
-            bytes.Add(0x04); // Request Structure Length
-            bytes.Add(0x04); // Tunnel Connection
-            bytes.Add(0x02); // Tunnel Link Layer
-            bytes.Add(0x00); // Reserved
+            if(isConfig)
+            {
+                bytes.Add(0x02); // Request Structure Length
+                bytes.Add(0x03); // Config Connection
+            } else {
+                bytes.Add(0x04); // Request Structure Length
+                bytes.Add(0x04); // Tunnel Connection
+                bytes.Add(0x02); // Tunnel Link Layer
+                bytes.Add(0x00); // Reserved
+            }
 
             byte[] length = BitConverter.GetBytes((ushort)(bytes.Count + 2));
             Array.Reverse(length);
