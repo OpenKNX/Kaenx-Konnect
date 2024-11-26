@@ -16,6 +16,7 @@
     <PackageTags>knx, bus, communication</PackageTags>
     <PackageReleaseNotes>Verbesserungen bei der Buskommunikation</PackageReleaseNotes>
     <PackageLicenseFile>License</PackageLicenseFile>
+    <PackageReadmeFile>Readme.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/OpenKnx/Kaenx-Konnect</PackageProjectUrl>
     <RepositoryUrl>https://github.com/OpenKnx/Kaenx-Konnect</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
@@ -27,10 +28,8 @@
 
   <ItemGroup>
     <None Remove="Data\knx_interfaces.xml" />
-    <None Include="..\License">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
+    <None Include="..\License" Pack="True" PackagePath="\" />
+    <None Include="..\Readme.md" Pack="True" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -46,7 +45,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
 </Project>
