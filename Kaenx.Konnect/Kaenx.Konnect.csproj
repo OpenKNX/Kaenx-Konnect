@@ -7,10 +7,10 @@
     <TargetFramework>net7.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <NeutralLanguage>de</NeutralLanguage>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
     <Description>Connect to a KNX IP (tunneling/routing) or USB Interface</Description>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <PackageIcon>Logo.png</PackageIcon>
     <PackageIconUrl />
     <PackageTags>knx, bus, communication</PackageTags>
