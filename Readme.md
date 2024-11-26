@@ -1,4 +1,4 @@
-![Logo](Kaenx.Konnect/Assets/Logo.png)
+![Logo](https://raw.githubusercontent.com/OpenKNX/Kaenx-Konnect/refs/heads/master/Kaenx.Konnect/Assets/Logo.png)
 # Kaenx.Konnect
 =================
 
