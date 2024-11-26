@@ -13,7 +13,7 @@
     <Version>1.0.2</Version>
     <PackageIcon>Logo.png</PackageIcon>
     <PackageIconUrl />
-    <PackageTags>knx, bus, communication</PackageTags>
+    <PackageTags>knx,bus,communication,ip,tunnel,tunneling,routing,smarthome,kaenx</PackageTags>
     <PackageReleaseNotes>Verbesserungen bei der Buskommunikation</PackageReleaseNotes>
     <PackageLicenseFile>License</PackageLicenseFile>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
