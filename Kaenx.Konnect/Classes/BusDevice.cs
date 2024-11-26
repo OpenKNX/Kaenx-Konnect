@@ -146,7 +146,7 @@ namespace Kaenx.Konnect.Classes
                 await Task.Delay(5); // TODO maybe erhöhen
 
             if (token.IsCancellationRequested)
-                throw new TimeoutException("Zeitüberschreitung beim Warten auf antwort");
+                throw new TimeoutException("Zeitüberschreitung beim Warten auf Antwort");
 
             var resp = responses[seq];
             responses.Remove(seq);
