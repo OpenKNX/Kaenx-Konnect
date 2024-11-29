@@ -22,10 +22,6 @@ namespace Kaenx.Konnect.Messages.Request
         public IKnxAddress DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.MemoryWrite;
         public byte[] Raw { get; set; }
-        public bool IsExtended { get; set; }
-
-
-        private int Length { get; set; }
         private int Address { get; set; }
         private byte[] Data { get; set; }
 
@@ -36,26 +32,20 @@ namespace Kaenx.Konnect.Messages.Request
         /// <param name="data">Data to write</param>
         /// <param name="uniAddr">Unicast Address from Device</param>
         /// <exception cref="Exception">Thrown if data length is greater than 256 bytes</exception>
-        public MsgMemoryWriteReq(int address, byte[] data, UnicastAddress uniAddr, bool isExtended = false)
+        public MsgMemoryWriteReq(int address, byte[] data, UnicastAddress uniAddr)
         {
-            if (isExtended && data.Length > 256)
-                throw new Exception("Es können maximal 256 Bytes geschrieben werden. (Angefordert waren " + data.Length + " bytes)[ExtendedFrame]");
-            if (!isExtended && data.Length > 13)
-                throw new Exception("Es können maximal 13 Bytes geschrieben werden. (Angefordert waren " + data.Length + " bytes)[StandardFrame]");
-
             Address = address;
             Data = data;
             DestinationAddress = uniAddr;
-            IsExtended = isExtended;
         }
 
         public MsgMemoryWriteReq() { }
 
-
-
-
         public byte[] GetBytesCemi()
         {
+            if (Data.Length > 63)
+                throw new Exception("Es können maximal 63 Bytes geschrieben werden. (Angefordert waren " + Data.Length + " bytes)");
+
             TunnelRequest builder = new TunnelRequest();
             List<byte> data = new List<byte> { Convert.ToByte(Data.Length) };
             byte[] addr = BitConverter.GetBytes(Convert.ToUInt16(Address));
@@ -63,7 +53,6 @@ namespace Kaenx.Konnect.Messages.Request
             data.AddRange(addr);
             data.AddRange(Data);
 
-            if(IsExtended) builder.SetIsExtended();
             builder.Build(SourceAddress, DestinationAddress, ApciTypes.MemoryWrite, SequenceNumber, data.ToArray());
             data = new List<byte>() { 0x11, 0x00 };
             data.AddRange(builder.GetBytes());
@@ -72,6 +61,8 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
+            if (Data.Length > 13)
+                throw new Exception("Es können maximal 13 Bytes geschrieben werden. (Angefordert waren " + Data.Length + " bytes)");
 
             List<byte> bytes = new List<byte>();
 
@@ -88,12 +79,9 @@ namespace Kaenx.Konnect.Messages.Request
             throw new NotImplementedException("GetBytesEmi2 - MsgMemoryWriteReq");
         }
 
-
-
-
         public void ParseDataCemi()
         {
-            Length = BitConverter.ToInt32(new byte[] { Raw[0], 0x00, 0x00, 0x00 }, 0);
+            //Length = BitConverter.ToInt32(new byte[] { Raw[0], 0x00, 0x00, 0x00 }, 0);
             Address = BitConverter.ToInt32(new byte[] { Raw[2], Raw[1], 0x00, 0x00 }, 0);
             Data = Raw.Skip(2).ToArray();
         }

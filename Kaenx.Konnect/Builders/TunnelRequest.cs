@@ -13,20 +13,14 @@ namespace Kaenx.Konnect.Builders
     class TunnelRequest : IRequestBuilder
     {
         private List<byte> bytes = new List<byte>();
-        private bool IsExtended = false;
-
         private BitArray ctrlByte = new BitArray(new byte[] { 0xb0 });
         private BitArray drlByte = new BitArray(new byte[] { 0xe0 });
 
-            //TODO sequenz obsolet machen!!
          public void Build(IKnxAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apciType, int sCounter = 255, byte[] data = null)
         {
             //bytes.Add(0x11); //Message Code
             //bytes.Add(0x00); //Manufacturer Code
-            if(IsExtended) ctrlByte.Set(7, false);
-            bytes.Add(bitToByte(ctrlByte)); // Control Byte
-
-
+            bytes.Add(0x00); // Control Byte will be set later
 
             drlByte.Set(7, destinationAddress is MulticastAddress);
 
@@ -37,9 +31,6 @@ namespace Kaenx.Konnect.Builders
 
             byte lengthData = Convert.ToByte(data?.Length ?? 0);
 
-
-
-
             List<ApciTypes> datatypes = new List<ApciTypes>() { ApciTypes.Restart, ApciTypes.IndividualAddressRead, ApciTypes.DeviceDescriptorRead, ApciTypes.GroupValueRead, ApciTypes.GroupValueResponse, ApciTypes.GroupValueWrite, ApciTypes.ADCRead, ApciTypes.ADCResponse, ApciTypes.MemoryRead, ApciTypes.MemoryResponse, ApciTypes.MemoryWrite };
 
             int _apci = (int)apciType;
@@ -48,7 +39,6 @@ namespace Kaenx.Konnect.Builders
             _apci = _apci | ((sCounter == 255 ? 0 : sCounter) << 10);
             _apci = _apci | ((sCounter == 255 ? 0 : 1) << 14);
             _apci = _apci | (((data == null && !datatypes.Contains(apciType)) ? 1 : 0) << 15);
-
 
             List<ApciTypes> withData = new List<ApciTypes>() {
                 ApciTypes.GroupValueRead, ApciTypes.GroupValueResponse, ApciTypes.GroupValueWrite,
@@ -69,7 +59,6 @@ namespace Kaenx.Konnect.Builders
                     }
             }
 
-
             byte[] _apci2 = BitConverter.GetBytes(Convert.ToUInt16(_apci));
 
             switch(apciType)
@@ -88,6 +77,9 @@ namespace Kaenx.Konnect.Builders
                     bytes.Add(_apci2[0]);
                     break;
             }
+            
+            if(lengthData > 15) ctrlByte.Set(7, false);
+            bytes[2] = bitToByte(ctrlByte);
 
             if(data != null)
                 bytes.AddRange(data);
@@ -97,12 +89,6 @@ namespace Kaenx.Konnect.Builders
         {
             return bytes.ToArray();
         }
-
-        public void SetIsExtended() {
-            IsExtended = true;
-        }
-
-
 
         public void SetPriority(Prios prio)
         {
@@ -127,10 +113,8 @@ namespace Kaenx.Konnect.Builders
                     ctrlByte.Set(2, false);
                     ctrlByte.Set(3, false);
                     break;
-
             }
         }
-
 
         private byte bitToByte(BitArray arr)
         {
@@ -151,5 +135,4 @@ namespace Kaenx.Konnect.Builders
         High,
         Low
     }
-
 }

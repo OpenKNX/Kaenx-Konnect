@@ -677,6 +677,7 @@ namespace Kaenx.Konnect.Classes
             int currentPosition = address;
             int maxCount = MaxFrameLength - 3;
 
+            // TODO implement MemoryWriteExtended
             if (maxCount > 63) maxCount = 63;
 
             if (verifyMode == VerifyMode.Unknown)
@@ -722,8 +723,7 @@ namespace Kaenx.Konnect.Classes
                     datalist.RemoveRange(0, datalist.Count);
                 }
 
-
-                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address, data_temp.Count > 13);
+                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
                 message.SequenceNumber = _currentSeqNum++;
                 var seq = message.SequenceNumber;
                 CheckForData(message.SequenceNumber);
@@ -784,6 +784,7 @@ namespace Kaenx.Konnect.Classes
             int toRead = length;
             int maxCount = MaxFrameLength - 3;
 
+            // TODO implement MemoryReadExtended
             if (maxCount > 63) maxCount = 63;
 
             while (true)
@@ -793,8 +794,7 @@ namespace Kaenx.Konnect.Classes
                 if (length > maxCount) toRead = maxCount;
                 else toRead = length;
 
-
-                MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address, MaxFrameLength > 15);
+                MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address);
                 msg.SequenceNumber = _currentSeqNum++;
                 CheckForData(msg.SequenceNumber);
                 await _conn.Send(msg);
