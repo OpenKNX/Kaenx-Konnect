@@ -17,7 +17,7 @@ namespace Kaenx.Konnect.Builders
         private BitArray ctrlByte = new BitArray(new byte[] { 0xb0 });
         private BitArray drlByte = new BitArray(new byte[] { 0x60 });
 
-         public void Build(IKnxAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apciType, int sCounter = 255, byte[] data = null)
+         public void Build(IKnxAddress sourceAddress, IKnxAddress destinationAddress, ApciTypes apciType, int sCounter = 255, byte[]? data = null)
         {
             bytes.Add(0x11); //Message Code
             bytes.Add(0x00); // Control Byte will be set later

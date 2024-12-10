@@ -44,7 +44,7 @@ namespace Kaenx.Konnect.Parser
             }
 
 
-            byte[] data = null;
+            byte[]? data = null;
             int seqNumb = 0x0;
             ApciTypes type = ApciTypes.Undefined;
 

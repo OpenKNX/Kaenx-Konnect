@@ -22,17 +22,16 @@ namespace Kaenx.Konnect.Classes
     {
         private string _mask = "";
 
-        public ManagmentModels ManagmentModel { get; set; }
-        public bool SupportsExtendedFrames { get; set; } = false;
+        public ManagementModels ManagmentModel { get; set; } = ManagementModels.None;
         public int MaxFrameLength { get; set; } = 15;
         public ushort? MaskVersion { get; private set; } = null;
 
         private bool _isConnected = false;
         private UnicastAddress _address;
         private IKnxConnection _conn;
-        private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
-        private Dictionary<int, bool> acks = new Dictionary<int, bool>();
-        private Dictionary<string, string> features;
+        private Dictionary<int, ResponseHelper> responses = new Dictionary<int, ResponseHelper>();
+        private Dictionary<int, CancellationTokenSource?> acks = new Dictionary<int, CancellationTokenSource?>();
+        private Dictionary<string, string> features = new Dictionary<string, string>();
         private int timeoutForData = 4000;
 
         private int _seqNum = 0;
@@ -55,7 +54,8 @@ namespace Kaenx.Konnect.Classes
                     int y = x - i;
                     if (y < 0) y += 15;
 
-                    acks[y] = false;
+                    if(acks.ContainsKey(y))
+                        acks.Remove(y);
                 }
             }
         }
@@ -67,26 +67,17 @@ namespace Kaenx.Konnect.Classes
             set { _lastNumb = value; }
         }
 
-
-
-
         private VerifyMode verifyMode = VerifyMode.Unknown;
 
         public BusDevice(string address, IKnxConnection conn)
         {
             _address = UnicastAddress.FromString(address);
             _conn = conn;
-
-            for (int i = 0; i <= 15; i++)
-                acks.Add(i, false);
         }
         public BusDevice(UnicastAddress address, IKnxConnection conn)
         {
             _address = address;
             _conn = conn;
-
-            for (int i = 0; i <= 15; i++)
-                acks.Add(i, false);
         }
 
         public void SetTimeout(int timeout)
@@ -102,18 +93,19 @@ namespace Kaenx.Konnect.Classes
         #region Waiters
         private void _conn_OnTunnelAck(MsgAckRes response)
         {
-            acks[response.SequenceNumber] = true;
-            //("Got Ack: " + response.SequenceNumber);
+            acks[response.SequenceNumber]?.Cancel();
         }
 
         private void OnTunnelResponse(IMessageResponse response)
         {
             if(!response.IsNumbered) return;
 
-            if (responses.ContainsKey(response.SequenceNumber))
-                responses[response.SequenceNumber] = response;
+            if (responses.ContainsKey(response.SequenceNumber)) {
+                responses[response.SequenceNumber].Response = response;
+                responses[response.SequenceNumber].TokenSource.Cancel();
+            }
             else
-                responses.Add(response.SequenceNumber, response);
+                responses.Add(response.SequenceNumber, new ResponseHelper() { Response = response });
 
             lastReceivedNumber = response.SequenceNumber;
             //Debug.WriteLine("Got Response: " + response.ApciType + "/" + response.SequenceNumber);
@@ -128,40 +120,54 @@ namespace Kaenx.Konnect.Classes
             }
         }
 
-
-        private void CheckForData(int seq)
-        {
-            if (responses.ContainsKey(seq))
-                responses.Remove(seq);
-        }
-
         /// <summary>
         /// Wartet auf antwort
         /// </summary>
         /// <param name="seq">Sequenznummer</param>
         /// <returns>Daten als Byte Array</returns>
-        private async Task<IMessageResponse> WaitForData(int seq, CancellationToken token)
+        private async Task<IMessageResponse> WaitForData(IMessageRequest message)
         {
-            while (!responses.ContainsKey(seq) && !token.IsCancellationRequested)
-                await Task.Delay(5); // TODO maybe erhöhen
+            if (responses.ContainsKey(message.SequenceNumber))
+                responses.Remove(message.SequenceNumber);
 
-            if (token.IsCancellationRequested)
+            ResponseHelper helper = new ResponseHelper();
+            responses.Add(message.SequenceNumber, helper);
+
+            await _conn.Send(message);
+
+            try {
+                await Task.Delay(timeoutForData, helper.TokenSource.Token);
+            } catch {
+                // If the Token was cancelled, we got the Response
+            }
+
+            responses.Remove(message.SequenceNumber);
+            if(helper.Response == null)
                 throw new TimeoutException("Zeitüberschreitung beim Warten auf Antwort");
 
-            var resp = responses[seq];
-            responses.Remove(seq);
-            return resp;
+            return helper.Response;
         }
 
-        private async Task WaitForAck(int seq, CancellationToken token)
+        private async Task WaitForAck(IMessageRequest message)
         {
-            while (!acks[seq] && !token.IsCancellationRequested)
-                await Task.Delay(10); // TODO maybe erhöhen
+            if (acks.ContainsKey(message.SequenceNumber))
+                acks.Remove(message.SequenceNumber);
 
-            if (token.IsCancellationRequested)
+            CancellationTokenSource tokenS = new CancellationTokenSource();
+            acks.Add(message.SequenceNumber, tokenS);
+            await _conn.Send(message);
+
+            bool gotAck = true;
+            try {
+                await Task.Delay(timeoutForData, tokenS.Token);
+                gotAck = false;
+            } catch {
+                // If the Token was cancelled, we got the Ack
+            }
+
+            acks.Remove(message.SequenceNumber);
+            if (!gotAck)
                 throw new TimeoutException("Zeitüberschreitung beim Warten auf Ack");
-
-            acks[seq] = false;
         }
         #endregion
 
@@ -190,11 +196,11 @@ namespace Kaenx.Konnect.Classes
         {
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
-            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
-            XElement prop = null;
+            if(master.Root == null) return false;
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id")?.Value == maskId);
             try
             {
-                prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name").Value == resourceId);
+                XElement prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name")?.Value == resourceId);
                 return true;
             }
             catch
@@ -258,7 +264,6 @@ namespace Kaenx.Konnect.Classes
             {
                 MaxFrameLength = await PropertyRead<int>(0, 56);
                 //Debug.WriteLine("Maximale Länge:  " + MaxFrameLength);
-                if (MaxFrameLength > 15) SupportsExtendedFrames = true;
                 if (MaxFrameLength < 15) MaxFrameLength = 15;
                 //Debug.WriteLine("Maximale Länge*: " + MaxFrameLength);
             }
@@ -321,32 +326,41 @@ namespace Kaenx.Konnect.Classes
 
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
-            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
-            XElement prop = null;
+            if(master.Root == null)
+                throw new Exception("Cant create Master");
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id")?.Value == maskId);
+            XElement? prop = null;
             try
             {
-                prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name").Value == resourceId);
+                prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name")?.Value == resourceId);
+                if (prop == null)
+                    throw new Exception("Resource not found");
             }
             catch
             {
                 throw new Exception("Device does not support this Property");
             }
 
-            XElement loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
-            int length = int.Parse(prop.Element(XName.Get("ResourceType", master.Root.Name.NamespaceName)).Attribute("Length").Value);
-            string start = loc.Attribute("StartAddress")?.Value;
+            XElement? loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
+            if(loc == null)
+                throw new Exception("Location not found");
+            int length = int.Parse(prop.Element(XName.Get("ResourceType", master.Root.Name.NamespaceName))?.Attribute("Length")?.Value ?? "0");
+            string? start = loc.Attribute("StartAddress")?.Value;
+            if(start == null)
+                throw new Exception("StartAddress not found");
 
             if (data.Length > length)
             {
                 data = data.Skip(data.Length - length).ToArray();
             }
 
-
-            switch (loc.Attribute("AddressSpace").Value)
+            switch (loc.Attribute("AddressSpace")?.Value)
             {
                 case "SystemProperty":
-                    string obj = loc.Attribute("InterfaceObjectRef").Value;
-                    string pid = loc.Attribute("PropertyID").Value;
+                    string? obj = loc.Attribute("InterfaceObjectRef")?.Value;
+                    string? pid = loc.Attribute("PropertyID")?.Value;
+                    if(obj == null || pid == null)
+                        throw new Exception("Object or Property not found");
                     await PropertyWrite(Convert.ToByte(obj), Convert.ToByte(pid), data);
                     break;
 
@@ -355,16 +369,23 @@ namespace Kaenx.Konnect.Classes
                     break;
 
                 case "Pointer":
-                    string newProp = loc.Attribute("PtrResource").Value;
+                    string? newProp = loc.Attribute("PtrResource")?.Value;
+                    if(newProp == null)
+                        throw new Exception("Pointer Resource not found");
                     await ResourceWrite(newProp, data);
                     break;
 
                 case "RelativeMemory":
-                    obj = loc.Attribute("InterfaceObjectRef").Value;
-                    pid = loc.Attribute("PropertyID").Value;
+                    obj = loc.Attribute("InterfaceObjectRef")?.Value;
+                    pid = loc.Attribute("PropertyID")?.Value;
+                    if(obj == null || pid == null)
+                        throw new Exception("Object or Property not found");
                     int addr = await PropertyRead<int>(Convert.ToByte(obj), Convert.ToByte(pid));
                     await MemoryWrite(addr, data);
                     break;
+
+                default:
+                    throw new Exception("AddressSpace not found or unknown");
             }
         }
 
@@ -413,11 +434,7 @@ namespace Kaenx.Konnect.Classes
 
             MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
             message.SequenceNumber = _currentSeqNum++;
-            CheckForData(message.SequenceNumber);
-            await _conn.Send(message);
-
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message.SequenceNumber, tokenS.Token);
+            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message);
             return resp.Get<T>();
         }
 
@@ -449,27 +466,36 @@ namespace Kaenx.Konnect.Classes
 
             string maskId = await GetMaskVersion();
             XDocument master = GetKnxMaster();
-            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id").Value == maskId);
-            XElement prop = null;
+            if(master.Root == null)
+                throw new Exception("Cant create Master");
+            XElement mask = master.Descendants(XName.Get("MaskVersion", master.Root.Name.NamespaceName)).Single(mv => mv.Attribute("Id")?.Value == maskId);
+            XElement? prop = null;
             try
             {
-                prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name").Value == resourceId);
+                prop = mask.Descendants(XName.Get("Resource", master.Root.Name.NamespaceName)).First(mv => mv.Attribute("Name")?.Value == resourceId);
             }
             catch
             {
                 throw new Exceptions.NotSupportedException("Mask '" + maskId + "' does not support this Resource: " + resourceId);
             }
 
-            XElement loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
-            int length = int.Parse(prop.Element(XName.Get("ResourceType", master.Root.Name.NamespaceName)).Attribute("Length").Value);
-            string start = loc.Attribute("StartAddress")?.Value;
-            string obj, pid;
+            XElement? loc = prop.Element(XName.Get("Location", master.Root.Name.NamespaceName));
+            if(loc == null)
+                throw new Exception("Location not found");
+            int length = int.Parse(prop.Element(XName.Get("ResourceType", master.Root.Name.NamespaceName))?.Attribute("Length")?.Value ?? "0");
+            string? start = loc.Attribute("StartAddress")?.Value;
+            if(start == null)
+                throw new Exception("StartAddress not found");
+            string? obj;
+            string? pid;
 
-            switch (loc.Attribute("AddressSpace").Value)
+            switch (loc.Attribute("AddressSpace")?.Value)
             {
                 case "SystemProperty":
-                    obj = loc.Attribute("InterfaceObjectRef").Value;
-                    pid = loc.Attribute("PropertyID").Value;
+                    obj = loc.Attribute("InterfaceObjectRef")?.Value;
+                    pid = loc.Attribute("PropertyID")?.Value;
+                    if(obj == null || pid == null)
+                        throw new Exception("Object or Property not found");
                     return await PropertyRead<T>(Convert.ToByte(obj), Convert.ToByte(pid));
 
                 case "StandardMemory":
@@ -479,12 +505,16 @@ namespace Kaenx.Konnect.Classes
                         return await MemoryRead<T>(int.Parse(start), length);
 
                 case "Pointer":
-                    string newProp = loc.Attribute("PtrResource").Value;
+                    string? newProp = loc.Attribute("PtrResource")?.Value;
+                    if(newProp == null)
+                        throw new Exception("Pointer Resource not found");
                     return await ResourceRead<T>(newProp, onlyAddress);
 
                 case "RelativeMemory":
-                    obj = loc.Attribute("InterfaceObjectRef").Value;
-                    pid = loc.Attribute("PropertyID").Value;
+                    obj = loc.Attribute("InterfaceObjectRef")?.Value;
+                    pid = loc.Attribute("PropertyID")?.Value;
+                    if(obj == null || pid == null)
+                        throw new Exception("Object or Property not found");
                     int addr = await PropertyRead<int>(Convert.ToByte(obj), Convert.ToByte(pid));
                     byte[] data = await MemoryRead(addr, length);
                     return (T)Convert.ChangeType(data, typeof(T));
@@ -525,15 +555,9 @@ namespace Kaenx.Konnect.Classes
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
 
-            //Debug.WriteLine("PropRead:" + _currentSeqNum);
             MsgPropertyReadReq message = new MsgPropertyReadReq(objIdx, propId, _address);
             message.SequenceNumber = _currentSeqNum++;
-            CheckForData(message.SequenceNumber);
-            await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-            //Debug.WriteLine("Wating for " + objIdx + "/" + propId + ": " + message.SequenceNumber);
-            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message.SequenceNumber, tokenS.Token);
-            //Debug.WriteLine("Ended waiting");
+            MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message);
             return resp.Get<T>();
         }
 
@@ -549,15 +573,9 @@ namespace Kaenx.Konnect.Classes
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
 
-            //Debug.WriteLine("PropDescriptionRead:" + _currentSeqNum);
             MsgPropertyDescriptionReq message = new MsgPropertyDescriptionReq(objIdx, propId, 0, _address);
             message.SequenceNumber = _currentSeqNum++;
-            CheckForData(message.SequenceNumber);
-            await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-            //Debug.WriteLine("Wating for Description " + objIdx + "/" + propId + ": " + message.SequenceNumber);
-            MsgPropertyDescriptionRes resp = (MsgPropertyDescriptionRes)await WaitForData(message.SequenceNumber, tokenS.Token);
-            //Debug.WriteLine("Ended waiting");
+            MsgPropertyDescriptionRes resp = (MsgPropertyDescriptionRes)await WaitForData(message);
             return resp;
         }
 
@@ -576,18 +594,13 @@ namespace Kaenx.Konnect.Classes
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
 
-            var seq1 = _currentSeqNum++;
-
             MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
-            message.SequenceNumber = seq1;
-            CheckForData(message.SequenceNumber);
-            await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-
+            message.SequenceNumber = _currentSeqNum++;
+            
             if (waitForResp)
-                await WaitForData(message.SequenceNumber, tokenS.Token);
+                await WaitForData(message);
             else
-                await WaitForAck(seq1, tokenS.Token);
+                await WaitForAck(message);
         }
 
         /// <summary>
@@ -598,7 +611,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die übergeben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<MsgFunctionPropertyStateRes> InvokeFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false)        {
+        public async Task<MsgFunctionPropertyStateRes?> InvokeFunctionProperty(byte objIdx, byte propId, byte[]? data, bool waitForResp = false)        {
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
 
@@ -610,19 +623,19 @@ namespace Kaenx.Konnect.Classes
 
             MsgFunctionPropertyCommandReq message = new MsgFunctionPropertyCommandReq(objIdx, propId, data, _address);
             message.SequenceNumber = seq1;
-            CheckForData(message.SequenceNumber);
-            await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-
+            
             if (waitForResp) {
-                var response = (MsgFunctionPropertyStateRes)await WaitForData(message.SequenceNumber, tokenS.Token);
+                var response = (MsgFunctionPropertyStateRes)await WaitForData(message);
+                // TODO check if we really need to send the same sequence number again
+                // device should accept all sequences that are greater than the last one
+
                 // this will be called only if there is no exception during WaitForData
                 _currentSeqNum++;
                 return response;
-            } else
-                _currentSeqNum++;
-            
-            await WaitForAck(seq1, tokenS.Token);
+            }
+
+            _currentSeqNum++;
+            await WaitForAck(message);
             return null;
         }
 
@@ -634,7 +647,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die übergeben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<MsgFunctionPropertyStateRes> ReadFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
+        public async Task<MsgFunctionPropertyStateRes?> ReadFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
         {
             if(!_isConnected)
                 throw new DeviceNotConnectedException();
@@ -642,18 +655,13 @@ namespace Kaenx.Konnect.Classes
             if(data == null)
                 data = new byte[0];
 
-            var seq1 = _currentSeqNum++;
-
             MsgFunctionPropertyStateReq message = new MsgFunctionPropertyStateReq(objIdx, propId, data, _address);
-            message.SequenceNumber = seq1;
-            CheckForData(message.SequenceNumber);
-            await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-
-            if (waitForResp)
-                return (MsgFunctionPropertyStateRes)await WaitForData(message.SequenceNumber, tokenS.Token);
+            message.SequenceNumber = _currentSeqNum++;
             
-            await WaitForAck(seq1, tokenS.Token);
+            if (waitForResp)
+                return (MsgFunctionPropertyStateRes)await WaitForData(message);
+            
+            await WaitForAck(message);
             return null;
         }
         #endregion
@@ -725,27 +733,30 @@ namespace Kaenx.Konnect.Classes
 
                 MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
                 message.SequenceNumber = _currentSeqNum++;
-                var seq = message.SequenceNumber;
-                CheckForData(message.SequenceNumber);
-                await _conn.Send(message);
-                CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
+                // var seq = message.SequenceNumber;
+                // CheckForData(message.SequenceNumber);
+                // await _conn.Send(message);
+                // CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
                 if (verify)
                 {
+                    IMessageResponse? resp;
                     if (verifyMode == VerifyMode.NotSupported)
                     {
+                        await WaitForAck(message);
+
                         MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, data_temp.Count, _address);
                         msg.SequenceNumber = _currentSeqNum++;
-                        CheckForData(msg.SequenceNumber);
-                        await _conn.Send(msg);
-                        seq = msg.SequenceNumber;
+                        resp = await WaitForData(msg);
+                    } else {
+                        resp = await WaitForData(message);
                     }
-                    IMessageResponse resp = await WaitForData(seq, tokenS.Token);
+                    
                     if (!resp.Raw.Skip(2).SequenceEqual(data_temp))
                         throw new Exception($"Adresse 0x{currentPosition:X}-0x{currentPosition + data_temp.Count:X} konnte nicht beschrieben werden");
                 }
                 else
                 {
-                    await WaitForAck(seq, tokenS.Token);
+                    await WaitForAck(message);
                 }
 
                 currentPosition += data_temp.Count;
@@ -796,12 +807,7 @@ namespace Kaenx.Konnect.Classes
 
                 MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address);
                 msg.SequenceNumber = _currentSeqNum++;
-                CheckForData(msg.SequenceNumber);
-                await _conn.Send(msg);
-
-                //Debug.WriteLine("Warten auf: " + seq);
-                CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-                IMessageResponse resp = await WaitForData(msg.SequenceNumber, tokenS.Token);
+                IMessageResponse resp = await WaitForData(msg);
                 readed.AddRange(resp.Raw.Skip(2));
                 currentPosition += toRead;
                 length -= toRead;
@@ -850,10 +856,7 @@ namespace Kaenx.Konnect.Classes
 
             MsgAuthorizeReq message = new MsgAuthorizeReq(key, _address);
             message.SequenceNumber = _currentSeqNum++;
-            CheckForData(message.SequenceNumber);
-            await _conn.Send(message);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-            MsgAuthorizeRes resp = (MsgAuthorizeRes)await WaitForData(message.SequenceNumber, tokenS.Token);
+            MsgAuthorizeRes resp = (MsgAuthorizeRes)await WaitForData(message);
             return resp.Level;
         }
 
@@ -869,12 +872,7 @@ namespace Kaenx.Konnect.Classes
 
             MsgDescriptorReadReq message = new MsgDescriptorReadReq(_address);
             message.SequenceNumber = _currentSeqNum++;
-            CheckForData(message.SequenceNumber);
-            await _conn.Send(message);
-            //Debug.WriteLine("Warten auf: " + seq);
-            CancellationTokenSource tokenS = new CancellationTokenSource(timeoutForData);
-            //Todo MsgDeviceDescriptorReadRes convert benutzen
-            IMessageResponse resp = await WaitForData(message.SequenceNumber, tokenS.Token);
+            IMessageResponse resp = await WaitForData(message);
             MaskVersion = (ushort)(resp.Raw[0] << 8 | resp.Raw[1]);
             _mask = "MV-" + BitConverter.ToString(resp.Raw).Replace("-", "");
 
@@ -882,20 +880,29 @@ namespace Kaenx.Konnect.Classes
             features = new Dictionary<string, string>();
 
             XDocument master = GetKnxMaster();
+            if(master.Root == null)
+                throw new Exception("Cant create Master");
             XNamespace ns = master.Root.Name.Namespace;
-            XElement xmask = master.Root.Descendants(ns + "MaskVersion").Single(e => e.Attribute("Id").Value == _mask);
-            foreach (XElement xfeature in xmask.Element(ns + "HawkConfigurationData").Descendants(ns + "Feature"))
-                features[xfeature.Attribute("Name").Value] = xfeature.Attribute("Value").Value;
+            XElement xmask = master.Root.Descendants(ns + "MaskVersion").Single(e => e.Attribute("Id")?.Value == _mask);
+            foreach (XElement xfeature in xmask.Element(ns + "HawkConfigurationData")?.Descendants(ns + "Feature") ?? new List<XElement>()) {
+                string? name = xfeature.Attribute("Name")?.Value;
+                string? value = xfeature.Attribute("Value")?.Value;
 
-            ManagmentModel = xmask.Attribute("ManagementModel").Value switch
+                if (name != null && value != null)
+                    features[name] = value;
+                else
+                    throw new Exception("Feature has no Name or Value");
+            }
+
+            ManagmentModel = xmask.Attribute("ManagementModel")?.Value switch
             {
-                "None" => ManagmentModels.None,
-                "SystemB" => ManagmentModels.SystemB,
-                "Bcu1" => ManagmentModels.Bcu1,
-                "Bcu2" => ManagmentModels.Bcu2,
-                "BimM112" => ManagmentModels.BimM112,
-                "PropertyBased" => ManagmentModels.PropertyBased,
-                _ => throw new Exception($"Unbekanntes ManagmentModel: {xmask.Attribute("ManagmentModel").Value}")
+                "None" => ManagementModels.None,
+                "SystemB" => ManagementModels.SystemB,
+                "Bcu1" => ManagementModels.Bcu1,
+                "Bcu2" => ManagementModels.Bcu2,
+                "BimM112" => ManagementModels.BimM112,
+                "PropertyBased" => ManagementModels.PropertyBased,
+                _ => throw new Exception($"Unbekanntes ManagementModel: {xmask.Attribute("ManagementModel")?.Value ?? "null"}")
             };
 
             return _mask;
@@ -903,17 +910,17 @@ namespace Kaenx.Konnect.Classes
 
         public async Task<int> ReadMaxAPDULength()
         {
-            ushort mediumIndependent = (ushort)(MaskVersion & 0x0fff);
+            ushort mediumIndependent = (ushort)((MaskVersion ?? 0) & 0x0fff);
             switch (mediumIndependent)
             {
                 case 0x07B0:
                 case 0x0920:
                     MaxFrameLength = await PropertyRead<int>(0, 56);
                     break;
+                default:
+                    throw new Exception("Unsupported MaskVersion " + mediumIndependent.ToString("X4"));
             }
 
-            //Debug.WriteLine("Maximale Länge: " + MaxFrameLength);
-            if (MaxFrameLength > 15) SupportsExtendedFrames = true;
             return MaxFrameLength;
         }
 
@@ -921,7 +928,7 @@ namespace Kaenx.Konnect.Classes
         {
             if (features.ContainsKey(name))
                 return features[name];
-            return null;
+            return "";
         }
 
         private XDocument GetKnxMaster()

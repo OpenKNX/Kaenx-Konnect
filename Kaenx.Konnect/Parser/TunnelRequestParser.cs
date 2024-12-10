@@ -46,7 +46,7 @@ namespace Kaenx.Konnect.Parser
             }
 
 
-            byte[] data = null;
+            byte[]? data = null;
             int seqNumb = 0x0;
             bool isNumbered = false;
             ApciTypes type = ApciTypes.Undefined;
@@ -169,7 +169,7 @@ namespace Kaenx.Konnect.Parser
             BitArray bitsCtrl1 = new BitArray(new[] { responseBytes[6] });
             BitArray bitsCtrl2 = new BitArray(new[] { responseBytes[7] });
 
-            IKnxAddress destAddr = null;
+            IKnxAddress? destAddr = null;
             if (bitsCtrl2.Get(7))
                 destAddr = MulticastAddress.FromByteArray(new[] { responseBytes[10], responseBytes[11] });
             else

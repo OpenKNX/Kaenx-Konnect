@@ -25,14 +25,14 @@ namespace Kaenx.Konnect.Connections
 {
     public class KnxIpRouting : IKnxConnection
     {
-        public event TunnelRequestHandler OnTunnelRequest;
-        public event TunnelResponseHandler OnTunnelResponse;
-        public event TunnelAckHandler OnTunnelAck;
-        public event ConnectionChangedHandler ConnectionChanged;
+        public event TunnelRequestHandler? OnTunnelRequest;
+        public event TunnelResponseHandler? OnTunnelResponse;
+        public event TunnelAckHandler? OnTunnelAck;
+        public event ConnectionChangedHandler? ConnectionChanged;
 
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
-        public UnicastAddress PhysicalAddress { get; set; }
+        public UnicastAddress? PhysicalAddress { get; set; }
         public int MaxFrameLength { get; set; } = 254;
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
@@ -42,7 +42,7 @@ namespace Kaenx.Konnect.Connections
         private List<UdpConnection> _clients = new List<UdpConnection>();
         private readonly Queue<object> _sendMessages;
         private readonly ReceiverParserDispatcher _receiveParserDispatcher;
-        private CancellationTokenSource tokenSource;
+        private CancellationTokenSource tokenSource = new CancellationTokenSource();
 
         public KnxIpRouting(UnicastAddress physicalAddress, string ip = "224.0.23.12", int port = 3671)
         {
@@ -205,6 +205,8 @@ namespace Kaenx.Konnect.Connections
                 switch (parserMessage)
                 {
                     case Responses.RoutingResponse tunnelResponse:
+                        if(PhysicalAddress == null)
+                            throw new Exception("PhysicalAddress not set!");
                         if (tunnelResponse.DestinationAddress.ToString() != PhysicalAddress.ToString())
                         {
                             Debug.WriteLine("Telegram erhalten das nicht mit der Adresse selbst zu tun hat!");
@@ -213,7 +215,7 @@ namespace Kaenx.Konnect.Connections
                             Debug.WriteLine("Adressiert an:  " + tunnelResponse.DestinationAddress.ToString());
                             break;
                         }
-                        Debug.WriteLine($"Received: {sender.Interface.Name} {tunnelResponse.APCI}");
+                        Debug.WriteLine($"Received: {sender.Interface?.Name ?? "(no interface)"} {tunnelResponse.APCI}");
 
                         if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                         {
@@ -244,11 +246,14 @@ namespace Kaenx.Konnect.Connections
                                 where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
                                 select t;
 
-                        IMessage message = null;
+                        IMessage? message = null;
 
                         foreach (Type t in q.ToList())
                         {
-                            IMessage resp = (IMessage)Activator.CreateInstance(t);
+                            object? obj = Activator.CreateInstance(t);
+                            if (obj == null)
+                                continue;
+                            IMessage resp = (IMessage)obj;
 
                             if (resp.ApciType == tunnelResponse.APCI)
                             {
@@ -279,9 +284,9 @@ namespace Kaenx.Konnect.Connections
                         message.ParseDataCemi();
 
                         if (tunnelResponse.APCI.ToString().EndsWith("Response"))
-                            OnTunnelResponse?.Invoke(message as IMessageResponse);
+                            OnTunnelResponse?.Invoke((IMessageResponse)message);
                         else
-                            OnTunnelRequest?.Invoke(message as IMessageRequest);
+                            OnTunnelRequest?.Invoke((IMessageRequest)message);
 
                         break;
 
@@ -321,35 +326,32 @@ namespace Kaenx.Konnect.Connections
                 
                 var sendMessage = _sendMessages.Dequeue();
                 
-                if (sendMessage is byte[])
+                if (sendMessage is byte[] sdata)
                 {
                     Debug.WriteLine("Sending bytes");
-                    byte[] data = sendMessage as byte[];
                     foreach (UdpConnection client in _clients)
-                        _ = client.SendAsync(data);
+                        _ = client.SendAsync(sdata);
                 }
-                else if (sendMessage is MsgSearchReq)
+                else if (sendMessage is MsgSearchReq messageR)
                 {
-                    MsgSearchReq message = sendMessage as MsgSearchReq;
-
                     foreach(UdpConnection _udp in _clients)
                     {
-                        message.Endpoint = _udp.GetLocalEndpoint();
+                        messageR.Endpoint = _udp.GetLocalEndpoint();
                         byte[] xdata;
 
                         switch (CurrentType)
                         {
                             case ProtocolTypes.Emi1:
-                                xdata = message.GetBytesEmi1();
+                                xdata = messageR.GetBytesEmi1();
                                 break;
 
                             case ProtocolTypes.Emi2:
-                                xdata = message.GetBytesEmi2(); //Todo check diffrences to emi1
+                                xdata = messageR.GetBytesEmi2(); //Todo check diffrences to emi1
                                                                 //xdata.AddRange(message.GetBytesEmi2());
                                 break;
 
                             case ProtocolTypes.cEmi:
-                                xdata = message.GetBytesCemi();
+                                xdata = messageR.GetBytesCemi();
                                 break;
 
                             default:
@@ -358,10 +360,9 @@ namespace Kaenx.Konnect.Connections
 
                         _ = _udp.SendAsync(xdata);
                     }
-                } else if(sendMessage is IMessage) { 
+                } else if(sendMessage is IMessage msg) { 
                     Debug.WriteLine("Sending IMessage " + sendMessage.GetType());
-                    IMessage message = sendMessage as IMessage;
-                    message.SourceAddress = PhysicalAddress;
+                    msg.SourceAddress = PhysicalAddress ?? UnicastAddress.FromByteArray(new byte[] { 0, 0, 0 });
                     List<byte> xdata = new List<byte>();
 
                     //KNX/IP Header
@@ -374,23 +375,23 @@ namespace Kaenx.Konnect.Connections
                     switch (CurrentType)
                     {
                         case ProtocolTypes.Emi1:
-                            xdata.AddRange(message.GetBytesEmi1());
+                            xdata.AddRange(msg.GetBytesEmi1());
                             break;
 
                         case ProtocolTypes.Emi2:
-                            xdata.AddRange(message.GetBytesEmi1()); //Todo check diffrences between emi1
+                            xdata.AddRange(msg.GetBytesEmi1()); //Todo check diffrences between emi1
                                                                     //xdata.AddRange(message.GetBytesEmi2());
                             break;
 
                         case ProtocolTypes.cEmi:
-                            xdata.AddRange(message.GetBytesCemi());
+                            xdata.AddRange(msg.GetBytesCemi());
                             break;
 
                         default:
                             throw new Exception("Unbekanntes Protokoll");
                     }
 
-                    byte[] length = BitConverter.GetBytes((ushort)(xdata.Count));
+                    byte[] length = BitConverter.GetBytes((ushort)xdata.Count);
                     Array.Reverse(length);
                     xdata[4] = length[0];
                     xdata[5] = length[1];

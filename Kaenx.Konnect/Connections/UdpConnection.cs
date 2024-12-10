@@ -13,14 +13,14 @@ namespace Kaenx.Konnect.Connections
     {
         private CancellationTokenSource tokenSource = new CancellationTokenSource();
         private UdpClient client;
-        private IPEndPoint Source { get; set; }
+        private IPEndPoint? Source { get; set; }
         private IPEndPoint Target { get; set; }
         public delegate void ReceivedKnxMessage(UdpConnection sender, IParserMessage message);
-        public event ReceivedKnxMessage OnReceived;
-        public NetworkInterface Interface { get; set; }
+        public event ReceivedKnxMessage? OnReceived;
+        public NetworkInterface? Interface { get; set; }
         public int InterfaceIndex { get; set; } = 0;
 
-        public UdpConnection(IPAddress ip, IPEndPoint _target, bool isMulticast = false, IPEndPoint _source = null)
+        public UdpConnection(IPAddress ip, IPEndPoint _target, bool isMulticast = false, IPEndPoint? _source = null)
         {
             client = new UdpClient(new IPEndPoint(ip, 0));
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -35,7 +35,7 @@ namespace Kaenx.Konnect.Connections
             Source = _source;
         }
 
-        public UdpConnection(IPAddress ip, int port, IPEndPoint _target, bool isMulticast = false, IPEndPoint _source = null)
+        public UdpConnection(IPAddress ip, int port, IPEndPoint _target, bool isMulticast = false, IPEndPoint? _source = null)
         {
             client = new UdpClient(new IPEndPoint(ip, port));
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -57,7 +57,7 @@ namespace Kaenx.Konnect.Connections
 
         public IPEndPoint GetLocalEndpoint()
         {
-            return client.Client.LocalEndPoint as IPEndPoint;
+            return (IPEndPoint?)client.Client.LocalEndPoint ?? new IPEndPoint(IPAddress.Any, 0);
         }
 
         private async void ProcessReceive()

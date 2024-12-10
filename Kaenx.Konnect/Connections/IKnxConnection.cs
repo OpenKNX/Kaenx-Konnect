@@ -38,7 +38,7 @@ namespace Kaenx.Konnect.Connections
         /// <summary>
         /// Returns the Physical Address of the Interface
         /// </summary>
-        public UnicastAddress PhysicalAddress { get; set; }
+        public UnicastAddress? PhysicalAddress { get; set; }
 
         /// <summary>
         /// Returns the max APDU length of the interface

@@ -9,12 +9,10 @@ namespace Kaenx.Konnect.Classes
 {
     class ReceiverParserDispatcher
     {
-        private static ReceiverParserDispatcher _instance;
+        private static ReceiverParserDispatcher _instance = new ReceiverParserDispatcher();
         public static ReceiverParserDispatcher Instance
         {
             get {
-                if( _instance == null)
-                    _instance = new ReceiverParserDispatcher();
                 return _instance;
             }
         }
@@ -35,7 +33,10 @@ namespace Kaenx.Konnect.Classes
 
             foreach (Type t in parsers)
             {
-                IReceiveParser parser = (IReceiveParser)Activator.CreateInstance(t);
+                object? inst = Activator.CreateInstance(t);
+                if(inst == null)
+                    throw new Exception("Could not create instance of parser: " + t.FullName);
+                IReceiveParser parser = (IReceiveParser)inst;
                 _responseParsers.Add(parser);
             }
         }
@@ -47,10 +48,10 @@ namespace Kaenx.Konnect.Classes
             var serviceTypeIdentifier = ParseServiceTypeIdentifier(responseBytes[2], responseBytes[3]);
             var totalLength = ParseTotalLength(responseBytes[4], responseBytes[5]);
 
-            //Console.WriteLine($"ServiceType: {serviceTypeIdentifier} {responseBytes[2]:X}-{responseBytes[3]:X}");
-
-            IReceiveParser parser = _responseParsers.SingleOrDefault(x => x.ServiceTypeIdentifier == serviceTypeIdentifier);
-            IParserMessage result = parser?.Build(headerLength, protocolVersion, totalLength, responseBytes.Skip(6).ToArray());
+            IReceiveParser? parser = _responseParsers.SingleOrDefault(x => x.ServiceTypeIdentifier == serviceTypeIdentifier);
+            if(parser == null)
+                throw new Exception("No parser found for ServiceTypeIdentifier: " + serviceTypeIdentifier);
+            IParserMessage result = parser.Build(headerLength, protocolVersion, totalLength, responseBytes.Skip(6).ToArray());
             return result;
         }
 

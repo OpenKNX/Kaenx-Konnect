@@ -24,19 +24,19 @@ namespace Kaenx.Konnect.Connections
 {
     public class KnxIpSearch : IKnxConnection
     {
-        public delegate void SearchResponseHandler(MsgSearchRes message, NetworkInterface netInterface, int netIndex);
+        public delegate void SearchResponseHandler(MsgSearchRes message, NetworkInterface? netInterface, int netIndex);
         public delegate void SearchRequestHandler(MsgSearchReq message);
 
-        public event TunnelRequestHandler OnTunnelRequest;
-        public event TunnelResponseHandler OnTunnelResponse;
-        public event TunnelAckHandler OnTunnelAck;
-        public event SearchResponseHandler OnSearchResponse;
-        public event SearchRequestHandler OnSearchRequest;
-        public event ConnectionChangedHandler ConnectionChanged;
+        public event TunnelRequestHandler? OnTunnelRequest;
+        public event TunnelResponseHandler? OnTunnelResponse;
+        public event TunnelAckHandler? OnTunnelAck;
+        public event SearchResponseHandler? OnSearchResponse;
+        public event SearchRequestHandler? OnSearchRequest;
+        public event ConnectionChangedHandler? ConnectionChanged;
 
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
-        public UnicastAddress PhysicalAddress { get; set; }
+        public UnicastAddress? PhysicalAddress { get; set; }
         public int MaxFrameLength { get; set; } = 15;
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
@@ -49,7 +49,7 @@ namespace Kaenx.Konnect.Connections
         private readonly BlockingCollection<object> _sendMessages;
         
         private List<int> _receivedAcks;
-        private CancellationTokenSource _ackToken = null;
+        private CancellationTokenSource? _ackToken;
         private CancellationTokenSource tokenSource = new CancellationTokenSource();
 
         public KnxIpSearch()
@@ -61,6 +61,7 @@ namespace Kaenx.Konnect.Connections
 
             Init();
 
+            // To get rid of the warning
             if(OnTunnelResponse != null && OnTunnelRequest != null && OnTunnelAck != null && OnSearchRequest != null)
                 return;
         }
@@ -242,12 +243,10 @@ namespace Kaenx.Konnect.Connections
             {
                 foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
                 {
-                    if (sendMessage is byte[])
+                    if (sendMessage is byte[] sdata)
                     {
-
-                        byte[] data = sendMessage as byte[];
                         foreach(UdpConnection udp in _clients)
-                            await udp.SendAsync(data);
+                            await udp.SendAsync(sdata);
                     }
                     else if (sendMessage is MsgSearchReq || sendMessage is MsgSearchRes)
                     {
@@ -282,9 +281,8 @@ namespace Kaenx.Konnect.Connections
                             await udp.SendAsync(xdata);
                         }
                     }
-                    else if (sendMessage is IMessage)
+                    else if (sendMessage is IMessage message)
                     {
-                        IMessage message = sendMessage as IMessage;
                         message.SourceAddress = UnicastAddress.FromString("0.0.0");
                         List<byte> xdata = new List<byte>
                         {
@@ -333,10 +331,6 @@ namespace Kaenx.Konnect.Connections
                         int repeatCounter = 0;
                         do 
                         {
-                            // if(repeatCounter > 0)
-                            // {
-                            //     Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
-                            // }
                             if(repeatCounter > 3)
                                 throw new Exception("Zu viele wiederholungen eines Telegramms auf kein OK");
 

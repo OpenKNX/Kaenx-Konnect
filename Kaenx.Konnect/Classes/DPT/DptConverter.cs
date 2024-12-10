@@ -25,7 +25,10 @@ namespace Kaenx.Konnect.Classes.DPT
 
             if (types.Any(t => t.IsClass && !t.IsNested && t.Name == name)) {
                 Type type = types.Single(t => t.IsClass && !t.IsNested && t.Name == name);
-                return (IDPT)Activator.CreateInstance(type);
+                object? instance = Activator.CreateInstance(type);
+                if(instance == null)
+                    throw new Exception("Konnte Klasse nicht instanziieren: " + type.FullName);
+                return (IDPT)instance;
             }
             throw new NotImplementedException(name + " wurde noch nicht implementiert");
         }

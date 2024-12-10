@@ -23,14 +23,14 @@ namespace Kaenx.Konnect.Connections
 {
     internal class KnxIpTunnelingConfig : IKnxConnection
     {
-        public event TunnelRequestHandler OnTunnelRequest;
-        public event TunnelResponseHandler OnTunnelResponse;
-        public event TunnelAckHandler OnTunnelAck;
-        public event ConnectionChangedHandler ConnectionChanged;
+        public event TunnelRequestHandler? OnTunnelRequest;
+        public event TunnelResponseHandler? OnTunnelResponse;
+        public event TunnelAckHandler? OnTunnelAck;
+        public event ConnectionChangedHandler? ConnectionChanged;
 
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
-        public UnicastAddress PhysicalAddress { get; set; }
+        public UnicastAddress? PhysicalAddress { get; set; }
         public int MaxFrameLength { get; set; } = 15;
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
@@ -44,7 +44,7 @@ namespace Kaenx.Konnect.Connections
         
         private bool _flagCRRecieved = false;
         private List<int> _receivedAcks;
-        private CancellationTokenSource _ackToken = null;
+        private CancellationTokenSource? _ackToken;
         private CancellationTokenSource tokenSource = new CancellationTokenSource();
 
         private System.Timers.Timer _timer = new System.Timers.Timer(60000);
@@ -63,7 +63,7 @@ namespace Kaenx.Konnect.Connections
             _timer.Elapsed += TimerElapsed;
         }
 
-        private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void TimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             _ = SendStatusReq();
         }
@@ -263,11 +263,13 @@ namespace Kaenx.Konnect.Connections
                                 where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
                                 select t;
 
-                        IMessage message = null;
+                        IMessage? message = null;
 
                         foreach (Type t in q.ToList())
                         {
-                            IMessage resp = (IMessage)Activator.CreateInstance(t);
+                            object? obj = Activator.CreateInstance(t);
+                            if(obj == null) continue;
+                            IMessage resp = (IMessage)obj;
 
                             if (resp.ApciType == tunnelResponse.APCI)
                             {
@@ -318,9 +320,9 @@ namespace Kaenx.Konnect.Connections
 
 
                         if (tunnelResponse.APCI.ToString().EndsWith("Response"))
-                            OnTunnelResponse?.Invoke(message as IMessageResponse);
+                            OnTunnelResponse?.Invoke((IMessageResponse)message);
                         else
-                            OnTunnelRequest?.Invoke(message as IMessageRequest);
+                            OnTunnelRequest?.Invoke((IMessageRequest)message);
 
                         break;
 
@@ -379,11 +381,9 @@ namespace Kaenx.Konnect.Connections
             {
                 foreach (var sendMessage in _sendMessages.GetConsumingEnumerable())
                 {
-                    if (sendMessage is byte[])
+                    if (sendMessage is byte[] sdata)
                     {
-
-                        byte[] data = sendMessage as byte[];
-                        await _client.SendAsync(data);
+                        await _client.SendAsync(sdata);
                     }
                     else if (sendMessage is MsgSearchReq || sendMessage is MsgSearchRes)
                     {
@@ -414,9 +414,8 @@ namespace Kaenx.Konnect.Connections
 
                         await _client.SendAsync(xdata);
                     }
-                    else if (sendMessage is IMessage)
+                    else if (sendMessage is IMessage message)
                     {
-                        IMessage message = sendMessage as IMessage;
                         message.SourceAddress = UnicastAddress.FromString("0.0.0");
                         List<byte> xdata = new List<byte>
                         {
@@ -465,10 +464,6 @@ namespace Kaenx.Konnect.Connections
                         int repeatCounter = 0;
                         do 
                         {
-                            // if(repeatCounter > 0)
-                            // {
-                            //     Console.WriteLine("wiederhole telegrmm " + message.SequenceCounter.ToString());
-                            // }
                             if(repeatCounter > 3)
                                 throw new Exception("Zu viele wiederholungen eines Telegramms auf kein OK");
 

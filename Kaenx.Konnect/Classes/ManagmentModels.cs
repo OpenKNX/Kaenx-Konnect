@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Classes
 {
-    public enum ManagmentModels
+    public enum ManagementModels
     {
         None,
         Bcu1,

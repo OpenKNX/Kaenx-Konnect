@@ -24,14 +24,14 @@ namespace Kaenx.Konnect.Connections
 {
     public class KnxIpTunneling : IKnxConnection
     {
-        public event TunnelRequestHandler OnTunnelRequest;
-        public event TunnelResponseHandler OnTunnelResponse;
-        public event TunnelAckHandler OnTunnelAck;
-        public event ConnectionChangedHandler ConnectionChanged;
+        public event TunnelRequestHandler? OnTunnelRequest;
+        public event TunnelResponseHandler? OnTunnelResponse;
+        public event TunnelAckHandler? OnTunnelAck;
+        public event ConnectionChangedHandler? ConnectionChanged;
 
         public bool IsConnected { get; set; }
         public ConnectionErrors LastError { get; set; }
-        public UnicastAddress PhysicalAddress { get; set; }
+        public UnicastAddress? PhysicalAddress { get; set; }
         public int MaxFrameLength { get; set; } = 15;
 
         private ProtocolTypes CurrentType { get; set; } = ProtocolTypes.cEmi;
@@ -45,8 +45,8 @@ namespace Kaenx.Konnect.Connections
         
         private bool _flagCRRecieved = false;
         private List<int> _receivedAcks;
-        private CancellationTokenSource _ackToken = null;
-        private CancellationTokenSource tokenSource;
+        private CancellationTokenSource? _ackToken;
+        private CancellationTokenSource? tokenSource;
 
         private System.Timers.Timer _timer = new System.Timers.Timer(60000);
         private bool isInConfig = false;
@@ -55,7 +55,7 @@ namespace Kaenx.Konnect.Connections
         {
             _sendEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
-            IPAddress IP = GetIpAddress(ip);
+            IPAddress? IP = GetIpAddress(ip);
 
             if (IP == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
@@ -63,37 +63,36 @@ namespace Kaenx.Konnect.Connections
             _receiveEndPoint = new IPEndPoint(IP, 0);
             _sendMessages = new Queue<object>();
             _receivedAcks = new List<int>();
-
-            Init();
+            _client = new UdpConnection(_receiveEndPoint.Address, _receiveEndPoint.Port, _sendEndPoint);
             _timer.Elapsed += TimerElapsed;
         }
 
         public KnxIpTunneling(IPEndPoint sendEndPoint)
         {
             _sendEndPoint = sendEndPoint;
-            IPAddress ip = GetIpAddress(sendEndPoint.Address.ToString());
+            IPAddress? ip = GetIpAddress(sendEndPoint.Address.ToString());
 
             if (ip == null)
                 throw new Exception("Lokale Ip konnte nicht gefunden werden");
 
             _receiveEndPoint = new IPEndPoint(ip, 0);
             _sendMessages = new Queue<object>();
-
-            Init();
+            _receivedAcks = new List<int>();
+            _client = new UdpConnection(_receiveEndPoint.Address, _receiveEndPoint.Port, _sendEndPoint);
             _timer.Elapsed += TimerElapsed;
         }
 
-        private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void TimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             _ = SendStatusReq();
         }
 
-        private IPAddress GetIpAddress(string receiver)
+        private IPAddress? GetIpAddress(string receiver)
         {
             if (receiver == "127.0.0.1")
                 return IPAddress.Parse(receiver);
 
-            IPAddress IP = null;
+            IPAddress? IP = null;
             int mostipcount = 0;
             string[] ipParts = receiver.Split('.');
 
@@ -134,19 +133,17 @@ namespace Kaenx.Konnect.Connections
                     using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
                     {
                         socket.Connect("8.8.8.8", 65530);
-                        IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-                        IP = endPoint.Address;
+                        if(socket.LocalEndPoint != null)
+                        {
+                            IPEndPoint endPoint = (IPEndPoint)socket.LocalEndPoint;
+                            IP = endPoint.Address;
+                        }
                     }
                 }
                 catch { }
             }
 
             return IP;
-        }
-
-        private void Init()
-        {
-            _client = new UdpConnection(_receiveEndPoint.Address, _receiveEndPoint.Port, _sendEndPoint);
         }
 
         public Task Send(byte[] data, byte sequence)
@@ -262,7 +259,7 @@ namespace Kaenx.Konnect.Connections
             builder.Build(_receiveEndPoint, _communicationChannel);
             Send(builder.GetBytes(), true);
 
-            tokenSource.Cancel();
+            tokenSource?.Cancel();
 
             if(isInConfig)
             {
@@ -370,11 +367,13 @@ namespace Kaenx.Konnect.Connections
                                 where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.Messages.Response" || t.Namespace == "Kaenx.Konnect.Messages.Request")
                                 select t;
 
-                        IMessage message = null;
+                        IMessage? message = null;
 
                         foreach (Type t in q.ToList())
                         {
-                            IMessage resp = (IMessage)Activator.CreateInstance(t);
+                            object? obj = Activator.CreateInstance(t);
+                            if (obj == null) continue;
+                            IMessage resp = (IMessage)obj;
 
                             if (resp.ApciType == tunnelResponse.APCI)
                             {
@@ -425,9 +424,9 @@ namespace Kaenx.Konnect.Connections
 
 
                         if (tunnelResponse.APCI.ToString().EndsWith("Response"))
-                            OnTunnelResponse?.Invoke(message as IMessageResponse);
+                            OnTunnelResponse?.Invoke((IMessageResponse)message);
                         else
-                            OnTunnelRequest?.Invoke(message as IMessageRequest);
+                            OnTunnelRequest?.Invoke((IMessageRequest)message);
 
                         break;
 
@@ -506,18 +505,16 @@ namespace Kaenx.Konnect.Connections
 
         private async Task ProcessSendMessages()
         {
-            while (!tokenSource.IsCancellationRequested)
+            while (!(tokenSource?.IsCancellationRequested ?? true))
             {
                 if(_sendMessages.Count == 0)
                     continue;
                 
                 var sendMessage = _sendMessages.Dequeue();
                 
-                if (sendMessage is byte[])
+                if (sendMessage is byte[]sdata)
                 {
-
-                    byte[] data = sendMessage as byte[];
-                    await _client.SendAsync(data);
+                    await _client.SendAsync(sdata);
                 }
                 else if (sendMessage is MsgSearchReq || sendMessage is MsgSearchRes)
                 {
@@ -548,9 +545,8 @@ namespace Kaenx.Konnect.Connections
 
                     await _client.SendAsync(xdata);
                 }
-                else if (sendMessage is IMessage)
+                else if (sendMessage is IMessage message)
                 {
-                    IMessage message = sendMessage as IMessage;
                     message.SourceAddress = UnicastAddress.FromString("0.0.0");
                     List<byte> xdata = new List<byte>
                     {
@@ -629,7 +625,7 @@ namespace Kaenx.Konnect.Connections
         {
             if(_client != null)
                 _client.Dispose();
-            tokenSource.Cancel();
+            tokenSource?.Cancel();
         }
     }
 }

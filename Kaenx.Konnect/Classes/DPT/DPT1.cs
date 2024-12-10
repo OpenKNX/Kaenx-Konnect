@@ -30,7 +30,7 @@ namespace Kaenx.Konnect.Classes.DPT
             switch (Type.GetTypeCode(value.GetType()))
             {
                 case TypeCode.String:
-                    string v = value.ToString();
+                    string v = value.ToString() ?? "";
                     output = (byte)((v == "on" || v == "True") ? 0x01 : 0x00);
                     break;
 
