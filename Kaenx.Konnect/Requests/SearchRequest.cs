@@ -7,6 +7,6 @@ namespace Kaenx.Konnect.Requests
 {
     internal class SearchRequest : IParserMessage
     {
-        public byte[] responseBytes;
+        public byte[] responseBytes { get; set; } = new byte[0];
     }
 }

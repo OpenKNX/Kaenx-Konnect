@@ -41,8 +41,8 @@ namespace Kaenx.Konnect.Connections
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
             if(isMulticast) {
-                client.Client.MulticastLoopback = false;
-                client.MulticastLoopback = false;
+                client.Client.MulticastLoopback = true;
+                client.MulticastLoopback = true;
                 client.JoinMulticastGroup(_target.Address, ip);
             }
             Task.Run(ProcessReceive, tokenSource.Token);

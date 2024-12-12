@@ -115,10 +115,10 @@ namespace Kaenx.Konnect.Connections
                     
                     IPAddress localIp = ipprops.UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork).Single().Address;
                     
-                    UdpConnection udp = new UdpConnection(localIp, port, new IPEndPoint(IPAddress.Parse(ip), port));
+                    UdpConnection udp = new UdpConnection(localIp, port, new IPEndPoint(IPAddress.Parse(ip), port), true);
                     _clients.Add(udp);
 
-                    Debug.WriteLine("Binded to " + adapter.Name + " - " + localIp.ToString() + " - " + 3671 + " -> " + udp.InterfaceIndex);
+                    Debug.WriteLine("Binded to " + adapter.Name + " - " + ip.ToString() + " - " + 3671 + " -> " + udp.InterfaceIndex);
                 }
                 catch (Exception ex)
                 {

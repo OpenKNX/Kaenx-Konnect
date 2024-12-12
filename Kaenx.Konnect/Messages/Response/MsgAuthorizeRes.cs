@@ -14,10 +14,10 @@ namespace Kaenx.Konnect.Messages.Response
         public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.AuthorizeResponse;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
         public byte Level { get; set; }
@@ -32,6 +32,8 @@ namespace Kaenx.Konnect.Messages.Response
 
         public void ParseDataCemi()
         {
+            if(Raw.Length != 1)
+                throw new Exception("Invalid raw Length");
             Level = Raw[0];
         }
 

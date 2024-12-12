@@ -17,10 +17,10 @@ namespace Kaenx.Konnect.Messages.Request
         public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.DeviceDescriptorRead;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
         /// <summary>
         /// Creates a telegram to read the device descriptor
@@ -45,6 +45,9 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesEmi1()
         {
+            if(DestinationAddress == null)
+                throw new Exception("Destination Address is missing");
+                
             List<byte> data = new List<byte>()
             {
                 0x11, //L_Data.req

@@ -17,13 +17,13 @@ namespace Kaenx.Konnect.Messages.Request
         public bool IsNumbered { get; } = false;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.IndividualAddressWrite;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
-        public UnicastAddress NewAddress { get; set; }
+        public UnicastAddress? NewAddress { get; set; }
 
         /// <summary>
         /// Creates a telegram to write an individual addres via programm button
@@ -40,6 +40,8 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
+            if (NewAddress == null)
+                throw new Exception("NewAddress is required");
             List<byte> data = new List<byte>() { 0x11, 0x00 };
             TunnelRequest builder = new TunnelRequest();
             builder.Build(SourceAddress, MulticastAddress.FromString("0/0/0"), ApciTypes.IndividualAddressWrite, 255, NewAddress.GetBytes());
@@ -61,6 +63,9 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
+            if (Raw.Length != 2)
+                throw new Exception("Invalid raw Length");
+
             NewAddress = UnicastAddress.FromByteArray(Raw);
         }
 

@@ -10,7 +10,7 @@ namespace Kaenx.Konnect.Responses
     class ConnectResponse : IParserMessage
     {
         public ConnectResponse(byte headerLength, byte protocolVersion, ushort totalLength, byte communicationChannel,
-      byte status, HostProtocolAddressInformation dataEndpoint, ConnectionResponseDataBlock connectionResponseDataBlock)
+            byte status, HostProtocolAddressInformation dataEndpoint, ConnectionResponseDataBlock connectionResponseDataBlock)
         {
             HeaderLength = headerLength;
             ProtocolVersion = protocolVersion;
@@ -25,7 +25,6 @@ namespace Kaenx.Konnect.Responses
         public byte ProtocolVersion { get; }
         public ushort TotalLength { get; }
         public byte CommunicationChannel { get; }
-        public UnicastAddress PhAddress { get; }
         public byte Status { get; }
         public HostProtocolAddressInformation DataEndpoint { get; }
         public ConnectionResponseDataBlock ConnectionResponseDataBlock { get; }

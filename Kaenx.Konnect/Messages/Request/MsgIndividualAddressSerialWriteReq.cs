@@ -18,14 +18,14 @@ namespace Kaenx.Konnect.Messages.Request
         public bool IsNumbered { get; } = false;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.IndividualAddressSerialNumberWrite;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
-        public UnicastAddress NewAddress { get; set; }
-        public byte[] Serial { get; set; }
+        public UnicastAddress? NewAddress { get; set; }
+        public byte[] Serial { get; set; } = new byte[0];
 
         /// <summary>
         /// Creates a telegram to write an individual address via serialnumber
@@ -44,6 +44,8 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
+            if(NewAddress == null)
+                throw new Exception("NewAddress is required");
             TunnelRequest builder = new TunnelRequest();
 
             List<byte> data = new List<byte>();
@@ -73,8 +75,11 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
+            if(Raw.Length < 8)
+                throw new Exception("Invalid raw length");
+                
             Serial = Raw.Take(6).ToArray();
-            NewAddress = UnicastAddress.FromByteArray(Raw.Skip(4).Take(2).ToArray());
+            NewAddress = UnicastAddress.FromByteArray(Raw.Skip(6).Take(2).ToArray());
         }
 
         public void ParseDataEmi1()

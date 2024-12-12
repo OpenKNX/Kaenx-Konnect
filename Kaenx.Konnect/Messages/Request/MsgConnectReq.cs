@@ -18,10 +18,10 @@ namespace Kaenx.Konnect.Messages.Request
         public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.Connect;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
 
@@ -49,7 +49,7 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] GetBytesEmi1()
         {
             Emi2Request builder = new Emi2Request();
-            builder.Build(null, DestinationAddress, ApciTypes.Connect, 255);
+            builder.Build(DestinationAddress, ApciTypes.Connect, 255);
             return builder.GetBytes();
         }
 

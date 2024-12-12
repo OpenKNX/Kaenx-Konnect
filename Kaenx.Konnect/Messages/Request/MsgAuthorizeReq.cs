@@ -14,10 +14,10 @@ namespace Kaenx.Konnect.Messages.Request
         public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.AuthorizeRequest;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
         public uint Key { get; set; }
@@ -54,7 +54,7 @@ namespace Kaenx.Konnect.Messages.Request
         public byte[] GetBytesEmi1()
         {
             Emi2Request builder = new Emi2Request();
-            builder.Build(null, DestinationAddress, ApciTypes.AuthorizeRequest, SequenceNumber, BitConverter.GetBytes(Key));
+            builder.Build(DestinationAddress, ApciTypes.AuthorizeRequest, SequenceNumber, BitConverter.GetBytes(Key));
             return builder.GetBytes();
         }
 
@@ -66,6 +66,9 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
+            if(Raw.Length < 5)
+                throw new Exception("Invalid data length");
+                
             Key = (uint)((Raw[1] << 24) | (Raw[2] << 16) | (Raw[3] << 8) | Raw[4]);
         }
 

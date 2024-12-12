@@ -9,6 +9,6 @@ namespace Kaenx.Konnect.Responses
 {
     class SearchResponse : IParserMessage
     {
-        public byte[] responseBytes;
+        public byte[] responseBytes { get; set; } = new byte[0];
     }
 }

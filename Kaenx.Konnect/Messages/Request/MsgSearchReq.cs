@@ -18,16 +18,16 @@ namespace Kaenx.Konnect.Messages.Request
         public bool IsNumbered { get; } = false;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.Undefined;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
-        public string IPAddress;
+        public string IPAddress = "";
 
 
-        public IPEndPoint Endpoint { get; set; }
+        public IPEndPoint? Endpoint { get; set; }
 
         /// <summary>
         /// Creates a telegram to search for interfaces (only for IP and cEMI)
@@ -39,6 +39,8 @@ namespace Kaenx.Konnect.Messages.Request
 
         public byte[] GetBytesCemi()
         {
+            if(Endpoint == null)
+                throw new Exception("Endpoint is required");
             List<byte> bytes = new List<byte>() { 0x06, 0x10, 0x02, 0x01, 0x00, 0x0e }; // Length, Version, Descriptor 2x, Total length 2x
             bytes.AddRange(new HostProtocolAddressInformation(0x01, Endpoint).GetBytes());
             return bytes.ToArray();
@@ -57,6 +59,9 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
+            if(Raw.Length != 8)
+                throw new Exception("Invalid Data Length");
+                
             byte[] addr = new byte[4] { Raw[2], Raw[3], Raw[4], Raw[5] };
             Endpoint = new IPEndPoint(new IPAddress(addr), BitConverter.ToUInt16(new byte[2] { Raw[7], Raw[6] }, 0));
             IPAddress = new IPAddress(addr).ToString();

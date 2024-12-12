@@ -17,16 +17,16 @@ namespace Kaenx.Konnect.Messages.Request
         public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.PropertyDescriptionRead;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
 
-        public byte ObjectIndex { get; set; }
-        public byte PropertyId { get; set; }
-        public byte PropertyIndex { get; set; }
+        public byte ObjectIndex { get; set; } = 0;
+        public byte PropertyId { get; set; } = 0;
+        public byte PropertyIndex { get; set; } = 0;
 
 
         /// <summary>
@@ -71,6 +71,8 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
+            if(Raw.Length != 3)
+                throw new Exception("Invalid Data Length");
             ObjectIndex = Raw[0];
             PropertyId = Raw[1];
             PropertyIndex = Raw[2];

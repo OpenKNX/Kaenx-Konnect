@@ -10,8 +10,8 @@ namespace Kaenx.Konnect.Messages
     {
         public byte ChannelId { get; set; }
         public bool IsNumbered { get; }
-        IKnxAddress SourceAddress { get; set; }
-        IKnxAddress DestinationAddress { get; set; }
+        IKnxAddress? SourceAddress { get; set; }
+        IKnxAddress? DestinationAddress { get; set; }
         byte SequenceCounter { get; set; }
         int SequenceNumber { get; set; }
         ApciTypes ApciType { get; }

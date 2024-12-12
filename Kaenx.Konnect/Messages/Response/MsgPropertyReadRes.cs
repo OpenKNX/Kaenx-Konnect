@@ -14,10 +14,10 @@ namespace Kaenx.Konnect.Messages.Response
         public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.PropertyValueResponse;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
 
@@ -27,7 +27,7 @@ namespace Kaenx.Konnect.Messages.Response
         public int ObjectIndex { get; set; }
         public int PropertyId { get; set; }
         public int Length { get; set; }
-        public byte[] Data { get; set; }
+        public byte[] Data { get; set; } = new byte[0];
 
 
 

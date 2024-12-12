@@ -18,12 +18,12 @@ namespace Kaenx.Konnect.Messages.Request
         public bool IsNumbered { get; } = true;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.MemoryWrite;
-        public byte[] Raw { get; set; }
-        private int Address { get; set; }
-        private byte[] Data { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
+        private int Address { get; set; } = 0;
+        private byte[] Data { get; set; } = new byte[0];
 
         /// <summary>
         /// Creates a telegram to write to memory
@@ -81,6 +81,8 @@ namespace Kaenx.Konnect.Messages.Request
 
         public void ParseDataCemi()
         {
+            if (Raw.Length < 3)
+                throw new Exception("Invalid raw length");
             //Length = BitConverter.ToInt32(new byte[] { Raw[0], 0x00, 0x00, 0x00 }, 0);
             Address = BitConverter.ToInt32(new byte[] { Raw[2], Raw[1], 0x00, 0x00 }, 0);
             Data = Raw.Skip(2).ToArray();

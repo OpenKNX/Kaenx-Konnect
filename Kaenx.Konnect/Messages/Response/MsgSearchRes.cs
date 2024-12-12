@@ -14,24 +14,27 @@ namespace Kaenx.Konnect.Messages.Response
         public bool IsNumbered { get; } = false;
         public byte SequenceCounter { get; set; }
         public int SequenceNumber { get; set; }
-        public IKnxAddress SourceAddress { get; set; }
-        public IKnxAddress DestinationAddress { get; set; }
+        public IKnxAddress? SourceAddress { get; set; }
+        public IKnxAddress? DestinationAddress { get; set; }
         public ApciTypes ApciType { get; } = ApciTypes.PropertyValueWrite;
-        public byte[] Raw { get; set; }
+        public byte[] Raw { get; set; } = new byte[0];
 
 
 
         public MsgSearchRes(byte[] data) => Raw = data;
         public MsgSearchRes() { }
 
-        public IPEndPoint Endpoint { get; set; }
-        public IPEndPoint Multicast { get; set; }
-        public string FriendlyName { get; set; }
-        public UnicastAddress PhAddr { get; set; }
+        public IPEndPoint? Endpoint { get; set; }
+        public IPEndPoint? Multicast { get; set; }
+        public string FriendlyName { get; set; } = "";
+        public UnicastAddress? PhAddr { get; set; }
         public List<ServiceFamily> SupportedServiceFamilies = new List<ServiceFamily>();
 
         public void ParseDataCemi()
         {
+            if (Raw.Length < 62)
+                throw new Exception("Invalid raw length");
+
             //HPAI
             //0 = length (8)
             //1 = ipv4/ipv6
@@ -94,6 +97,8 @@ namespace Kaenx.Konnect.Messages.Response
 
         public byte[] GetBytesCemi()
         {
+            if(Endpoint == null || Multicast == null || PhAddr == null)
+                throw new Exception("Endpoint, Multicast or PhAddr is null");
             List<byte> bytes = new List<byte>() { 0x06, 0x10, 0x02, 0x02, 0x00, 0x4C }; // Length, Version, Descriptor 2x, Total length 2x
             bytes.AddRange(new HostProtocolAddressInformation(0x01, Endpoint).GetBytes());
 

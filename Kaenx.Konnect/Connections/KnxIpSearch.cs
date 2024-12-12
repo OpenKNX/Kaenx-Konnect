@@ -164,6 +164,8 @@ namespace Kaenx.Konnect.Connections
             await Connect(false);
         }
 
+// we cant get rid of the warning because we need to implement the interface
+#pragma warning disable CS1998
         public async Task Connect(bool connectOnly = false)
         {
             foreach(UdpConnection udp in _clients)
@@ -180,6 +182,7 @@ namespace Kaenx.Konnect.Connections
         {
             return true;
         }
+#pragma warning restore CS1998async
 
         private void KnxMessageReceived(UdpConnection sender, IParserMessage parserMessage)
         {

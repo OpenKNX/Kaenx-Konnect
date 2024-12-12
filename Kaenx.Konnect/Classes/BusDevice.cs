@@ -94,11 +94,15 @@ namespace Kaenx.Konnect.Classes
         private void _conn_OnTunnelAck(MsgAckRes response)
         {
             acks[response.SequenceNumber]?.Cancel();
+            Console.WriteLine("Recv  Ack: " + response.SequenceNumber);
         }
 
         private void OnTunnelResponse(IMessageResponse response)
         {
             if(!response.IsNumbered) return;
+
+            
+            Console.WriteLine("Recv  Dat: " + response.SequenceNumber);
 
             if (responses.ContainsKey(response.SequenceNumber)) {
                 responses[response.SequenceNumber].Response = response;
@@ -133,11 +137,14 @@ namespace Kaenx.Konnect.Classes
             ResponseHelper helper = new ResponseHelper();
             responses.Add(message.SequenceNumber, helper);
 
+            Console.WriteLine("Send  Dat: " + message.SequenceNumber);
             await _conn.Send(message);
 
             try {
                 await Task.Delay(timeoutForData, helper.TokenSource.Token);
+                Console.WriteLine("Try   Dat: " + message.SequenceNumber);
             } catch {
+                Console.WriteLine("Catch Dat: " + message.SequenceNumber);
                 // If the Token was cancelled, we got the Response
             }
 
@@ -155,13 +162,16 @@ namespace Kaenx.Konnect.Classes
 
             CancellationTokenSource tokenS = new CancellationTokenSource();
             acks.Add(message.SequenceNumber, tokenS);
+            Console.WriteLine("Send  Ack: " + message.SequenceNumber);
             await _conn.Send(message);
 
             bool gotAck = true;
             try {
                 await Task.Delay(timeoutForData, tokenS.Token);
                 gotAck = false;
+                Console.WriteLine("Try   Ack: " + message.SequenceNumber);
             } catch {
+                Console.WriteLine("Catch Ack: " + message.SequenceNumber);
                 // If the Token was cancelled, we got the Ack
             }
 
@@ -521,8 +531,10 @@ namespace Kaenx.Konnect.Classes
             }
 
             //TODO property aus knx_master auslesen
-
-            return (T)Convert.ChangeType(null, typeof(T));
+            object? objt = Convert.ChangeType(null, typeof(T));
+            if(objt == null)
+                throw new Exception("Data kann nicht in angegebenen Type konvertiert werden. " + typeof(T).ToString());
+            return (T)objt;
         }
         #endregion
 
