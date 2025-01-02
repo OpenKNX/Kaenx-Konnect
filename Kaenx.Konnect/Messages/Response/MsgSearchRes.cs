@@ -1,8 +1,9 @@
-using Kaenx.Konnect.Addresses;
+﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Classes;
 using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Text;
 
@@ -66,7 +67,15 @@ namespace Kaenx.Konnect.Messages.Response
             Multicast = new IPEndPoint(new IPAddress(addr), 3671);
             //18-23 = MAC Address
             //24-53 = FriendlyName
-            FriendlyName = System.Text.Encoding.UTF8.GetString(Raw, 32, 30).Trim();
+            byte[] name = Raw.Skip(32).Take(30).ToArray();
+            int nameLength = 0;
+            for(int i = 0; i < name.Length; i++)
+            {
+                if(name[i] == 0)
+                    break;
+                nameLength++;
+            }
+            FriendlyName = System.Text.Encoding.UTF8.GetString(name, 0, nameLength);
 
             //DIB SupDvs
             //0 = length (different)
