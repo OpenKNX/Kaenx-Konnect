@@ -3,6 +3,7 @@ using Kaenx.Konnect.Classes;
 using Kaenx.Konnect.Parser;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Text;
 
@@ -10,6 +11,16 @@ namespace Kaenx.Konnect.Messages.Response
 {
     public class MsgSearchRes : IMessageResponse
     {
+        public enum MediumTypes
+        {
+            TP0 = 0x00,
+            TP1 = 0x01,
+            PL110 = 0x02,
+            PL132 = 0x03,
+            RF = 0x04,
+            IP = 0x05,
+        }
+
         public byte ChannelId { get; set; }
         public bool IsNumbered { get; } = false;
         public byte SequenceCounter { get; set; }
@@ -24,6 +35,7 @@ namespace Kaenx.Konnect.Messages.Response
         public MsgSearchRes(byte[] data) => Raw = data;
         public MsgSearchRes() { }
 
+        public byte MediumType { get; set; }
         public IPEndPoint? Endpoint { get; set; }
         public IPEndPoint? Multicast { get; set; }
         public string FriendlyName { get; set; } = "";
@@ -46,7 +58,7 @@ namespace Kaenx.Konnect.Messages.Response
             //DIB DevInfo
             //0 =  length (54)
             //1 = DescriptionType
-            //2 = MediumType
+            MediumType = Raw[8+2];
             //3 = DeviceState (ProgMode)
             //4-5 = Physical Address
             byte[] phAddr = new byte[2] { Raw[8+4], Raw[8+5] };
@@ -58,7 +70,15 @@ namespace Kaenx.Konnect.Messages.Response
             Multicast = new IPEndPoint(new IPAddress(addr), 3671);
             //18-23 = MAC Address
             //24-53 = FriendlyName
-            FriendlyName = System.Text.Encoding.UTF8.GetString(Raw, 32, 30).Trim();
+            byte[] name = Raw.Skip(32).Take(30).ToArray();
+            int nameLength = 0;
+            for(int i = 0; i < name.Length; i++)
+            {
+                if(name[i] == 0)
+                    break;
+                nameLength++;
+            }
+            FriendlyName = System.Text.Encoding.UTF8.GetString(name, 0, nameLength);
 
             //DIB SupDvs
             //0 = length (different)
@@ -72,6 +92,11 @@ namespace Kaenx.Konnect.Messages.Response
                     Version = Raw[offset+i+1]
                 });
             }
+        }
+
+        public bool IsMediumType(MediumTypes mediumType)
+        {
+            return (((int)MediumType >> (int)mediumType) & 0x1) != 0;
         }
 
         public void ParseDataEmi1()

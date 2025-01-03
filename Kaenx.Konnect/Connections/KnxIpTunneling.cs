@@ -146,6 +146,12 @@ namespace Kaenx.Konnect.Connections
             return IP;
         }
 
+        private void Init()
+        {
+            _client = new UdpConnection(_receiveEndPoint.Address, _receiveEndPoint.Port, _sendEndPoint);
+            _receiveEndPoint.Port = _client.GetLocalEndpoint().Port;
+        }
+
         public Task Send(byte[] data, byte sequence)
         {
             List<byte> xdata = new List<byte>();
