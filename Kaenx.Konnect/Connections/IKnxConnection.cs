@@ -78,6 +78,12 @@ namespace Kaenx.Konnect.Connections
         /// <param name="igoreConnected">If true the conected status will be ignored</param>
         /// <returns>Sequenz Counter as byte</returns>
         Task<byte> Send(IMessage message, bool ignoreConnected = false);
+
+        /// <summary>
+        /// Send Acknowledge to the bus
+        /// </summary>
+        /// <param name="sequenceNumber">Sequence Number</param>
+        //Task<byte> SendAck(byte sequenceNumber);
     }
 
 

@@ -83,8 +83,9 @@ namespace Kaenx.Konnect.Builders
                     break;
             }
             
+            // set standard frame
             if(lengthData > 15) ctrlByte.Set(7, false);
-            bytes[2] = bitToByte(ctrlByte);
+            bytes[0] = bitToByte(ctrlByte);
 
             if(data != null)
                 bytes.AddRange(data);

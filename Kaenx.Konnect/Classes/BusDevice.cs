@@ -45,23 +45,11 @@ namespace Kaenx.Konnect.Classes
                 {
                     _seqNum = 0;
                 }
-
-                int x = _seqNum;
-                x -= 5;
-
-                for (int i = 0; i < 5; i++)
-                {
-                    int y = x - i;
-                    if (y < 0) y += 15;
-
-                    if(acks.ContainsKey(y))
-                        acks.Remove(y);
-                }
             }
         }
 
         private int _lastNumb = -1;
-        private int lastReceivedNumber
+        private int sequenceNumberReceived
         {
             get { return _lastNumb == 15 ? 0 : _lastNumb + 1; }
             set { _lastNumb = value; }
@@ -93,16 +81,16 @@ namespace Kaenx.Konnect.Classes
         #region Waiters
         private void _conn_OnTunnelAck(MsgAckRes response)
         {
-            acks[response.SequenceNumber]?.Cancel();
-            Console.WriteLine("Recv  Ack: " + response.SequenceNumber);
+            if(acks.ContainsKey(response.SequenceNumber))
+                acks[response.SequenceNumber]?.Cancel();
+            Debug.WriteLine("Bus Device | Recv  Ack: " + response.SequenceNumber);
         }
 
         private void OnTunnelResponse(IMessageResponse response)
         {
             if(!response.IsNumbered) return;
 
-            
-            Console.WriteLine("Recv  Dat: " + response.SequenceNumber);
+            Debug.WriteLine("Bus Device | Recv  Dat: " + response.SequenceNumber);
 
             if (responses.ContainsKey(response.SequenceNumber)) {
                 responses[response.SequenceNumber].Response = response;
@@ -111,7 +99,7 @@ namespace Kaenx.Konnect.Classes
             else
                 responses.Add(response.SequenceNumber, new ResponseHelper() { Response = response });
 
-            lastReceivedNumber = response.SequenceNumber;
+            sequenceNumberReceived = response.SequenceNumber;
             //Debug.WriteLine("Got Response: " + response.ApciType + "/" + response.SequenceNumber);
         }
 
@@ -131,20 +119,34 @@ namespace Kaenx.Konnect.Classes
         /// <returns>Daten als Byte Array</returns>
         private async Task<IMessageResponse> WaitForData(IMessageRequest message)
         {
-            if (responses.ContainsKey(message.SequenceNumber))
-                responses.Remove(message.SequenceNumber);
+            int awaitingSequenceNumber = sequenceNumberReceived;
+            if (responses.ContainsKey(awaitingSequenceNumber))
+                responses.Remove(awaitingSequenceNumber);
 
             ResponseHelper helper = new ResponseHelper();
-            responses.Add(message.SequenceNumber, helper);
+            responses.Add(awaitingSequenceNumber, helper);
 
-            Console.WriteLine("Send  Dat: " + message.SequenceNumber);
-            await _conn.Send(message);
+            Debug.WriteLine($"Bus Device | Send  Dat: {message.SequenceNumber} -> {awaitingSequenceNumber}");
+            // await _conn.Send(message);
+
+
+            for(int i = 0; i < 4; i++) {
+                try {
+                    await WaitForAck(message);
+                    Debug.WriteLine($"Bus Device | Send Got Ack: {message.SequenceNumber} -> {awaitingSequenceNumber}");
+                    // We got an Ack
+                    break;
+                } catch {
+                    Debug.WriteLine($"Bus Device | Send Got no Ack: {message.SequenceNumber} -> {awaitingSequenceNumber}");
+                    // We got no Ack for sending data!
+                }
+            }
 
             try {
                 await Task.Delay(timeoutForData, helper.TokenSource.Token);
-                Console.WriteLine("Try   Dat: " + message.SequenceNumber);
+                Debug.WriteLine($"Bus Device | Try   Dat: {message.SequenceNumber} -> {awaitingSequenceNumber}");
             } catch {
-                Console.WriteLine("Catch Dat: " + message.SequenceNumber);
+                Debug.WriteLine($"Bus Device | Catch Dat: {message.SequenceNumber} -> {awaitingSequenceNumber}");
                 // If the Token was cancelled, we got the Response
             }
 
@@ -152,32 +154,37 @@ namespace Kaenx.Konnect.Classes
             if(helper.Response == null)
                 throw new TimeoutException("Zeitüberschreitung beim Warten auf Antwort");
 
+            await Task.Delay(10);
+
             return helper.Response;
         }
 
-        private async Task WaitForAck(IMessageRequest message)
+        private async Task WaitForAck(IMessageRequest message, bool increaseSequence = true)
         {
             if (acks.ContainsKey(message.SequenceNumber))
                 acks.Remove(message.SequenceNumber);
 
             CancellationTokenSource tokenS = new CancellationTokenSource();
             acks.Add(message.SequenceNumber, tokenS);
-            Console.WriteLine("Send  Ack: " + message.SequenceNumber);
+            //Debug.WriteLine("Bus Device | Send  Ack: " + message.SequenceNumber);
             await _conn.Send(message);
 
             bool gotAck = true;
             try {
                 await Task.Delay(timeoutForData, tokenS.Token);
                 gotAck = false;
-                Console.WriteLine("Try   Ack: " + message.SequenceNumber);
+                //Debug.WriteLine("Bus Device | Try   Ack: " + message.SequenceNumber);
             } catch {
-                Console.WriteLine("Catch Ack: " + message.SequenceNumber);
+                //Debug.WriteLine("Bus Device | Catch Ack: " + message.SequenceNumber);
                 // If the Token was cancelled, we got the Ack
             }
 
             acks.Remove(message.SequenceNumber);
             if (!gotAck)
                 throw new TimeoutException("Zeitüberschreitung beim Warten auf Ack");
+            
+            if(gotAck && increaseSequence)
+                _currentSeqNum++;
         }
         #endregion
 
@@ -280,7 +287,7 @@ namespace Kaenx.Konnect.Classes
             catch
             {
                 MaxFrameLength = 15;
-                Debug.WriteLine("Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
+                Debug.WriteLine("Bus Device | Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
                 await Disconnect();
                 await Connect(true);
             }
@@ -443,7 +450,7 @@ namespace Kaenx.Konnect.Classes
                 throw new DeviceNotConnectedException();
 
             MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
-            message.SequenceNumber = _currentSeqNum++;
+            message.SequenceNumber = _currentSeqNum;
             MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message);
             return resp.Get<T>();
         }
@@ -568,7 +575,7 @@ namespace Kaenx.Konnect.Classes
                 throw new DeviceNotConnectedException();
 
             MsgPropertyReadReq message = new MsgPropertyReadReq(objIdx, propId, _address);
-            message.SequenceNumber = _currentSeqNum++;
+            message.SequenceNumber = _currentSeqNum;
             MsgPropertyReadRes resp = (MsgPropertyReadRes)await WaitForData(message);
             return resp.Get<T>();
         }
@@ -586,7 +593,7 @@ namespace Kaenx.Konnect.Classes
                 throw new DeviceNotConnectedException();
 
             MsgPropertyDescriptionReq message = new MsgPropertyDescriptionReq(objIdx, propId, 0, _address);
-            message.SequenceNumber = _currentSeqNum++;
+            message.SequenceNumber = _currentSeqNum;
             MsgPropertyDescriptionRes resp = (MsgPropertyDescriptionRes)await WaitForData(message);
             return resp;
         }
@@ -607,7 +614,7 @@ namespace Kaenx.Konnect.Classes
                 throw new DeviceNotConnectedException();
 
             MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
-            message.SequenceNumber = _currentSeqNum++;
+            message.SequenceNumber = _currentSeqNum;
             
             if (waitForResp)
                 await WaitForData(message);
@@ -631,10 +638,8 @@ namespace Kaenx.Konnect.Classes
             if(data == null)
                 data = new byte[0];
 
-            var seq1 = _currentSeqNum;
-
             MsgFunctionPropertyCommandReq message = new MsgFunctionPropertyCommandReq(objIdx, propId, data, _address);
-            message.SequenceNumber = seq1;
+            message.SequenceNumber = _currentSeqNum;
             
             if (waitForResp) {
                 var response = (MsgFunctionPropertyStateRes)await WaitForData(message);
@@ -642,11 +647,11 @@ namespace Kaenx.Konnect.Classes
                 // device should accept all sequences that are greater than the last one
 
                 // this will be called only if there is no exception during WaitForData
-                _currentSeqNum++;
+                //_currentSeqNum++; will be handled in WaitForData
                 return response;
             }
 
-            _currentSeqNum++;
+            //_currentSeqNum++;
             await WaitForAck(message);
             return null;
         }
@@ -668,7 +673,7 @@ namespace Kaenx.Konnect.Classes
                 data = new byte[0];
 
             MsgFunctionPropertyStateReq message = new MsgFunctionPropertyStateReq(objIdx, propId, data, _address);
-            message.SequenceNumber = _currentSeqNum++;
+            message.SequenceNumber = _currentSeqNum;
             
             if (waitForResp)
                 return (MsgFunctionPropertyStateRes)await WaitForData(message);
@@ -744,7 +749,7 @@ namespace Kaenx.Konnect.Classes
                 }
 
                 MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
-                message.SequenceNumber = _currentSeqNum++;
+                message.SequenceNumber = _currentSeqNum;
                 // var seq = message.SequenceNumber;
                 // CheckForData(message.SequenceNumber);
                 // await _conn.Send(message);
@@ -757,7 +762,7 @@ namespace Kaenx.Konnect.Classes
                         await WaitForAck(message);
 
                         MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, data_temp.Count, _address);
-                        msg.SequenceNumber = _currentSeqNum++;
+                        msg.SequenceNumber = _currentSeqNum;
                         resp = await WaitForData(msg);
                     } else {
                         resp = await WaitForData(message);
@@ -818,7 +823,7 @@ namespace Kaenx.Konnect.Classes
                 else toRead = length;
 
                 MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address);
-                msg.SequenceNumber = _currentSeqNum++;
+                msg.SequenceNumber = _currentSeqNum;
                 IMessageResponse resp = await WaitForData(msg);
                 readed.AddRange(resp.Raw.Skip(2));
                 currentPosition += toRead;
@@ -867,7 +872,7 @@ namespace Kaenx.Konnect.Classes
                 throw new DeviceNotConnectedException();
 
             MsgAuthorizeReq message = new MsgAuthorizeReq(key, _address);
-            message.SequenceNumber = _currentSeqNum++;
+            message.SequenceNumber = _currentSeqNum;
             MsgAuthorizeRes resp = (MsgAuthorizeRes)await WaitForData(message);
             return resp.Level;
         }
@@ -883,7 +888,7 @@ namespace Kaenx.Konnect.Classes
                 throw new DeviceNotConnectedException();
 
             MsgDescriptorReadReq message = new MsgDescriptorReadReq(_address);
-            message.SequenceNumber = _currentSeqNum++;
+            message.SequenceNumber = _currentSeqNum;
             IMessageResponse resp = await WaitForData(message);
             MaskVersion = (ushort)(resp.Raw[0] << 8 | resp.Raw[1]);
             _mask = "MV-" + BitConverter.ToString(resp.Raw).Replace("-", "");

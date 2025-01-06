@@ -215,30 +215,33 @@ namespace Kaenx.Konnect.Connections
                             Debug.WriteLine("Adressiert an:  " + tunnelResponse.DestinationAddress.ToString());
                             break;
                         }
-                        Debug.WriteLine($"Received: {sender.Interface?.Name ?? "(no interface)"} {tunnelResponse.APCI}");
 
                         if (tunnelResponse.APCI.ToString().EndsWith("Response"))
                         {
+                            // Send Ack
+                            Debug.WriteLine("KnxIpRouting | Send Ack: " + tunnelResponse.SequenceNumber);
                             List<byte> data = new List<byte>() { 0x11, 0x00 };
                             Builders.TunnelRequest builder = new Builders.TunnelRequest();
                             builder.Build(PhysicalAddress, tunnelResponse.SourceAddress, ApciTypes.Ack, tunnelResponse.SequenceNumber);
                             data.AddRange(builder.GetBytes());
                             _=Send(data.ToArray(), _sequenceCounter);
                             _sequenceCounter++;
-                            
                         }
-                        else if (tunnelResponse.APCI == ApciTypes.Ack)
+                        else 
+                        if (tunnelResponse.APCI == ApciTypes.Ack)
                         {
                             OnTunnelAck?.Invoke(new MsgAckRes()
                             {
-                                //ChannelId = tunnelResponse.CommunicationChannel,
-                                //SequenceCounter = tunnelResponse.SequenceCounter,
+                                // ChannelId = tunnelResponse.CommunicationChannel,
+                                // SequenceCounter = tunnelResponse.SequenceCounter,
                                 SequenceNumber = tunnelResponse.SequenceNumber,
                                 SourceAddress = tunnelResponse.SourceAddress,
                                 DestinationAddress = tunnelResponse.DestinationAddress
                             });
                             break;
                         }
+                        
+                        Debug.WriteLine($"Received: {tunnelResponse.SequenceNumber} {sender.Interface?.Name ?? "(no interface)"} {tunnelResponse.APCI}");
 
 
                         List<string> temp = new List<string>();
