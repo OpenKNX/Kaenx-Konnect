@@ -1,11 +1,12 @@
 ﻿using Kaenx.Konnect.Addresses;
-using Kaenx.Konnect.Builders;
-using Kaenx.Konnect.Connections;
+using Kaenx.Konnect.Connections.Connections;
+using Kaenx.Konnect.EMI.LData;
 using Kaenx.Konnect.Messages.Request;
 using Kaenx.Konnect.Messages.Response;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,7 +17,7 @@ namespace Kaenx.Konnect.Classes
         private IKnxConnection _conn;
         private MulticastAddress to = MulticastAddress.FromString("0/0/0");
         private UnicastAddress from = UnicastAddress.FromString("0.0.0");
-        private Dictionary<int, IMessageResponse> responses = new Dictionary<int, IMessageResponse>();
+        private Dictionary<int, LDataBase> responses = new Dictionary<int, LDataBase>();
 
         private int _lastNumb = -1;
         private int lastReceivedNumber
@@ -29,10 +30,10 @@ namespace Kaenx.Konnect.Classes
         public BusCommon(IKnxConnection conn)
         {
             _conn = conn;
-            _conn.OnTunnelResponse += _conn_OnTunnelResponse;
+            //_conn.OnTunnelResponse += _conn_OnTunnelResponse;
         }
 
-        private void _conn_OnTunnelResponse(IMessageResponse response)
+        private void _conn_OnTunnelResponse(LDataBase response)
         {
             if (responses.ContainsKey(response.SequenceNumber))
                 responses[response.SequenceNumber] = response;
@@ -43,7 +44,7 @@ namespace Kaenx.Konnect.Classes
         }
 
 
-        private async Task<IMessageResponse> WaitForData(int seq)
+        private async Task<LDataBase> WaitForData(int seq)
         {
             if (responses.ContainsKey(seq))
                 responses.Remove(seq);
@@ -61,14 +62,16 @@ namespace Kaenx.Konnect.Classes
         public async Task IndividualAddressRead()
         {
             MsgIndividualAddressReadReq message = new MsgIndividualAddressReadReq();
-            await _conn.Send(message);
+            // TODO
+            //await _conn.SendAsync(message, to);
             await Task.Delay(200);
         }
 
         public async Task IndividualAddressWrite(UnicastAddress newAddr)
         {
             MsgIndividualAddressWriteReq message = new MsgIndividualAddressWriteReq(newAddr);
-            await _conn.Send(message);
+            // TODO
+            //await _conn.SendAsync(message, to);
             await Task.Delay(200);
         }
 
@@ -76,8 +79,20 @@ namespace Kaenx.Konnect.Classes
         public async Task IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
         {
             MsgIndividualAddressSerialWriteReq message = new MsgIndividualAddressSerialWriteReq(newAddr, serialNumber);
-            await _conn.Send(message);
+            // TODO
+            //await _conn.SendAsync(message, to);
             await Task.Delay(200);
+        }
+
+        public async Task<LDataBase> ReadSerialNumberByManufacturer(int manufacturerId)
+        {
+            byte[] data = BitConverter.GetBytes((ushort)IPAddress.HostToNetworkOrder((short)manufacturerId));
+
+            MsgSystemNetworkParameterReadReq message = new MsgSystemNetworkParameterReadReq(MsgSystemNetworkParameterReadOperand.ByManufacturerSpecific, data);
+            // TODO
+            var seq = 0; // await _conn.SendAsync(message, to);
+            var x = await WaitForData(seq);
+            return x;
         }
 
 
@@ -90,13 +105,15 @@ namespace Kaenx.Konnect.Classes
         public async Task GroupValueWrite(MulticastAddress ga, byte[] data)
         {
             MsgGroupWriteReq message = new MsgGroupWriteReq(from, ga, data);
-            await _conn.Send(message);
+            // TODO
+            //await _conn.SendAsync(message, to);
         }
 
-        public async Task<IMessageResponse> GroupValueRead(MulticastAddress ga)
+        public async Task<LDataBase> GroupValueRead(MulticastAddress ga)
         {
             MsgGroupReadReq message = new MsgGroupReadReq(ga);
-            var seq = await _conn.Send(message);
+            // TODO
+            var seq = 0; // await _conn.SendAsync(message, to);
             var x = await WaitForData(seq);
             return x;
         }

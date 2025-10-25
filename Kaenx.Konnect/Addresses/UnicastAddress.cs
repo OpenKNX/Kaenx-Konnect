@@ -13,6 +13,11 @@ namespace Kaenx.Konnect.Addresses
             DeviceAddress = deviceAddress;
         }
 
+        public UnicastAddress(int address)
+            : this((byte)((address >> 12) & 0x0F), (byte)((address >> 8) & 0x0F), (byte)(address & 0xFF))
+        {
+        }
+
         public byte Area { get; }
         public byte Line { get; }
         public byte DeviceAddress { get; }
