@@ -1,4 +1,5 @@
-﻿using Kaenx.Konnect.Connections.Connections;
+﻿using Kaenx.Konnect.Addresses;
+using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.Connections.Protocols;
 using Kaenx.Konnect.Connections.Transports;
 using System;
@@ -25,15 +26,15 @@ namespace Kaenx.Konnect.Connections
             return new IpKnxConnection(protocol);
         }
 
-        public static IpKnxConnection CreateRouting(string ip = "224.0.23.12", int port = 3671)
+        public static IpKnxConnection CreateRouting(UnicastAddress sourceAddress, string ip = "224.0.23.12", int port = 3671)
         {
-            return CreateRouting(new IPEndPoint(IPAddress.Parse(ip), port));
+            return CreateRouting(sourceAddress, new IPEndPoint(IPAddress.Parse(ip), port));
         }
 
-        public static IpKnxConnection CreateRouting(IPEndPoint endPoint)
+        public static IpKnxConnection CreateRouting(UnicastAddress sourceAddress, IPEndPoint endPoint)
         {
             ITransport connection = new UdpTransport(IPAddress.Any, endPoint);
-            RoutingProtocol protocol = new RoutingProtocol(connection);
+            RoutingProtocol protocol = new RoutingProtocol(sourceAddress, connection);
             return new IpKnxConnection(protocol);
         }
     }

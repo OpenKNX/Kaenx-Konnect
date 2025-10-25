@@ -7,16 +7,25 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.EMI.DataMessages
 {
-    public class DeviceDescriptorResponse : IDataMessage
+    public class FunctionPropertyCommand : IDataMessage
     {
         public ApciTypes ApciType => StaticApciType;
-        public static ApciTypes StaticApciType => ApciTypes.DeviceDescriptorResponse;
+        public static ApciTypes StaticApciType => ApciTypes.FunctionPropertyCommand;
 
-        public int DescriptorType { get; private set; }
-        public byte[] DescriptorData { get; private set; } = Array.Empty<byte>();
+        public int ObjectIndex { get; private set; }
+        public int PropertyId { get; private set; }
+        public byte[] Data { get; private set; }
 
-        public DeviceDescriptorResponse(byte[] data, ExternalMessageInterfaces emi) {
-            switch(emi)
+        public FunctionPropertyCommand(int objectIndex, int propertyId, byte[] data)
+        {
+            ObjectIndex = objectIndex;
+            PropertyId = propertyId;
+            Data = data;
+        }
+
+        public FunctionPropertyCommand(byte[] data, ExternalMessageInterfaces emi)
+        {
+            switch (emi)
             {
                 case ExternalMessageInterfaces.cEmi:
                     ParseDataCemi(data);
@@ -28,21 +37,16 @@ namespace Kaenx.Konnect.EMI.DataMessages
                     ParseDataEmi2(data);
                     break;
                 default:
-                    throw new NotImplementedException("Unknown ExternalMessageInterface: " + emi.ToString());
+                    throw new NotSupportedException("The specified EMI type is not supported.");
             }
-        }
-
-        public DeviceDescriptorResponse(byte[] descriptorData, int descriptorType = 0)
-        {
-            DescriptorType = descriptorType;
-            DescriptorData = descriptorData;
         }
 
         public byte[] GetBytesCemi()
         {
             List<byte> data = new List<byte>();
-            data.Add((byte)(DescriptorType & 0x3F));
-            data.AddRange(DescriptorData);
+            data.Add((byte)(ObjectIndex & 0xFF));
+            data.Add((byte)(PropertyId & 0xFF));
+            data.AddRange(Data);
             return data.ToArray();
         }
 
@@ -58,8 +62,9 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public void ParseDataCemi(byte[] data)
         {
-            DescriptorType = data[0] & 0x3F;
-            DescriptorData = data.Skip(1).ToArray();
+            ObjectIndex = data[0];
+            PropertyId = data[1];
+            Data = data.Skip(2).ToArray();
         }
 
         public void ParseDataEmi1(byte[] data)

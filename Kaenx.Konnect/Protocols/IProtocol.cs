@@ -2,7 +2,6 @@
 using Kaenx.Konnect.Connections.Transports;
 using Kaenx.Konnect.EMI;
 using Kaenx.Konnect.EMI.LData;
-using Kaenx.Konnect.Messages.Request;
 using Kaenx.Konnect.Telegram.IP;
 using System;
 using System.Collections.Generic;
@@ -25,6 +24,7 @@ namespace Kaenx.Konnect.Connections.Protocols
         public event ReceivedMessage? OnReceivedMessage;
 
         public virtual bool IsConnected { get; set; } = false;
+        public abstract UnicastAddress? LocalAddress { get; }
 
         internal IProtocol(ITransport connection)
         {
@@ -67,6 +67,11 @@ namespace Kaenx.Konnect.Connections.Protocols
         public void Dispose()
         {
             _transport.Dispose();
+        }
+
+        public virtual int GetMaxApduLength()
+        {
+            return 250;
         }
     }
 }

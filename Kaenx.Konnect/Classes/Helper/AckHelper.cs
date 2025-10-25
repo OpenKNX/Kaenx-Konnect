@@ -1,5 +1,4 @@
 using System.Threading;
-using Kaenx.Konnect.Messages.Response;
 
 namespace Kaenx.Konnect.Classes.Helper
 {

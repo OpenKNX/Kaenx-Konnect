@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Kaenx.Konnect.Connections.Connections
+namespace Kaenx.Konnect.Connections
 {
     public interface IKnxConnection
     {
@@ -25,5 +25,9 @@ namespace Kaenx.Konnect.Connections.Connections
         public Task Connect();
 
         public Task Disconnect();
+
+        public int GetMaxApduLength();
+
+        public UnicastAddress? GetLocalAddress();
     }
 }

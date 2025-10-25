@@ -1,13 +1,11 @@
 ﻿
 using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Classes.Helper;
-using Kaenx.Konnect.Connections.Connections;
+using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.EMI.DataMessages;
 using Kaenx.Konnect.EMI.LData;
 using Kaenx.Konnect.Enums;
 using Kaenx.Konnect.Exceptions;
-using Kaenx.Konnect.Messages.Request;
-using Kaenx.Konnect.Messages.Response;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -254,10 +252,6 @@ namespace Kaenx.Konnect.Classes
 
             _currentSeqNum = 0;
 
-            // TODO implement Connect Message
-            //MsgConnectReq message = new MsgConnectReq(_address);
-            //await _conn.SendAsync(message, _address);
-
             _conn.OnReceivedMessage += OnTunnelResponse;
 
             LDataBase request = new LDataBase(_address, false, _currentSeqNum, new Connect());
@@ -297,12 +291,12 @@ namespace Kaenx.Konnect.Classes
             {
                 switch(message.GetApciType())
                 {
-                    case Messages.ApciTypes.Ack:
+                    case ApciTypes.Ack:
                         if (acks.ContainsKey(message.SequenceNumber))
                             acks[message.SequenceNumber]?.Cancel();
                         break;
 
-                    case Messages.ApciTypes.Disconnect:
+                    case ApciTypes.Disconnect:
                         _isConnected = false;
                         break;
                 }
@@ -352,8 +346,8 @@ namespace Kaenx.Konnect.Classes
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
 
-            MsgRestartReq message = new MsgRestartReq(_address);
-            message.SequenceNumber = _currentSeqNum++;
+            //MsgRestartReq message = new MsgRestartReq(_address);
+            //message.SequenceNumber = _currentSeqNum++;
             // TODO implement Restart Message
             //await _conn.SendAsync(message, _address);
         }
@@ -482,8 +476,8 @@ namespace Kaenx.Konnect.Classes
             // TODO implement PropertyWriteResponse Message
             //MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
             //message.SequenceNumber = _currentSeqNum;
-            MsgPropertyReadRes resp = new MsgPropertyReadRes(); // = (MsgPropertyReadRes)await WaitForData(message);
-            return resp.Get<T>();
+            //MsgPropertyReadRes resp = new MsgPropertyReadRes(); // = (MsgPropertyReadRes)await WaitForData(message);
+            return ConvertRawData<T>(new byte[0]);
         }
 
 
@@ -664,32 +658,16 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die übergeben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<MsgFunctionPropertyStateRes?> InvokeFunctionProperty(byte objIdx, byte propId, byte[]? data, bool waitForResp = false)        {
+        public async Task<FunctionPropertyStateResponse> InvokeFunctionProperty(int objIdx, int propId, byte[]? data = null)
+        {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
-
 
             if(data == null)
                 data = new byte[0];
 
-            MsgFunctionPropertyCommandReq message = new MsgFunctionPropertyCommandReq(objIdx, propId, data, _address);
-            message.SequenceNumber = _currentSeqNum;
-            
-            if (waitForResp) {
-                // TODO implement InvokeFunctionProperty Message
-                var response = new MsgFunctionPropertyStateRes(); // (MsgFunctionPropertyStateRes)await WaitForData(message);
-                // TODO check if we really need to send the same sequence number again
-                // device should accept all sequences that are greater than the last one
-
-                // this will be called only if there is no exception during WaitForData
-                //_currentSeqNum++; will be handled in WaitForData
-                return response;
-            }
-
-            //_currentSeqNum++;
-            // TODO implement InvokeFunctionProperty Message
-            //await WaitForAck(message);
-            return null;
+            FunctionPropertyStateResponse response = await WaitForData<FunctionPropertyStateResponse>(new FunctionPropertyCommand(objIdx, propId, data), _currentSeqNum);
+            return response;
         }
 
         /// <summary>
@@ -700,7 +678,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die übergeben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<MsgFunctionPropertyStateRes?> ReadFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
+        public async Task<FunctionPropertyStateResponse> ReadFunctionProperty(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
         {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
@@ -708,8 +686,8 @@ namespace Kaenx.Konnect.Classes
             if(data == null)
                 data = new byte[0];
 
-            MsgFunctionPropertyStateReq message = new MsgFunctionPropertyStateReq(objIdx, propId, data, _address);
-            message.SequenceNumber = _currentSeqNum;
+            //MsgFunctionPropertyStateReq message = new MsgFunctionPropertyStateReq(objIdx, propId, data, _address);
+            //message.SequenceNumber = _currentSeqNum;
             
             //if (waitForResp)
             //    return (MsgFunctionPropertyStateRes)await WaitForData(message);
@@ -785,8 +763,8 @@ namespace Kaenx.Konnect.Classes
                     datalist.RemoveRange(0, datalist.Count);
                 }
 
-                MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
-                message.SequenceNumber = _currentSeqNum;
+                //MsgMemoryWriteReq message = new MsgMemoryWriteReq(currentPosition, data_temp.ToArray(), _address);
+                //message.SequenceNumber = _currentSeqNum;
                 // var seq = message.SequenceNumber;
                 // CheckForData(message.SequenceNumber);
                 // await _conn.Send(message);
@@ -861,8 +839,8 @@ namespace Kaenx.Konnect.Classes
                 if (length > maxCount) toRead = maxCount;
                 else toRead = length;
 
-                MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address);
-                msg.SequenceNumber = _currentSeqNum;
+                //MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address);
+                //msg.SequenceNumber = _currentSeqNum;
                 // TODO implement MemoryRead Message
                 //IMessageResponse resp = await WaitForData(msg);
                 //readed.AddRange(resp.Raw.Skip(2));
@@ -911,11 +889,11 @@ namespace Kaenx.Konnect.Classes
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
 
-            MsgAuthorizeReq message = new MsgAuthorizeReq(key, _address);
-            message.SequenceNumber = _currentSeqNum;
-            // TODO implement Authorize Message
-            MsgAuthorizeRes resp = new MsgAuthorizeRes(); // = (MsgAuthorizeRes)await WaitForData(message);
-            return resp.Level;
+            //MsgAuthorizeReq message = new MsgAuthorizeReq(key, _address);
+            //message.SequenceNumber = _currentSeqNum;
+            //// TODO implement Authorize Message
+            //MsgAuthorizeRes resp = new MsgAuthorizeRes(); // = (MsgAuthorizeRes)await WaitForData(message);
+            return 0;
         }
 
         /// <summary>

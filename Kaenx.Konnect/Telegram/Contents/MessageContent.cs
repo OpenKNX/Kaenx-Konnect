@@ -1,7 +1,6 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.EMI.LData;
 using Kaenx.Konnect.Enums;
-using Kaenx.Konnect.Messages;
 using System;
 using System.Collections;
 using System.Collections.Generic;

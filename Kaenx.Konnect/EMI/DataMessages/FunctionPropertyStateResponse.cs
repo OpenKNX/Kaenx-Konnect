@@ -1,27 +1,33 @@
-﻿using Kaenx.Konnect.EMI;
-using Kaenx.Konnect.Enums;
+﻿using Kaenx.Konnect.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Kaenx.Konnect.Messages.Response
+namespace Kaenx.Konnect.EMI.DataMessages
 {
-    public class DeviceDescriptorReadResponseContent : IEmiConvertable
+    public class FunctionPropertyStateResponse : IDataMessage
     {
-        public int DescriptorType { get; private set; }
-        public byte[] Data { get; private set; } = Array.Empty<byte>();
+        public ApciTypes ApciType => StaticApciType;
+        public static ApciTypes StaticApciType => ApciTypes.FunctionPropertyStateResponse;
 
-        public DeviceDescriptorReadResponseContent(byte[] data, int descriptorType = 0)
+        public int ObjectIndex { get; private set; }
+        public int PropertyId { get; private set; }
+        public ReturnCodes ReturnCode { get; private set; }
+        public byte[] Data { get; private set; }
+
+        public FunctionPropertyStateResponse(int objectIndex, int propertyId, ReturnCodes returnCode, byte[] data)
         {
-            DescriptorType = descriptorType;
+            ObjectIndex = objectIndex;
+            PropertyId = propertyId;
+            ReturnCode = returnCode;
             Data = data;
         }
 
-        public DeviceDescriptorReadResponseContent(byte[] data, ExternalMessageInterfaces emi)
+        public FunctionPropertyStateResponse(byte[] data, ExternalMessageInterfaces emi)
         {
-            switch(emi)
+            switch (emi)
             {
                 case ExternalMessageInterfaces.cEmi:
                     ParseDataCemi(data);
@@ -39,7 +45,12 @@ namespace Kaenx.Konnect.Messages.Response
 
         public byte[] GetBytesCemi()
         {
-            throw new NotImplementedException();
+            List<byte> data = new List<byte>();
+            data.Add((byte)(ObjectIndex & 0xFF));
+            data.Add((byte)(PropertyId & 0xFF));
+            data.Add((byte)ReturnCode);
+            data.AddRange(Data);
+            return data.ToArray();
         }
 
         public byte[] GetBytesEmi1()
@@ -54,8 +65,10 @@ namespace Kaenx.Konnect.Messages.Response
 
         public void ParseDataCemi(byte[] data)
         {
-            DescriptorType = data[0] & 0x3F;
-            Data = data.Skip(1).ToArray();
+            ObjectIndex = data[0];
+            PropertyId = data[1];
+            ReturnCode = (ReturnCodes)data[2];
+            Data = data.Skip(3).ToArray();
         }
 
         public void ParseDataEmi1(byte[] data)

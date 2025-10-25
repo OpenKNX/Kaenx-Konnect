@@ -71,7 +71,6 @@ namespace Kaenx.Konnect.Connections.Transports
                 try
                 {
                     var result = await client.ReceiveAsync(tokenSource.Token);
-                    Debug.WriteLine($"Received {result.Buffer.Length} bytes");
                     if(OnReceived != null)
                         await OnReceived.Invoke(this, result.Buffer);
                 }

@@ -24,6 +24,9 @@ namespace Kaenx.Konnect.Connections.Protocols
         private byte _sequenzeCounter { get; set; } = 0;
         private int _lastReceivedSequenceCounter = -1;
 
+        private UnicastAddress? _localAddress = new UnicastAddress(0);
+        public override UnicastAddress? LocalAddress { get { return _localAddress; } }
+
         private List<(int sequenceCounter, CancellationTokenSource tokenSource)> _ackWaitList = new List<(int, CancellationTokenSource)>();
 
         public TunnelingProtocol(ITransport transport)
@@ -159,11 +162,8 @@ namespace Kaenx.Konnect.Connections.Protocols
                 throw new InvalidOperationException("Not connected");
 
             TunnelingRequest request = new(message, _channelId, _sequenzeCounter);
-            Debug.WriteLine($"Sending L_Data_x ({message.Content?.GetType().Name ?? "None"} with SequenceCounter {_sequenzeCounter}");
             await WaitForAck(request);
-            Debug.WriteLine($"Got Ack for SequenceCounter {_sequenzeCounter}");
             await WaitForConfirmation(_sequenzeCounter);
-            Debug.WriteLine($"Got Confirmation for SequenceCounter {_sequenzeCounter}");
             _sequenzeCounter++;
             return _lastReceivedSequenceCounter + 1;
         }
@@ -223,6 +223,11 @@ namespace Kaenx.Konnect.Connections.Protocols
                     return;
                 }
             throw new TimeoutException("TunnelingConfirmation timed out");
+        }
+
+        public override int GetMaxApduLength()
+        {
+            return base.GetMaxApduLength();
         }
     }
 }

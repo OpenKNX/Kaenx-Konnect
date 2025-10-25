@@ -1,4 +1,4 @@
-﻿using Kaenx.Konnect.Messages;
+﻿using Kaenx.Konnect.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;

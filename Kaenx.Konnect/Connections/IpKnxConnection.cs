@@ -9,7 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Kaenx.Konnect.Connections.Connections
+namespace Kaenx.Konnect.Connections
 {
     public class IpKnxConnection : IKnxConnection
     {
@@ -73,6 +73,16 @@ namespace Kaenx.Konnect.Connections.Connections
         {
             _protocol.OnReceivedMessage -= _protocol_OnReceivedMessage;
             _protocol.Dispose();
+        }
+
+        public int GetMaxApduLength()
+        {
+            return _protocol.GetMaxApduLength();
+        }
+
+        public UnicastAddress? GetLocalAddress()
+        {
+            return _protocol.LocalAddress;
         }
     }
 }

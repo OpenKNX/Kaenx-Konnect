@@ -1,7 +1,6 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.EMI.DataMessages;
 using Kaenx.Konnect.Enums;
-using Kaenx.Konnect.Messages;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -215,8 +214,6 @@ namespace Kaenx.Konnect.EMI.LData
                 apciType = (ApciTypes)(apci);
             } else
             {
-                Debug.WriteLine($"cEMI: {BitConverter.ToString(dataEnum.ToArray())}");
-                Debug.WriteLine($"Got TPDU: {dataEnum.Skip(7).First():X2}{dataEnum.Skip(8).First():X2}");
                 byte apci0 = (byte)(tpci & 0x03);
                 byte apci1 = dataEnum.Skip(8).First();
 

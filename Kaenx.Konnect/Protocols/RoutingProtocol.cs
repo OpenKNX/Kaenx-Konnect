@@ -15,10 +15,14 @@ namespace Kaenx.Konnect.Connections.Protocols
     {
         public override bool IsConnected { get { return true; } }
 
-        public RoutingProtocol(ITransport connection)
+        private UnicastAddress? _sourceAddress;
+        public override UnicastAddress? LocalAddress { get { return _sourceAddress; } }
+
+        public RoutingProtocol(UnicastAddress sourceAddress, ITransport connection)
             : base(connection)
         {
             connection.OnReceived += Connection_OnReceived;
+            _sourceAddress = sourceAddress;
         }
 
         private Task Connection_OnReceived(object sender, byte[] data)
