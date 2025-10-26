@@ -1,5 +1,6 @@
 ﻿using Kaenx.Konnect.Enums;
 using Kaenx.Konnect.Telegram.Contents;
+using Kaenx.Konnect.Telegram.IP.DIB;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,16 +27,34 @@ namespace Kaenx.Konnect.Telegram.IP
             Parse(data);
         }
 
+        public HpaiContent? GetEndpoint()
+        {
+            return Contents.OfType<HpaiContent>().FirstOrDefault();
+        }
+
+        public ChannelInfoContent? GetChannelInfo()
+        {
+            return Contents.OfType<ChannelInfoContent>().FirstOrDefault();
+        }
+
         public override void Parse(byte[] data)
         {
             IEnumerable<byte> _data = data;
             Header.Parse(data);
             _data = _data.Skip(Header.HeaderLength);
 
-            ChannelInfo channelInfo = new ChannelInfo(_data.ToArray());
+            ChannelInfoContent channelInfo = new ChannelInfoContent(_data.ToArray());
             ChannelId = channelInfo.ChannelId;
             ReturnCode = channelInfo.ReturnCode;
+            Contents.Add(channelInfo);
             _data = _data.Skip(channelInfo.Length);
+
+            HpaiContent hpai = new HpaiContent(_data.ToArray());
+            Contents.Add(hpai);
+            _data = _data.Skip(hpai.Length);
+
+            ConnectionResponseData connectionResponseData = new ConnectionResponseData(_data.ToArray());
+            Contents.Add(connectionResponseData);
         }
     }
 }

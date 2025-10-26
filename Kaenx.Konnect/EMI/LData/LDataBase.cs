@@ -205,6 +205,8 @@ namespace Kaenx.Konnect.EMI.LData
             if(IsNumbered)
             {
                 SequenceNumber = (byte)((tpci >> 2) & 0x0F);
+            } else {
+                SequenceNumber = 255;
             }
 
             ApciTypes apciType = ApciTypes.Undefined;

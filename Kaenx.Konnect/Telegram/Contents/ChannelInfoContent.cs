@@ -7,23 +7,23 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Telegram.Contents
 {
-    public class ChannelInfo : IContent
+    public class ChannelInfoContent : IContent
     {
         public int Length => 2;
 
         public byte ChannelId { get; private set; }
         public IpErrors ReturnCode { get; private set; }
 
-        public ChannelInfo(byte channelId, IpErrors returnCode)
+        public ChannelInfoContent(byte channelId, IpErrors returnCode)
         {
             ChannelId = channelId;
             ReturnCode = returnCode;
         }
 
-        public ChannelInfo(byte[] data)
+        public ChannelInfoContent(byte[] data)
         {
             if (data.Length < Length)
-                throw new ArgumentException("Data does not represent a ChannelInfo content.");
+                throw new ArgumentException("Data does not represent a ChannelInfoContent content.");
             ChannelId = data[0];
             ReturnCode = (IpErrors)data[1];
         }

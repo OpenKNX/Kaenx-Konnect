@@ -5,6 +5,7 @@ using Kaenx.Konnect.EMI.LData;
 using Kaenx.Konnect.Enums;
 using Kaenx.Konnect.Telegram.Contents;
 using Kaenx.Konnect.Telegram.IP;
+using Kaenx.Konnect.Telegram.IP.DIB;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -61,6 +62,10 @@ namespace Kaenx.Konnect.Connections.Protocols
                         {
                             throw new Exception("ConnectResponse returned error: " + response.ReturnCode.ToString());
                         }
+                        ConnectionResponseData? connectionResponseData = response.Contents.OfType<ConnectionResponseData>().FirstOrDefault();
+                        if (connectionResponseData == null)
+                            throw new Exception("ConnectResponse does not contain ConnectionResponseData");
+                        _localAddress = connectionResponseData.LocalAddress;
                         IsConnected = true;
                         InvokeReceivedService(response);
                         break;

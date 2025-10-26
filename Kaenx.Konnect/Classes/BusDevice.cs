@@ -40,7 +40,11 @@ namespace Kaenx.Konnect.Classes
         private byte _seqNum = 0;
         private byte _currentSeqNum
         {
-            get { return _seqNum; }
+            get
+            {
+                return _isIndividual ? (byte)255 : _seqNum;
+            }
+            
             set
             {
                 _seqNum = value;
@@ -90,9 +94,6 @@ namespace Kaenx.Konnect.Classes
 
             Debug.WriteLine($"Bus Device | Send  Dat: {sequenceNumber} | {message.GetType().FullName}");
 
-            //LDataBase lDataBase = new(_address, sequenceNumber, message);
-            //await _conn.SendAsync(lDataBase, _address);
-
             bool isNumbered = true;
             if (sequenceNumber == 255)
             {
@@ -100,23 +101,36 @@ namespace Kaenx.Konnect.Classes
                 isNumbered = false;
             }
 
-            for(int i = 0; i < 2; i++) {
-                try {
-                    await WaitForAck(message, sequenceNumber, isNumbered);
-                    Debug.WriteLine($"Bus Device | Send Got Ack: {sequenceNumber}");
-                    // We got an Ack
-                    break;
-                } catch (TaskCanceledException) {
-                    Debug.WriteLine($"Bus Device | Send Got no Ack: {sequenceNumber}");
-                    // We got no Ack for sending data!
-                } catch (TimeoutException)
+            if(!_isIndividual)
+            {
+                for (int i = 0; i < 2; i++)
                 {
-                    Debug.WriteLine($"Bus Device | Send Timeout: {sequenceNumber}");
-                } catch (Exception ex)
-                {
-                    Debug.WriteLine("Got Exception: " + ex.Message);
-                    throw new Exception("Could not wait for Ack", ex);
+                    try
+                    {
+                        await WaitForAck(message, sequenceNumber, isNumbered);
+                        Debug.WriteLine($"Bus Device | Send Got Ack: {sequenceNumber}");
+                        // We got an Ack
+                        break;
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        Debug.WriteLine($"Bus Device | Send Got no Ack: {sequenceNumber}");
+                        // We got no Ack for sending data!
+                    }
+                    catch (TimeoutException)
+                    {
+                        Debug.WriteLine($"Bus Device | Send Timeout: {sequenceNumber}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("Got Exception: " + ex.Message);
+                        throw new Exception("Could not wait for Ack", ex);
+                    }
                 }
+            } else
+            {
+                LDataBase lDataBase = new(_address, isNumbered, sequenceNumber, message);
+                await _conn.SendAsync(lDataBase);
             }
 
             try {
@@ -254,8 +268,11 @@ namespace Kaenx.Konnect.Classes
 
             _conn.OnReceivedMessage += OnTunnelResponse;
 
-            LDataBase request = new LDataBase(_address, false, _currentSeqNum, new Connect());
-            await _conn.SendAsync(request);
+            if(!_isIndividual)
+            {
+                LDataBase request = new LDataBase(_address, false, _currentSeqNum, new Connect());
+                await _conn.SendAsync(request);
+            }
 
             _isConnected = true;
             var x = await DeviceDescriptorRead();
@@ -302,7 +319,7 @@ namespace Kaenx.Konnect.Classes
                 }
             } else
             {
-                if(message.Content?.GetType().Name.EndsWith("Response") ?? false)
+                if((message.Content?.GetType().Name.EndsWith("Response") ?? false) && !_isIndividual)
                 {
                     try
                     {

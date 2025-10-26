@@ -9,7 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Kaenx.Konnect.Connections
+namespace Kaenx.Konnect
 {
     public class KnxFactory
     {
@@ -20,8 +20,7 @@ namespace Kaenx.Konnect.Connections
 
         public static IpKnxConnection CreateTunnelingUdp(IPEndPoint endPoint)
         {
-            //IConnection connection = new UdpConnection(IPAddress.Any, endPoint);
-            ITransport connection = new UdpTransport(IPAddress.Parse("192.168.178.84"), endPoint);
+            ITransport connection = new UdpTransport(endPoint);
             TunnelingProtocol protocol = new TunnelingProtocol(connection);
             return new IpKnxConnection(protocol);
         }

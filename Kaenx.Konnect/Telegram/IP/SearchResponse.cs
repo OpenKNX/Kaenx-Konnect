@@ -41,6 +41,11 @@ namespace Kaenx.Konnect.Telegram.IP
             return Contents.OfType<DeviceInfo>().FirstOrDefault();
         }
 
+        public SupportedServiceFamilies? GetSupportedServiceFamilies()
+        {
+            return Contents.OfType<SupportedServiceFamilies>().FirstOrDefault();
+        }
+
         public override void Parse(byte[] data)
         {
             IEnumerable<byte> _data = data;

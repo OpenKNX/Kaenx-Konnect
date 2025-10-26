@@ -36,7 +36,7 @@ namespace Kaenx.Konnect.Telegram.IP
 
         private void Initialize(byte channelId, IPEndPoint endPoint, HostProtocols protocol)
         {
-            Contents.Add(new ChannelInfo(channelId, IpErrors.NoError));
+            Contents.Add(new ChannelInfoContent(channelId, IpErrors.NoError));
             var hpai = new HpaiContent(endPoint, protocol);
             Contents.Add(hpai); // Control
         }
@@ -46,7 +46,7 @@ namespace Kaenx.Konnect.Telegram.IP
             Header.Parse(data);
             IEnumerable<byte> _data = data.Skip(Header.HeaderLength);
 
-            ChannelInfo channelInfo = new ChannelInfo(_data.ToArray());
+            ChannelInfoContent channelInfo = new ChannelInfoContent(_data.ToArray());
             ChannelId = channelInfo.ChannelId;
             ReturnCode = channelInfo.ReturnCode;
         }
