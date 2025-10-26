@@ -175,9 +175,7 @@ namespace Kaenx.Konnect.Connections.Protocols
 
         public override async Task Connect()
         {
-            // TODO get real IPEndpoint
-            IPEndPoint localEndpoint = new IPEndPoint(IPAddress.Parse("192.168.178.84"), GetLocalEndpoint().Port);
-            ConnectRequest creq = new ConnectRequest(localEndpoint, HostProtocols.IPv4_UDP);
+            ConnectRequest creq = new ConnectRequest(GetLocalEndpoint(), HostProtocols.IPv4_UDP);
             _connectToken = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             await SendAsync(creq);
             try

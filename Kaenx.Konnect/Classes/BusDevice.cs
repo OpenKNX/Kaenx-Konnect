@@ -285,7 +285,7 @@ namespace Kaenx.Konnect.Classes
 
             try
             {
-                MaxFrameLength = await PropertyRead<int>(0, 56);
+                MaxFrameLength = await PropertyRead<short>(0, 56);
                 //Debug.WriteLine("Maximale Länge:  " + MaxFrameLength);
                 if (MaxFrameLength < 15) MaxFrameLength = 15;
                 //Debug.WriteLine("Maximale Länge*: " + MaxFrameLength);
@@ -319,6 +319,14 @@ namespace Kaenx.Konnect.Classes
                 }
             } else
             {
+                if(message.Content.ApciType == ApciTypes.GroupValueRead ||
+                   message.Content.ApciType == ApciTypes.GroupValueWrite ||
+                   message.Content.ApciType == ApciTypes.GroupValueResponse)
+                {
+                    // Ignore Group Messages
+                    return;
+                }
+
                 if((message.Content?.GetType().Name.EndsWith("Response") ?? false) && !_isIndividual)
                 {
                     try
@@ -982,6 +990,30 @@ namespace Kaenx.Konnect.Classes
                 case TypeCode.String:
                     string datas = BitConverter.ToString(data.ToArray()).Replace("-", "");
                     return (T)Convert.ChangeType(datas, typeof(T));
+
+                case TypeCode.Int16:
+                    {
+                        byte[] datai = data.Reverse().ToArray();
+                        byte[] xint = new byte[2];
+
+                        for (int i = 0; i < datai.Length; i++)
+                        {
+                            xint[i] = datai[i];
+                        }
+                        return (T)Convert.ChangeType(BitConverter.ToInt16(xint, 0), typeof(T));
+                    }
+
+                case TypeCode.UInt16:
+                    {
+                        byte[] datai = data.Reverse().ToArray();
+                        byte[] xint = new byte[2];
+
+                        for (int i = 0; i < datai.Length; i++)
+                        {
+                            xint[i] = datai[i];
+                        }
+                        return (T)Convert.ChangeType(BitConverter.ToUInt16(xint, 0), typeof(T));
+                    }
 
                 case TypeCode.Int32:
                     {

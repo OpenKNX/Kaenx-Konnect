@@ -25,6 +25,7 @@ namespace Kaenx.Konnect.EMI.LData
         // These have x bytes, but length must be increased by 1 for legacy reasons
         private static List<ApciTypes> withDataLegacy = new List<ApciTypes>() {
                 ApciTypes.PropertyDescriptionResponse,
+                ApciTypes.PropertyValueResponse
             };
 
         public static List<MessageCodes> SupportedMessageCodes { get; } = new List<MessageCodes>()
