@@ -153,7 +153,7 @@ namespace Kaenx.Konnect.Classes
             }
             catch (Exception e)
             {
-                throw new Exception($"IDataMessage kann nicht konvertieren: {helper.Response.GetType().Name} -> {typeof(T).ToString()}", e);
+                throw new Exception($"IDataMessage kann nicht konvertieren: {helper.Response.GetType().Name} -> {typeof(T).Name}", e);
             }
         }
 
@@ -319,7 +319,10 @@ namespace Kaenx.Konnect.Classes
                 }
             } else
             {
-                if(message.Content.ApciType == ApciTypes.GroupValueRead ||
+                if (message.Content == null)
+                    return;
+                    
+                if (message.Content.ApciType == ApciTypes.GroupValueRead ||
                    message.Content.ApciType == ApciTypes.GroupValueWrite ||
                    message.Content.ApciType == ApciTypes.GroupValueResponse)
                 {
@@ -327,22 +330,26 @@ namespace Kaenx.Konnect.Classes
                     return;
                 }
 
-                if((message.Content?.GetType().Name.EndsWith("Response") ?? false) && !_isIndividual)
+                if (message.Content.GetType().Name.EndsWith("Response"))
                 {
-                    try
+                    if(!_isIndividual)
                     {
-                        LDataBase messageAck = new LDataBase((UnicastAddress)message.SourceAddress, message.IsNumbered, message.SequenceNumber, new Ack());
-                        await _conn.SendAsync(messageAck);
-                    } catch (Exception ex)
-                    {
-                        throw new Exception("Device sent answer but no Ack received", ex);
+                        try
+                        {
+                            LDataBase messageAck = new LDataBase((UnicastAddress)message.SourceAddress, message.IsNumbered, message.SequenceNumber, new Ack());
+                            await _conn.SendAsync(messageAck);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception("Device sent answer but no Ack received", ex);
+                        }
                     }
-                }
-
-                if (responses.ContainsKey(message.SequenceNumber))
-                {
-                    responses[message.SequenceNumber].Response = message.Content;
-                    responses[message.SequenceNumber].TokenSource.Cancel();
+                    
+                    if (responses.ContainsKey(message.SequenceNumber))
+                    {
+                        responses[message.SequenceNumber].Response = message.Content;
+                        responses[message.SequenceNumber].TokenSource.Cancel();
+                    }
                 }
             }
         }
