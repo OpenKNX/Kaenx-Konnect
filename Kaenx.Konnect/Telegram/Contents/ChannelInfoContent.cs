@@ -30,7 +30,7 @@ namespace Kaenx.Konnect.Telegram.Contents
 
         public byte[] ToByteArray()
         {
-            return new byte[] { (byte)ReturnCode, ChannelId };
+            return new byte[] { ChannelId, (byte)ReturnCode };
         }
     }
 }
