@@ -49,6 +49,9 @@ namespace Kaenx.Konnect.Telegram.IP
             Contents.Add(channelInfo);
             _data = _data.Skip(channelInfo.Length);
 
+            if(ReturnCode != IpErrors.NoError)
+                return;
+
             HpaiContent hpai = new HpaiContent(_data.ToArray());
             Contents.Add(hpai);
             _data = _data.Skip(hpai.Length);

@@ -14,7 +14,6 @@ namespace Kaenx.Konnect.Telegram.IP
     public class DisconnectRequest : IpTelegram
     {
         public byte ChannelId { get; private set; }
-        public IpErrors ReturnCode { get; private set; }
 
         public DisconnectRequest(byte channelId, IPEndPoint endpoint, HostProtocols protocol)
             : base(ServiceIdentifiers.DisconnectRequest)
@@ -36,7 +35,7 @@ namespace Kaenx.Konnect.Telegram.IP
 
         private void Initialize(byte channelId, IPEndPoint endPoint, HostProtocols protocol)
         {
-            Contents.Add(new ChannelInfoContent(channelId, IpErrors.NoError));
+            Contents.Add(new ChannelInfoContent(channelId, 0x00)); // second byte is reserved
             var hpai = new HpaiContent(endPoint, protocol);
             Contents.Add(hpai); // Control
         }
@@ -48,7 +47,8 @@ namespace Kaenx.Konnect.Telegram.IP
 
             ChannelInfoContent channelInfo = new ChannelInfoContent(_data.ToArray());
             ChannelId = channelInfo.ChannelId;
-            ReturnCode = channelInfo.ReturnCode;
+            if(channelInfo.ReturnCode != 0x00)
+                throw new Exception("DisconnectRequest reserved byte is not zero: " + channelInfo.ReturnCode.ToString());
         }
     }
 }
