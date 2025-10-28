@@ -166,21 +166,22 @@ namespace Kaenx.Konnect.Connections.Protocols
             if(!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            TunnelingRequest request = new(message, _channelId, _sequenzeCounter);
+            byte sequenceCounter = _sequenzeCounter;
+            TunnelingRequest request = new(message, _channelId, sequenceCounter);
             await WaitForAck(request);
-            await WaitForConfirmation(_sequenzeCounter);
             _sequenzeCounter++;
+            await WaitForConfirmation(sequenceCounter);
             return _lastReceivedSequenceCounter + 1;
         }
 
         public override async Task Connect()
         {
             ConnectRequest creq = new ConnectRequest(GetLocalEndpoint(), HostProtocols.IPv4_UDP);
-            _connectToken = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            _connectToken = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await SendAsync(creq);
             try
             {
-                await Task.Delay(5000, _connectToken.Token);
+                await Task.Delay(3000, _connectToken.Token);
             }
             catch (TaskCanceledException)
             {
@@ -190,16 +191,25 @@ namespace Kaenx.Konnect.Connections.Protocols
             throw new TimeoutException("ConnectRequest timed out");
         }
 
-        private async Task WaitForAck(TunnelingRequest request, CancellationTokenSource? token = null)
+        public override async Task Disconnect()
         {
-            if (token == null)
-                token = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
 
+            DisconnectRequest dreq = new DisconnectRequest(_channelId, GetLocalEndpoint(), HostProtocols.IPv4_UDP);
+            await SendAsync(dreq);
+            IsConnected = false;
+        }
+
+        private async Task WaitForAck(TunnelingRequest request, TimeSpan? timeout = null)
+        {
+            TimeSpan delay = timeout ?? TimeSpan.FromSeconds(3);
+            CancellationTokenSource token = new CancellationTokenSource();
             _ackWaitList.Add((request.GetConnectionHeader().SequenceCounter, token));
             await _transport.SendAsync(request.ToByteArray());
             try
             {
-                await Task.Delay(5000, token.Token);
+                await Task.Delay(delay, token.Token);
             }
             catch (TaskCanceledException)
             {
@@ -209,22 +219,19 @@ namespace Kaenx.Konnect.Connections.Protocols
             throw new TimeoutException("TunnelingAck timed out");
         }
 
-        private async Task WaitForConfirmation(int sequenceCounter, CancellationTokenSource? token = null)
+        private async Task WaitForConfirmation(int sequenceCounter, TimeSpan? timeout = null)
         {
-            if (token == null)
-                _confirmationToken = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            else
-                _confirmationToken = token;
-
+            _confirmationToken = new CancellationTokenSource();
+            TimeSpan delay = timeout ?? TimeSpan.FromSeconds(3);
             try
-                {
-                    await Task.Delay(5000, _confirmationToken.Token);
-                }
-                catch (TaskCanceledException)
-                {
-                    // Confirmation received
-                    return;
-                }
+            {
+                await Task.Delay(delay, _confirmationToken.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                // Confirmation received
+                return;
+            }
             throw new TimeoutException("TunnelingConfirmation timed out");
         }
 

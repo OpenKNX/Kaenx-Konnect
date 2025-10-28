@@ -25,6 +25,16 @@ namespace Kaenx.Konnect
             return new IpKnxConnection(protocol);
         }
 
+        public static IpKnxConnection CreateTunnelingTcp(string ip, int port)
+        {
+            return CreateTunnelingTcp(new IPEndPoint(IPAddress.Parse(ip), port));
+        }
+
+        public static IpKnxConnection CreateTunnelingTcp(IPEndPoint endPoint)
+        {
+            throw new NotImplementedException("TCP Tunneling is not implemented yet.");
+        }
+
         public static IpKnxConnection CreateRouting(UnicastAddress sourceAddress, string ip = "224.0.23.12", int port = 3671)
         {
             return CreateRouting(sourceAddress, new IPEndPoint(IPAddress.Parse(ip), port));
