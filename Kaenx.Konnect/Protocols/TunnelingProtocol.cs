@@ -6,6 +6,7 @@ using Kaenx.Konnect.Enums;
 using Kaenx.Konnect.Telegram.Contents;
 using Kaenx.Konnect.Telegram.IP;
 using Kaenx.Konnect.Telegram.IP.DIB;
+using Kaenx.Konnect.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -24,6 +25,7 @@ namespace Kaenx.Konnect.Connections.Protocols
         private byte _channelId { get; set; } = 0;
         private byte _sequenzeCounter { get; set; } = 0;
         private int _lastReceivedSequenceCounter = -1;
+        private IpErrors _connectionResponseCode = IpErrors.NoError;
 
         private UnicastAddress? _localAddress = new UnicastAddress(0);
         public override UnicastAddress? LocalAddress { get { return _localAddress; } }
@@ -52,6 +54,7 @@ namespace Kaenx.Konnect.Connections.Protocols
                 case ServiceIdentifiers.ConnectResponse:
                     {
                         ConnectResponse response = new ConnectResponse(data);
+                        _connectionResponseCode = response.ReturnCode;
                         if (_connectToken != null)
                         {
                             _connectToken.Cancel();
@@ -60,11 +63,13 @@ namespace Kaenx.Konnect.Connections.Protocols
                         _channelId = response.ChannelId;
                         if (response.ReturnCode != IpErrors.NoError)
                         {
-                            throw new Exception("ConnectResponse returned error: " + response.ReturnCode.ToString());
+                            //throw new InterfaceException("ConnectResponse returned error: " + response.ReturnCode.ToString());
+                            IsConnected = false;
+                            break;
                         }
                         ConnectionResponseData? connectionResponseData = response.Contents.OfType<ConnectionResponseData>().FirstOrDefault();
                         if (connectionResponseData == null)
-                            throw new Exception("ConnectResponse does not contain ConnectionResponseData");
+                            throw new InterfaceException("ConnectResponse does not contain ConnectionResponseData");
                         _localAddress = connectionResponseData.LocalAddress;
                         IsConnected = true;
                         InvokeReceivedService(response);
@@ -133,7 +138,6 @@ namespace Kaenx.Konnect.Connections.Protocols
 
                 case ServiceIdentifiers.TunnelingAck:
                     {
-                        Debug.WriteLine("Got Ack");
                         TunnelingAck ack = new TunnelingAck(data);
                         //InvokeReceivedService(ack);
                         CancellationTokenSource? source = _ackWaitList.FirstOrDefault(x => x.sequenceCounter == ack.ConnectionHeader.SequenceCounter).tokenSource;
@@ -185,6 +189,8 @@ namespace Kaenx.Konnect.Connections.Protocols
             }
             catch (TaskCanceledException)
             {
+                if( _connectionResponseCode != IpErrors.NoError)
+                    throw new InterfaceException("ConnectResponse returned " + _connectionResponseCode.ToString());
                 // Connected
                 return;
             }
@@ -194,7 +200,7 @@ namespace Kaenx.Konnect.Connections.Protocols
         public override async Task Disconnect()
         {
             if (!IsConnected)
-                throw new InvalidOperationException("Not connected");
+                return;
 
             DisconnectRequest dreq = new DisconnectRequest(_channelId, GetLocalEndpoint(), HostProtocols.IPv4_UDP);
             await SendAsync(dreq);
@@ -216,7 +222,7 @@ namespace Kaenx.Konnect.Connections.Protocols
                 // Ack received
                 return;
             }
-            throw new TimeoutException("TunnelingAck timed out");
+            throw new InterfaceException("TunnelingAck timed out");
         }
 
         private async Task WaitForConfirmation(int sequenceCounter, TimeSpan? timeout = null)
@@ -232,7 +238,7 @@ namespace Kaenx.Konnect.Connections.Protocols
                 // Confirmation received
                 return;
             }
-            throw new TimeoutException("TunnelingConfirmation timed out");
+            throw new InterfaceException("TunnelingConfirmation timed out");
         }
 
         public override int GetMaxApduLength()

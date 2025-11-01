@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\knx_interfaces.xml" />
+    <EmbeddedResource Include="Assets\knx_master.xml" />
   </ItemGroup>
 
   <ItemGroup>
