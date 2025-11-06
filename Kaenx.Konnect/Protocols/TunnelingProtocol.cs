@@ -26,16 +26,19 @@ namespace Kaenx.Konnect.Connections.Protocols
         private byte _sequenzeCounter { get; set; } = 0;
         private int _lastReceivedSequenceCounter = -1;
         private IpErrors _connectionResponseCode = IpErrors.NoError;
+        private Timer? _keepAliveTimer = null;
+        private ITransport _transport;
 
         private UnicastAddress? _localAddress = new UnicastAddress(0);
         public override UnicastAddress? LocalAddress { get { return _localAddress; } }
 
-        private List<(int sequenceCounter, CancellationTokenSource tokenSource)> _ackWaitList = new List<(int, CancellationTokenSource)>();
+        private Dictionary<int, CancellationTokenSource> _ackWaitList = new Dictionary<int, CancellationTokenSource>();
 
         public TunnelingProtocol(ITransport transport)
             : base(transport)
         {
             transport.OnReceived += Connection_OnReceived;
+            _transport = transport;
         }
 
         private async Task Connection_OnReceived(object sender, byte[] data)
@@ -76,6 +79,19 @@ namespace Kaenx.Konnect.Connections.Protocols
                         break;
                     }
 
+                case ServiceIdentifiers.ConnectionStateResponse:
+                    {
+                        ConnectionStateResponse response = new ConnectionStateResponse(data);
+                        _connectionResponseCode = response.ReturnCode;
+                        if (_connectToken != null)
+                        {
+                            _connectToken.Cancel();
+                            _connectToken = null;
+                        }
+                        InvokeReceivedService(response);
+                        break;
+                    }
+
                 case ServiceIdentifiers.DisconnectRequest:
                     {
                         DisconnectRequest request = new DisconnectRequest(data);
@@ -103,6 +119,9 @@ namespace Kaenx.Konnect.Connections.Protocols
                             {
                                 _confirmationToken.Cancel();
                                 _confirmationToken = null;
+                            } else
+                            {
+                                
                             }
                             ackRequired = true;
                         }
@@ -140,11 +159,10 @@ namespace Kaenx.Konnect.Connections.Protocols
                     {
                         TunnelingAck ack = new TunnelingAck(data);
                         //InvokeReceivedService(ack);
-                        CancellationTokenSource? source = _ackWaitList.FirstOrDefault(x => x.sequenceCounter == ack.ConnectionHeader.SequenceCounter).tokenSource;
-                        if(source != null)
+                        if(_ackWaitList.ContainsKey(ack.ConnectionHeader.SequenceCounter))
                         {
-                            _ackWaitList.RemoveAll(x => x.sequenceCounter == ack.ConnectionHeader.SequenceCounter);
-                            source.Cancel();
+                            _ackWaitList[ack.ConnectionHeader.SequenceCounter].Cancel();
+                            _ackWaitList.Remove(ack.ConnectionHeader.SequenceCounter);
                         }
                         break;
                     }
@@ -152,6 +170,27 @@ namespace Kaenx.Konnect.Connections.Protocols
                 default:
                     throw new NotImplementedException("Unknown ServiceIdentifier: " + data[2].ToString("X2") + data[3].ToString("X2"));
             }
+        }
+
+        public async void KeepAliveCallback(object? state)
+        {
+            ConnectionStateRequest csreq = new ConnectionStateRequest(_channelId, GetLocalEndpoint(), _transport.GetProtocolType());
+            _connectToken = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await SendAsync(csreq);
+
+            try
+            {
+                await Task.Delay(3000, _connectToken.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                if (_connectionResponseCode != IpErrors.NoError)
+                    throw new InterfaceException("ConnectionStateResponse returned " + _connectionResponseCode.ToString());
+                // Everything ok
+                return;
+            }
+            
+            throw new TimeoutException("ConnectionStateRequest timed out");
         }
 
         public override async Task SendAsync(IpTelegram ipTelegram)
@@ -168,10 +207,14 @@ namespace Kaenx.Konnect.Connections.Protocols
         public override async Task<int> SendAsync(LDataBase message)
         {
             if(!IsConnected)
-                throw new InvalidOperationException("Not connected");
+                throw new InterfaceNotConnectedException();
 
             byte sequenceCounter = _sequenzeCounter;
             TunnelingRequest request = new(message, _channelId, sequenceCounter);
+
+            _ackWaitList.Add(sequenceCounter, new CancellationTokenSource());
+            _confirmationToken = new CancellationTokenSource();
+
             await WaitForAck(request);
             _sequenzeCounter++;
             await WaitForConfirmation(sequenceCounter);
@@ -180,7 +223,8 @@ namespace Kaenx.Konnect.Connections.Protocols
 
         public override async Task Connect()
         {
-            ConnectRequest creq = new ConnectRequest(GetLocalEndpoint(), HostProtocols.IPv4_UDP);
+            _sequenzeCounter = 0;
+            ConnectRequest creq = new ConnectRequest(GetLocalEndpoint(), _transport.GetProtocolType());
             _connectToken = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await SendAsync(creq);
             try
@@ -189,9 +233,10 @@ namespace Kaenx.Konnect.Connections.Protocols
             }
             catch (TaskCanceledException)
             {
-                if( _connectionResponseCode != IpErrors.NoError)
+                if (_connectionResponseCode != IpErrors.NoError)
                     throw new InterfaceException("ConnectResponse returned " + _connectionResponseCode.ToString());
                 // Connected
+                _keepAliveTimer = new Timer(KeepAliveCallback, null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60) );
                 return;
             }
             throw new TimeoutException("ConnectRequest timed out");
@@ -202,7 +247,7 @@ namespace Kaenx.Konnect.Connections.Protocols
             if (!IsConnected)
                 return;
 
-            DisconnectRequest dreq = new DisconnectRequest(_channelId, GetLocalEndpoint(), HostProtocols.IPv4_UDP);
+            DisconnectRequest dreq = new DisconnectRequest(_channelId, GetLocalEndpoint(), _transport.GetProtocolType());
             await SendAsync(dreq);
             IsConnected = false;
         }
@@ -210,35 +255,46 @@ namespace Kaenx.Konnect.Connections.Protocols
         private async Task WaitForAck(TunnelingRequest request, TimeSpan? timeout = null)
         {
             TimeSpan delay = timeout ?? TimeSpan.FromSeconds(3);
-            CancellationTokenSource token = new CancellationTokenSource();
-            _ackWaitList.Add((request.GetConnectionHeader().SequenceCounter, token));
             await _transport.SendAsync(request.ToByteArray());
             try
             {
-                await Task.Delay(delay, token.Token);
+                CancellationTokenSource source = _ackWaitList[request.GetConnectionHeader().SequenceCounter];
+                // We already received the ack
+                if (source.Token.IsCancellationRequested)
+                    return;
+
+                await Task.Delay(delay, source.Token);
+
+                if (_ackWaitList.ContainsKey(request.GetConnectionHeader().SequenceCounter))
+                    _ackWaitList.Remove(request.GetConnectionHeader().SequenceCounter);
             }
             catch (TaskCanceledException)
             {
                 // Ack received
                 return;
             }
-            throw new InterfaceException("TunnelingAck timed out");
+            throw new InterfaceException($"TunnelingAck timed out #XX:{request.GetConnectionHeader().SequenceCounter}");
         }
 
         private async Task WaitForConfirmation(int sequenceCounter, TimeSpan? timeout = null)
         {
-            _confirmationToken = new CancellationTokenSource();
             TimeSpan delay = timeout ?? TimeSpan.FromSeconds(3);
             try
             {
+                // We already received the confirmation
+                if (_confirmationToken == null)
+                    return;
+                    
                 await Task.Delay(delay, _confirmationToken.Token);
+                _confirmationToken = null;
             }
             catch (TaskCanceledException)
             {
                 // Confirmation received
+                _confirmationToken = null;
                 return;
             }
-            throw new InterfaceException("TunnelingConfirmation timed out");
+            throw new InterfaceException($"TunnelingConfirmation timed out #XX:{sequenceCounter}");
         }
 
         public override int GetMaxApduLength()

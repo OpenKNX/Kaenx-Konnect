@@ -169,11 +169,14 @@ namespace Kaenx.Konnect.Classes
             await _conn.SendAsync(lDataBase);
 
             bool gotAck = true;
-            try {
+            try
+            {
                 await Task.Delay(timeoutForData, tokenS.Token);
                 gotAck = false;
                 //Debug.WriteLine("Bus Device | Try   Ack: " + message.SequenceNumber);
-            } catch {
+            }
+            catch
+            {
                 //Debug.WriteLine("Bus Device | Catch Ack: " + message.SequenceNumber);
                 // If the Token was cancelled, we got the Ack
             }
@@ -181,14 +184,20 @@ namespace Kaenx.Konnect.Classes
             acks.Remove(sequenceNumber);
             if (!gotAck)
                 throw new TimeoutException("Zeitüberschreitung beim Warten auf Ack");
-            
-            if(gotAck && increaseSequence)
+
+            if (gotAck && increaseSequence)
                 _currentSeqNum++;
         }
         #endregion
 
 
         #region Helper Functions
+        public async Task InterfaceReset()
+        {
+            await _conn.Disconnect();
+            await _conn.Connect();
+        }
+
         public void SetMaxFrameLength(int maxFrameLength)
         {
             MaxFrameLength = maxFrameLength;

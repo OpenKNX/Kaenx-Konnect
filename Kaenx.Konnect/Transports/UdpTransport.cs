@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Kaenx.Konnect.Classes;
+using Kaenx.Konnect.Enums;
 using Kaenx.Konnect.Messages;
 using static Kaenx.Konnect.Connections.Transports.ITransport;
 
@@ -61,6 +62,16 @@ namespace Kaenx.Konnect.Connections.Transports
         public IPEndPoint GetLocalEndpoint()
         {
             return (IPEndPoint?)client.Client.LocalEndPoint ?? new IPEndPoint(IPAddress.Any, 0);
+        }
+
+        public HostProtocols GetProtocolType()
+        {
+            if (client.Client.AddressFamily == AddressFamily.InterNetwork)
+                return HostProtocols.IPv4_UDP;
+            else if (client.Client.AddressFamily == AddressFamily.InterNetworkV6)
+                return HostProtocols.IPv6_UDP;
+            else
+                throw new Exception("Unknown AddressFamily in UdpTransport: " + client.Client.AddressFamily.ToString());
         }
 
         private async void ProcessReceive()

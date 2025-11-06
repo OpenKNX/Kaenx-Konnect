@@ -1,4 +1,5 @@
 ﻿using Kaenx.Konnect.Classes;
+using Kaenx.Konnect.Enums;
 using Kaenx.Konnect.Messages;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ namespace Kaenx.Konnect.Connections.Transports
 
         public Task SendAsync(byte[] data);
         public IPEndPoint GetLocalEndpoint();
+        public HostProtocols GetProtocolType();
 
         public delegate Task ReceivedKnxMessage(object sender, byte[] data);
         public event ReceivedKnxMessage? OnReceived;

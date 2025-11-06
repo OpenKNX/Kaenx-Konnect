@@ -8,10 +8,10 @@
     <TargetFramework>net9.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <NeutralLanguage>de</NeutralLanguage>
-    <AssemblyVersion>1.0.3.0</AssemblyVersion>
-    <FileVersion>1.0.2.0</FileVersion>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
     <Description>Connect to a KNX IP (tunneling/routing) or USB Interface</Description>
-    <Version>1.0.3</Version>
+    <Version>2.0.0</Version>
     <PackageIcon>Logo.png</PackageIcon>
     <PackageIconUrl />
     <PackageTags>knx,bus,communication,ip,tunnel,tunneling,routing,smarthome,kaenx</PackageTags>
