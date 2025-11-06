@@ -12,7 +12,8 @@ Its supports IP Tunneling, USB* and IP Routing.
 
 
 # How to use
-See the Wiki-Section to see how to use this library.
+See the Wiki-Section to see how to use this library.  
+Or click here: [https://github.com/OpenKNX/Kaenx-Konnect/wiki](https://github.com/OpenKNX/Kaenx-Konnect/wiki)
 
 # Credits
 
