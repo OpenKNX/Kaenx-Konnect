@@ -32,7 +32,9 @@ namespace Kaenx.Konnect
 
         public static IpKnxConnection CreateTunnelingTcp(IPEndPoint endPoint)
         {
-            throw new NotImplementedException("TCP Tunneling is not implemented yet.");
+            ITransport connection = new TcpTransport(endPoint);
+            TunnelingProtocol protocol = new TunnelingProtocol(connection);
+            return new IpKnxConnection(protocol);
         }
 
         public static IpKnxConnection CreateRouting(UnicastAddress sourceAddress, string ip = "224.0.23.12", int port = 3671)

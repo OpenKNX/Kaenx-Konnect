@@ -115,6 +115,7 @@ namespace Kaenx.Konnect.Connections.Protocols
                         bool ackRequired = false;
                         if(request.MessageCode == MessageCodes.L_Data_con)
                         {
+                            Debug.WriteLine("Git confirmation");
                             if (_confirmationToken != null)
                             {
                                 _confirmationToken.Cancel();
@@ -256,6 +257,9 @@ namespace Kaenx.Konnect.Connections.Protocols
         {
             TimeSpan delay = timeout ?? TimeSpan.FromSeconds(3);
             await _transport.SendAsync(request.ToByteArray());
+            if(!_transport.IsAckRequired)
+                return;
+
             try
             {
                 CancellationTokenSource source = _ackWaitList[request.GetConnectionHeader().SequenceCounter];
