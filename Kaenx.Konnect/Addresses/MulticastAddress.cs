@@ -45,7 +45,7 @@ namespace Kaenx.Konnect.Addresses
 
         public override string ToString()
         {
-            return MainGroup.ToString() + "/" + MiddleGroup.ToString() + "/" + SubGroup.ToString();
+            return $"{MainGroup:D2}/{MiddleGroup:D2}/{SubGroup:D3}"; // MainGroup.ToString() + "/" + MiddleGroup.ToString() + "/" + SubGroup.ToString();
         }
     }
 }

@@ -11,5 +11,6 @@ namespace Kaenx.Konnect.EMI.DataMessages
     {
         public ApciTypes ApciType { get; }
         public static ApciTypes StaticApciType { get; }
+        public string GetDescription();
     }
 }

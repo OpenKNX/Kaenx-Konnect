@@ -51,7 +51,7 @@ namespace Kaenx.Konnect.Addresses
 
         public override string ToString()
         {
-            return Area.ToString() + "." + Line.ToString() + "." + DeviceAddress.ToString();
+            return $"{Area:D2}.{Line:D2}.{DeviceAddress:D3}"; // Area.ToString() + "." + Line.ToString() + "." + DeviceAddress.ToString();
         }
     }
 }

@@ -25,6 +25,7 @@ namespace Kaenx.Konnect.EMI.LData
         // These have x bytes, but length must be increased by 1 for legacy reasons
         private static List<ApciTypes> withDataLegacy = new List<ApciTypes>() {
                 ApciTypes.PropertyDescriptionResponse,
+                ApciTypes.PropertyValueRead,
                 ApciTypes.PropertyValueResponse
             };
 
@@ -235,8 +236,6 @@ namespace Kaenx.Konnect.EMI.LData
             var q = from t in Assembly.GetExecutingAssembly().GetTypes()
                     where t.IsClass && t.IsNested == false && (t.Namespace == "Kaenx.Konnect.EMI.DataMessages")
                     select t;
-
-            Debug.WriteLine($"Got APCI: {apciType.ToString()}");
 
             Type? messageType = null;
             foreach(Type t in q.ToList())

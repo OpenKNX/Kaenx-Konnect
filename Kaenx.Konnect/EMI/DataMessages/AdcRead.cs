@@ -4,27 +4,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Kaenx.Konnect.EMI.DataMessages
 {
-    public class PropertyDescriptionRead : IDataMessage
+    public class AdcRead : IDataMessage
     {
         public ApciTypes ApciType => StaticApciType;
-        public static ApciTypes StaticApciType => ApciTypes.PropertyDescriptionRead;
+        public static ApciTypes StaticApciType => ApciTypes.ADCRead;
 
-        public int ObjectIndex { get; private set; }
-        public int PropertyId { get; private set; }
-        public int PropertyIndex { get; private set; }
+        public int Channel { get; private set; }
+        public int Count { get; private set; }
 
-        public PropertyDescriptionRead(int objectIndex, int propertyId, int propertyIndex = 0)
+        public AdcRead(int channel, int count)
         {
-            ObjectIndex = objectIndex;
-            PropertyId = propertyId;
-            PropertyIndex = propertyIndex;
+            Channel = channel;
+            Count = count;
         }
 
-        public PropertyDescriptionRead(byte[] data, ExternalMessageInterfaces emi)
+        public AdcRead(byte[] data, ExternalMessageInterfaces emi)
         {
             switch (emi)
             {
@@ -38,16 +35,15 @@ namespace Kaenx.Konnect.EMI.DataMessages
                     ParseDataEmi2(data);
                     break;
                 default:
-                    throw new NotImplementedException("Unknown ExternalMessageInterface: " + emi.ToString());
+                    throw new NotSupportedException("The specified EMI type is not supported.");
             }
         }
 
         public byte[] GetBytesCemi()
         {
             List<byte> data = new List<byte>();
-            data.Add((byte)ObjectIndex);
-            data.Add((byte)PropertyId);
-            data.Add((byte)PropertyIndex);
+            data.Add((byte)(Channel & 0x3F));
+            data.Add((byte)(Count & 0xFF));
             return data.ToArray();
         }
 
@@ -63,9 +59,8 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public void ParseDataCemi(byte[] data)
         {
-            ObjectIndex = data[0];
-            PropertyId = data[1];
-            PropertyIndex = data[2];
+            Channel = data[0] & 0x3F;
+            Count = data[1];
         }
 
         public void ParseDataEmi1(byte[] data)
@@ -80,7 +75,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public string GetDescription()
         {
-            return $"OX={ObjectIndex} PX={PropertyIndex} P={PropertyId}";
+            return $"#{Channel} N={Count}";
         }
     }
 }

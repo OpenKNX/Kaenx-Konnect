@@ -106,5 +106,10 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             throw new NotImplementedException();
         }
+
+        public string GetDescription()
+        {
+            return $"OX={ObjectIndex} PX={PropertyIndex} P={PropertyId} N={MaxNumberOfElements} A={ReadLevel}/{WriteLevel} W={IsWriteEnabled} T={DataType}";
+        }
     }
 }

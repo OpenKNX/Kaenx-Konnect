@@ -9,6 +9,8 @@ namespace Kaenx.Konnect.Enums
     public enum ServiceIdentifiers
     {
         Unknown = 0x0000,
+
+        /* KNXnet/IP Core Services */
         SearchRequest = 0x0201,
         SearchResponse = 0x0202,
         DescriptionRequest = 0x0203,
@@ -19,8 +21,12 @@ namespace Kaenx.Konnect.Enums
         ConnectionStateResponse = 0x0208,
         DisconnectRequest = 0x0209,
         DisconnectResponse = 0x020A,
+
+        /* KNXnet/IP Device Management Services */
         DeviceConfigurationRequest = 0x0310,
         DeviceConfigurationAck = 0x0311,
+
+        /* KNXnet/IP Tunneling Services */
         TunnelingRequest = 0x0420,
         TunnelingAck = 0x0421,
         TunnelFeatureGet = 0x0422,
@@ -28,5 +34,13 @@ namespace Kaenx.Konnect.Enums
         TunnelFeatureSet = 0x0424,
         RoutingIndication = 0x0530,
         RoutingLostMessage = 0x0531,
+
+        /* KNXnet/IP Secure Services */
+        SecureWrapper = 0x0950,
+        SessionRequest = 0x0951,
+        SessionResponse = 0x0952,
+        SessionAuthenticate = 0x0953,
+        SessionStatus = 0x0954,
+        TimerNotify = 0x0955,
     }
 }

@@ -15,7 +15,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public int ObjectIndex { get; private set; }
         public int PropertyId { get; private set; }
         public ReturnCodes ReturnCode { get; private set; }
-        public byte[] Data { get; private set; }
+        public byte[] Data { get; private set; } = Array.Empty<byte>();
 
         public FunctionPropertyStateResponse(int objectIndex, int propertyId, ReturnCodes returnCode, byte[] data)
         {
@@ -79,6 +79,11 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public void ParseDataEmi2(byte[] data)
         {
             throw new NotImplementedException();
+        }
+
+        public string GetDescription()
+        {
+            return $"OX={ObjectIndex} P={PropertyId} R={ReturnCode} ${BitConverter.ToString(Data).Replace("-", "")}";
         }
     }
 }

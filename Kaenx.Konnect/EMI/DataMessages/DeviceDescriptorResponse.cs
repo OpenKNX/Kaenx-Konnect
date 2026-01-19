@@ -71,5 +71,10 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             throw new NotImplementedException();
         }
+
+        public string GetDescription()
+        {
+            return $"#{DescriptorType:X4} ${BitConverter.ToString(DescriptorData).Replace("-", "")}";
+        }
     }
 }

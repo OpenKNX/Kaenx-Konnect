@@ -37,6 +37,11 @@ namespace Kaenx.Konnect.Telegram.IP
             return Contents.OfType<ChannelInfoContent>().FirstOrDefault();
         }
 
+        public ConnectionResponseData? GetConnectionResponseData()
+        {
+            return Contents.OfType<ConnectionResponseData>().FirstOrDefault();
+        }
+
         public override void Parse(byte[] data)
         {
             IEnumerable<byte> _data = data;

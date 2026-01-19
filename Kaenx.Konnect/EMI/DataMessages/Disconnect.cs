@@ -67,5 +67,10 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             // Nothing to do for Disconnect Request
         }
+
+        public string GetDescription()
+        {
+            return "";
+        }
     }
 }

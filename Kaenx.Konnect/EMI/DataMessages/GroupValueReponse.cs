@@ -65,5 +65,10 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             throw new NotImplementedException();
         }
+
+        public string GetDescription()
+        {
+            return $"${BitConverter.ToString(Data).Replace("-", "")}";
+        }
     }
 }

@@ -84,5 +84,10 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             throw new NotImplementedException();
         }
+
+        public string GetDescription()
+        {
+            return $"OX={ObjectIndex} P={PropertyId} I={StartIndex} N={Count}";
+        }
     }
 }

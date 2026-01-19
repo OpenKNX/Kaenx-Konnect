@@ -97,6 +97,11 @@ namespace Kaenx.Konnect.Connections.Protocols
                         DisconnectRequest request = new DisconnectRequest(data);
                         InvokeReceivedService(request);
                         IsConnected = false;
+                        if (_keepAliveTimer != null)
+                        {
+                            _keepAliveTimer.Dispose();
+                            _keepAliveTimer = null;
+                        }
                         break;
                     }
 
@@ -251,6 +256,11 @@ namespace Kaenx.Konnect.Connections.Protocols
             DisconnectRequest dreq = new DisconnectRequest(_channelId, GetLocalEndpoint(), _transport.GetProtocolType());
             await SendAsync(dreq);
             IsConnected = false;
+            if (_keepAliveTimer != null)
+            {
+                _keepAliveTimer.Dispose();
+                _keepAliveTimer = null;
+            }
         }
 
         private async Task WaitForAck(TunnelingRequest request, TimeSpan? timeout = null)

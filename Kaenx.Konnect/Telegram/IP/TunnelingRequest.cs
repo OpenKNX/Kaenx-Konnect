@@ -20,8 +20,6 @@ namespace Kaenx.Konnect.Telegram.IP
         {
             Contents.Add(new ConnectionHeaderContent(ChannelId, SequenceCounter));
             Contents.Add(new EmiContent(message, ExternalMessageInterfaces.cEmi));
-
-            //Contents.Add(new MessageContent(message, ExternalMessageInterfaces.cEmi));
         }
 
         public TunnelingRequest(byte[] data)
