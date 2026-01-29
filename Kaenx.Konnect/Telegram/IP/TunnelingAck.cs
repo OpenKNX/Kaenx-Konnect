@@ -12,7 +12,7 @@ namespace Kaenx.Konnect.Telegram.IP
     {
         public ConnectionHeaderContent ConnectionHeader { get; private set; }
 
-        public TunnelingAck(byte ChannelId, byte SequenceCounter)
+        public TunnelingAck(uint ChannelId, byte SequenceCounter)
             : base(ServiceIdentifiers.TunnelingAck)
         {
             ConnectionHeader = new ConnectionHeaderContent(ChannelId, SequenceCounter);

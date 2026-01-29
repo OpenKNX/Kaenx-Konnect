@@ -13,9 +13,9 @@ namespace Kaenx.Konnect.Telegram.IP
 {
     public class DisconnectRequest : IpTelegram
     {
-        public byte ChannelId { get; private set; }
+        public uint ChannelId { get; private set; }
 
-        public DisconnectRequest(byte channelId, IPEndPoint endpoint, HostProtocols protocol)
+        public DisconnectRequest(uint channelId, IPEndPoint endpoint, HostProtocols protocol)
             : base(ServiceIdentifiers.DisconnectRequest)
         {
             Initialize(channelId, endpoint, protocol);
@@ -33,7 +33,7 @@ namespace Kaenx.Konnect.Telegram.IP
             Parse(data);
         }
 
-        private void Initialize(byte channelId, IPEndPoint endPoint, HostProtocols protocol)
+        private void Initialize(uint channelId, IPEndPoint endPoint, HostProtocols protocol)
         {
             Contents.Add(new ChannelInfoContent(channelId, 0x00)); // second byte is reserved
             var hpai = new HpaiContent(endPoint, protocol);

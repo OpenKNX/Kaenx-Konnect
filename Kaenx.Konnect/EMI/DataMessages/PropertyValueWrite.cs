@@ -7,18 +7,19 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.EMI.DataMessages
 {
-    public class PropertyValueRead : IDataMessage
+    public class PropertyValueWrite : IDataMessage
     {
         public ApciTypes ApciType => StaticApciType;
-        public static ApciTypes StaticApciType => ApciTypes.PropertyValueRead;
+        public static ApciTypes StaticApciType => ApciTypes.PropertyValueWrite;
 
         public uint ObjectIndex { get; private set; }
         public uint PropertyId { get; private set; }
         public uint StartIndex { get; private set; }
         public uint Count { get; private set; }
+        public byte[] Data { get; private set; } = Array.Empty<byte>();
 
 
-        public PropertyValueRead(uint objectIndex, uint propertyId, uint startIndex, uint count)
+        public PropertyValueWrite(uint objectIndex, uint propertyId, uint startIndex, uint count, byte[] data)
         {
             if(objectIndex > 0xFF)
                 throw new ArgumentOutOfRangeException(nameof(objectIndex), "Object Index must be between 0 and 255.");
@@ -28,14 +29,14 @@ namespace Kaenx.Konnect.EMI.DataMessages
                 throw new ArgumentOutOfRangeException(nameof(startIndex), "Start Index must be between 0 and 4095.");
             if(count > 0xF)
                 throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 15.");
-
             ObjectIndex = objectIndex;
             PropertyId = propertyId;
             StartIndex = startIndex;
             Count = count;
+            Data = data;
         }
 
-        public PropertyValueRead(byte[] data, ExternalMessageInterfaces emi)
+        public PropertyValueWrite(byte[] data, ExternalMessageInterfaces emi)
         {
             switch (emi)
             {
@@ -63,6 +64,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
             oct10 |= ((int)StartIndex >> 8) & 0x0F;
             data.Add((byte)(oct10));
             data.Add((byte)(StartIndex & 0xFF));
+            data.AddRange(Data);
             return data.ToArray();
         }
 
@@ -82,6 +84,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
             PropertyId = data[1];
             StartIndex = (uint)(((data[2] & 0x0F) << 8) | data[3]);
             Count = (uint)((data[2] >> 4) & 0x0F);
+            Data = data.Skip(4).ToArray();
         }
 
         public void ParseDataEmi1(byte[] data)
@@ -96,7 +99,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public string GetDescription()
         {
-            return $"OX={ObjectIndex} P={PropertyId} I={StartIndex} N={Count}";
+            return $"OX={ObjectIndex} P={PropertyId} I={StartIndex} N={Count} ${BitConverter.ToString(Data).Replace("-", "")}";
         }
     }
 }

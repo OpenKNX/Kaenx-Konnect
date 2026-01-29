@@ -11,10 +11,10 @@ namespace Kaenx.Konnect.Telegram.Contents
     {
         public int Length => 2;
 
-        public byte ChannelId { get; private set; }
+        public uint ChannelId { get; private set; }
         public IpErrors ReturnCode { get; private set; }
 
-        public ChannelInfoContent(byte channelId, IpErrors returnCode)
+        public ChannelInfoContent(uint channelId, IpErrors returnCode)
         {
             ChannelId = channelId;
             ReturnCode = returnCode;
@@ -30,7 +30,9 @@ namespace Kaenx.Konnect.Telegram.Contents
 
         public byte[] ToByteArray()
         {
-            return new byte[] { ChannelId, (byte)ReturnCode };
+            if(ChannelId > 255)
+                throw new ArgumentException("ChannelId must be between 0 and 255.");
+            return new byte[] { (byte)ChannelId, (byte)ReturnCode };
         }
     }
 }

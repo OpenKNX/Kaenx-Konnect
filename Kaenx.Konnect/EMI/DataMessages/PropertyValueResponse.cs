@@ -12,15 +12,24 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public ApciTypes ApciType => StaticApciType;
         public static ApciTypes StaticApciType => ApciTypes.PropertyValueResponse;
 
-        public int ObjectIndex { get; private set; }
-        public int PropertyId { get; private set; }
-        public int StartIndex { get; private set; }
-        public int Count { get; private set; }
+        public uint ObjectIndex { get; private set; }
+        public uint PropertyId { get; private set; }
+        public uint StartIndex { get; private set; }
+        public uint Count { get; private set; }
         public byte[] Data { get; private set; } = Array.Empty<byte>();
 
 
-        public PropertyValueResponse(int objectIndex, int propertyId, int startIndex, int count, byte[] data)
+        public PropertyValueResponse(uint objectIndex, uint propertyId, uint startIndex, uint count, byte[] data)
         {
+            if(objectIndex > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(objectIndex), "Object Index must be between 0 and 255.");
+            if(propertyId > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(propertyId), "Property ID must be between 0 and 255.");
+            if(startIndex > 0xFFF)
+                throw new ArgumentOutOfRangeException(nameof(startIndex), "Start Index must be between 0 and 4095.");
+            if(count > 0xF)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 15.");
+
             ObjectIndex = objectIndex;
             PropertyId = propertyId;
             StartIndex = startIndex;
@@ -52,8 +61,8 @@ namespace Kaenx.Konnect.EMI.DataMessages
             data.Add((byte)(ObjectIndex & 0xFF));
             data.Add((byte)(PropertyId & 0xFF));
 
-            int oct10 = (Count & 0x0F) << 4;
-            oct10 |= (StartIndex >> 8) & 0x0F;
+            int oct10 = ((int)Count & 0x0F) << 4;
+            oct10 |= ((int)StartIndex >> 8) & 0x0F;
             data.Add((byte)(oct10));
             data.Add((byte)(StartIndex & 0xFF));
             return data.ToArray();
@@ -73,8 +82,8 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             ObjectIndex = data[0];
             PropertyId = data[1];
-            StartIndex = ((data[2] & 0x0F) << 8) | data[3];
-            Count = (data[2] >> 4) & 0x0F;
+            StartIndex = (uint)(((data[2] & 0x0F) << 8) | data[3]);
+            Count = (uint)((data[2] >> 4) & 0x0F);
             Data = data.Skip(4).ToArray();
         }
 

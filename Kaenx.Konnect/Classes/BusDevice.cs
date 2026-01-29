@@ -94,20 +94,13 @@ namespace Kaenx.Konnect.Classes
 
             Debug.WriteLine($"Bus Device | Send  Dat: {sequenceNumber} | {message.GetType().FullName}");
 
-            bool isNumbered = true;
-            if (sequenceNumber == 255)
-            {
-                sequenceNumber = 0;
-                isNumbered = false;
-            }
-
             if(!_isIndividual)
             {
                 for (int i = 0; i < 2; i++)
                 {
                     try
                     {
-                        await WaitForAck(message, sequenceNumber, isNumbered);
+                        await WaitForAck(message, sequenceNumber);
                         Debug.WriteLine($"Bus Device | Send Got Ack: {sequenceNumber}");
                         // We got an Ack
                         break;
@@ -129,7 +122,7 @@ namespace Kaenx.Konnect.Classes
                 }
             } else
             {
-                LDataBase lDataBase = new(_address, isNumbered, sequenceNumber, message);
+                LDataBase lDataBase = new(_address, sequenceNumber != 255, sequenceNumber, message);
                 await _conn.SendAsync(lDataBase);
             }
 
@@ -157,10 +150,19 @@ namespace Kaenx.Konnect.Classes
             }
         }
 
-        private async Task WaitForAck(IDataMessage message, byte sequenceNumber, bool isNumbered = true, bool increaseSequence = true)
+        private async Task WaitForAck(IDataMessage message, byte sequenceNumber, bool increaseSequence = true)
         {
             if (acks.ContainsKey(sequenceNumber))
                 acks.Remove(sequenceNumber);
+
+
+            bool isNumbered = true;
+            if (sequenceNumber == 255)
+            {
+                sequenceNumber = 0;
+                isNumbered = false;
+            }
+
 
             CancellationTokenSource tokenS = new CancellationTokenSource();
             acks.Add(sequenceNumber, tokenS);
@@ -169,16 +171,20 @@ namespace Kaenx.Konnect.Classes
             await _conn.SendAsync(lDataBase);
 
             bool gotAck = true;
-            try
+
+            if(!_isIndividual)
             {
-                await Task.Delay(timeoutForData, tokenS.Token);
-                gotAck = false;
-                //Debug.WriteLine("Bus Device | Try   Ack: " + message.SequenceNumber);
-            }
-            catch
-            {
-                //Debug.WriteLine("Bus Device | Catch Ack: " + message.SequenceNumber);
-                // If the Token was cancelled, we got the Ack
+                try
+                {
+                    await Task.Delay(timeoutForData, tokenS.Token);
+                    gotAck = false;
+                    //Debug.WriteLine("Bus Device | Try   Ack: " + message.SequenceNumber);
+                }
+                catch
+                {
+                    //Debug.WriteLine("Bus Device | Catch Ack: " + message.SequenceNumber);
+                    // If the Token was cancelled, we got the Ack
+                }
             }
 
             acks.Remove(sequenceNumber);
@@ -284,7 +290,6 @@ namespace Kaenx.Konnect.Classes
             }
 
             _isConnected = true;
-            var x = await DeviceDescriptorRead();
 
             if (onlyConnect)
             {
@@ -403,7 +408,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
         /// <returns></returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
-        public async Task ResourceWrite(string resourceId, byte[] data)
+        public async Task ResourceWrite(string resourceId, byte[] data, int startIndex = 1, int count = 1)
         {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
@@ -445,7 +450,7 @@ namespace Kaenx.Konnect.Classes
                     string? pid = loc.Attribute("PropertyID")?.Value;
                     if(obj == null || pid == null)
                         throw new Exception("Object or Property not found");
-                    await PropertyWrite(Convert.ToByte(obj), Convert.ToByte(pid), data);
+                    await PropertyWrite(Convert.ToByte(obj), Convert.ToByte(pid), data, startIndex, count);
                     break;
 
                 case "StandardMemory":
@@ -645,7 +650,7 @@ namespace Kaenx.Konnect.Classes
                 throw new NotImplementedException("PropertyExtendedRead is not implemented");
             } else
             {
-                PropertyValueResponse response = await WaitForData< PropertyValueResponse>(new PropertyValueRead(objIdx, propId, start, count), _currentSeqNum);
+                PropertyValueResponse response = await WaitForData<PropertyValueResponse>(new PropertyValueRead(objIdx, propId, start, count), _currentSeqNum);
                 return ConvertRawData<T>(response.Data);
             }
         }
@@ -662,7 +667,7 @@ namespace Kaenx.Konnect.Classes
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
 
-            PropertyDescriptionResponse response = await WaitForData< PropertyDescriptionResponse>(new PropertyDescriptionRead(objIdx, propId, propIndex), _currentSeqNum);
+            PropertyDescriptionResponse response = await WaitForData<PropertyDescriptionResponse>(new PropertyDescriptionRead(objIdx, propId, propIndex), _currentSeqNum);
             return response;
         }
 
@@ -676,19 +681,18 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die geschrieben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, bool waitForResp = false)
+        public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, int startIndex = 1, int count = 1, bool waitForResp = false)
         {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
 
-            // TODO implement PropertyWrite Message
-            //MsgPropertyWriteReq message = new MsgPropertyWriteReq(objIdx, propId, data, _address);
-            //message.SequenceNumber = _currentSeqNum;
+            var message = new PropertyValueWrite(objIdx, propId, startIndex, count, data);
 
-            //if (waitForResp)
-            //    await WaitForData(message);
-            //else
-            //    await WaitForAck(message);
+            // TODO also make for that the response will be returned
+            if(waitForResp)
+                await WaitForData<PropertyValueResponse>(message, _currentSeqNum);
+            else
+                await WaitForAck(message, _currentSeqNum);
         }
 
         /// <summary>
@@ -727,9 +731,11 @@ namespace Kaenx.Konnect.Classes
             if(data == null)
                 data = new byte[0];
 
+            throw new NotImplementedException("ReadFunctionProperty is not implemented");
+
             //MsgFunctionPropertyStateReq message = new MsgFunctionPropertyStateReq(objIdx, propId, data, _address);
             //message.SequenceNumber = _currentSeqNum;
-            
+
             //if (waitForResp)
             //    return (MsgFunctionPropertyStateRes)await WaitForData(message);
 
@@ -779,14 +785,14 @@ namespace Kaenx.Konnect.Classes
             {
                 byte[] deviceControl = await PropertyRead(0, 14);
                 deviceControl[0] &= 0b1111_1011;
-                await PropertyWrite(0, 14, deviceControl, true);
+                await PropertyWrite(0, 14, deviceControl, waitForResp: true);
                 verifyMode = VerifyMode.Disabled;
             }
             else if (verify && verifyMode == VerifyMode.Disabled)
             {
                 byte[] deviceControl = await PropertyRead(0, 14);
                 deviceControl[0] |= 0b0000_0100;
-                await PropertyWrite(0, 14, deviceControl, true);
+                await PropertyWrite(0, 14, deviceControl, waitForResp: true);
                 verifyMode = VerifyMode.Enabled;
             }
 
@@ -929,6 +935,8 @@ namespace Kaenx.Konnect.Classes
         {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
+
+            throw new NotImplementedException("Authorize is not implemented");
 
             //MsgAuthorizeReq message = new MsgAuthorizeReq(key, _address);
             //message.SequenceNumber = _currentSeqNum;

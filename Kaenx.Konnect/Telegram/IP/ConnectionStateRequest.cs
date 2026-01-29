@@ -13,15 +13,15 @@ namespace Kaenx.Konnect.Telegram.IP
 {
     public class ConnectionStateRequest : IpTelegram
     {
-        public byte ChannelId { get; private set; }
+        public uint ChannelId { get; private set; }
 
-        public ConnectionStateRequest(byte channelId, IPEndPoint endpoint, HostProtocols protocol)
+        public ConnectionStateRequest(uint channelId, IPEndPoint endpoint, HostProtocols protocol)
             : base(ServiceIdentifiers.ConnectionStateRequest)
         {
             Initialize(channelId, endpoint, protocol);
         }
 
-        public ConnectionStateRequest(byte channelId, string ipAddress, int ipPort, HostProtocols protocol)
+        public ConnectionStateRequest(uint channelId, string ipAddress, int ipPort, HostProtocols protocol)
             : base(ServiceIdentifiers.ConnectionStateRequest)
         {
             Initialize(channelId, new IPEndPoint(IPAddress.Parse(ipAddress), ipPort), protocol);
@@ -33,8 +33,9 @@ namespace Kaenx.Konnect.Telegram.IP
             Parse(data);
         }
 
-        private void Initialize(byte channelId, IPEndPoint endPoint, HostProtocols protocol)
+        private void Initialize(uint channelId, IPEndPoint endPoint, HostProtocols protocol)
         {
+            ChannelId = channelId;
             Contents.Add(new ChannelInfoContent(channelId, 0x00)); // second byte is reserved
             var hpai = new HpaiContent(endPoint, protocol);
             Contents.Add(hpai); // Control

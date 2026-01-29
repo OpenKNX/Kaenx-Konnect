@@ -11,10 +11,10 @@ namespace Kaenx.Konnect.Telegram.IP
 {
     public class ConnectResponse : IpTelegram
     {
-        public byte ChannelId { get; private set; }
+        public uint ChannelId { get; private set; }
         public IpErrors ReturnCode { get; private set; }
 
-        public ConnectResponse(byte channelId, IpErrors returnCode)
+        public ConnectResponse(uint channelId, IpErrors returnCode)
             : base(ServiceIdentifiers.ConnectResponse)
         {
             ChannelId = channelId;

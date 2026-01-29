@@ -15,7 +15,7 @@ namespace Kaenx.Konnect.Telegram.IP
     {
         public MessageCodes MessageCode { get; private set; }
 
-        public TunnelingRequest(IEmiMessage message, byte ChannelId, byte SequenceCounter) 
+        public TunnelingRequest(IEmiMessage message, uint ChannelId, byte SequenceCounter) 
             : base(ServiceIdentifiers.TunnelingRequest)
         {
             Contents.Add(new ConnectionHeaderContent(ChannelId, SequenceCounter));

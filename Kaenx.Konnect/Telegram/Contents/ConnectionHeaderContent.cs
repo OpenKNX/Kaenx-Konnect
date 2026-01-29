@@ -9,13 +9,15 @@ namespace Kaenx.Konnect.Telegram.Contents
 {
     public class ConnectionHeaderContent : IContent
     {
-        public byte ChannelId { get; private set; }
+        public uint ChannelId { get; private set; }
         public byte SequenceCounter { get; private set; }
         public IpErrors ReturnCode { get; private set; }
         public int Length => 4;
 
-        public ConnectionHeaderContent(byte channelId, byte sequenceCounter)
+        public ConnectionHeaderContent(uint channelId, byte sequenceCounter)
         {
+            if(channelId > 255)
+                throw new ArgumentOutOfRangeException(nameof(channelId), "ChannelId must be between 0 and 255.");
             ChannelId = channelId;
             SequenceCounter = sequenceCounter;
         }
@@ -40,7 +42,7 @@ namespace Kaenx.Konnect.Telegram.Contents
 
         public byte[] ToByteArray()
         {
-            return new byte[] { (byte)Length, ChannelId, SequenceCounter , 0x00 };
+            return new byte[] { (byte)Length, (byte)ChannelId, SequenceCounter , 0x00 };
         }
     }
 }

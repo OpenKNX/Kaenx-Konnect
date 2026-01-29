@@ -12,12 +12,19 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public ApciTypes ApciType => StaticApciType;
         public static ApciTypes StaticApciType => ApciTypes.ADCResponse;
 
-        public int Channel { get; private set; }
-        public int Count { get; private set; }
+        public uint Channel { get; private set; }
+        public uint Count { get; private set; }
         public byte[] Data { get; private set; } = Array.Empty<byte>();
 
-        public AdcResponse(int channel, int count, byte[] data)
+        public AdcResponse(uint channel, uint count, byte[] data)
         {
+            if(channel > 0x7)
+                throw new ArgumentOutOfRangeException(nameof(channel), "Channel must be between 0 and 7.");
+            if(count > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 255.");
+            if(data.Length != 2)
+                throw new ArgumentException("Data length must be exactly 2 bytes.", nameof(data));
+
             Channel = channel;
             Count = count;
             Data = data;
@@ -62,7 +69,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public void ParseDataCemi(byte[] data)
         {
-            Channel = data[0] & 0x3F;
+            Channel = (uint)(data[0] & 0x3F);
             Count = data[1];
             Data = data.Skip(2).ToArray();
         }

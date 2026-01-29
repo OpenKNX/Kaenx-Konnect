@@ -22,12 +22,12 @@ namespace Kaenx.Konnect.Connections.Protocols
     {
         private CancellationTokenSource? _connectToken;
         private CancellationTokenSource? _confirmationToken;
-        private byte _channelId { get; set; } = 0;
+        private uint _channelId { get; set; } = 0;
         private byte _sequenzeCounter { get; set; } = 0;
         private int _lastReceivedSequenceCounter = -1;
         private IpErrors _connectionResponseCode = IpErrors.NoError;
         private Timer? _keepAliveTimer = null;
-        private ITransport _transport;
+        //private ITransport _transport;
 
         private UnicastAddress? _localAddress = new UnicastAddress(0);
         public override UnicastAddress? LocalAddress { get { return _localAddress; } }
@@ -120,7 +120,7 @@ namespace Kaenx.Konnect.Connections.Protocols
                         bool ackRequired = false;
                         if(request.MessageCode == MessageCodes.L_Data_con)
                         {
-                            Debug.WriteLine("Git confirmation");
+                            Debug.WriteLine("Got confirmation");
                             if (_confirmationToken != null)
                             {
                                 _confirmationToken.Cancel();
@@ -136,8 +136,10 @@ namespace Kaenx.Konnect.Connections.Protocols
                             ackRequired = true;
                         }
 
-                        if(ackRequired && _transport.IsAckRequired)
+                        Debug.WriteLine($"Transport Ack Required {(_transport.IsAckRequired ? "true" : "false")}");
+                        if (ackRequired && _transport.IsAckRequired)
                         {
+                            Debug.WriteLine("Sending ack");
                             TunnelingAck ack = new TunnelingAck(request.GetConnectionHeader().ChannelId, request.GetConnectionHeader().SequenceCounter);
                             await SendAsync(ack);
                         }
@@ -163,6 +165,7 @@ namespace Kaenx.Konnect.Connections.Protocols
 
                 case ServiceIdentifiers.TunnelingAck:
                     {
+                        Debug.WriteLine("Got TunnelingAck");
                         TunnelingAck ack = new TunnelingAck(data);
                         //InvokeReceivedService(ack);
                         if(_ackWaitList.ContainsKey(ack.ConnectionHeader.SequenceCounter))
@@ -314,6 +317,16 @@ namespace Kaenx.Konnect.Connections.Protocols
         public override int GetMaxApduLength()
         {
             return base.GetMaxApduLength();
+        }
+
+        public HostProtocols GetProtocolType()
+        {
+            return _transport.GetProtocolType();
+        }
+
+        public uint GetChannelId()
+        {
+            return _channelId;
         }
     }
 }

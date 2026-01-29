@@ -12,17 +12,30 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public ApciTypes ApciType => StaticApciType;
         public static ApciTypes StaticApciType => ApciTypes.PropertyDescriptionResponse;
 
-        public int ObjectIndex { get; private set; }
-        public int PropertyId { get; private set; }
-        public int PropertyIndex { get; private set; }
+        public uint ObjectIndex { get; private set; }
+        public uint PropertyId { get; private set; }
+        public uint PropertyIndex { get; private set; }
         public bool IsWriteEnabled { get; private set; }
-        public int MaxNumberOfElements { get; private set; }
-        public int ReadLevel { get; private set; }
-        public int WriteLevel { get; private set; }
+        public uint MaxNumberOfElements { get; private set; }
+        public uint ReadLevel { get; private set; }
+        public uint WriteLevel { get; private set; }
         public PropertyDataTypes DataType { get; private set; }
 
-        public PropertyDescriptionResponse(int objectIndex, int propertyId, PropertyDataTypes dataType, bool isWriteEnabled, int maxNumberOfElements, int readLevel, int writeLevel, int propertyIndex = 0)
+        public PropertyDescriptionResponse(uint objectIndex, uint propertyId, PropertyDataTypes dataType, bool isWriteEnabled, uint maxNumberOfElements, uint readLevel, uint writeLevel, uint propertyIndex = 0)
         {
+            if(objectIndex > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(objectIndex), "Object Index must be between 0 and 255.");
+            if(propertyId > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(propertyId), "Property ID must be between 0 and 255.");
+            if(propertyIndex > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(propertyIndex), "Property Index must be between 0 and 255.");
+            if(maxNumberOfElements > 0xFFF)
+                throw new ArgumentOutOfRangeException(nameof(maxNumberOfElements), "Max Number Of Elements must be between 0 and 4095.");
+            if(readLevel > 0xF)
+                throw new ArgumentOutOfRangeException(nameof(readLevel), "Read Level must be between 0 and 15.");
+            if(writeLevel > 0xF)
+                throw new ArgumentOutOfRangeException(nameof(writeLevel), "Write Level must be between 0 and 15.");
+
             ObjectIndex = objectIndex;
             PropertyId = propertyId;
             PropertyIndex = propertyIndex;
@@ -65,8 +78,8 @@ namespace Kaenx.Konnect.EMI.DataMessages
             data.Add((byte)((MaxNumberOfElements >> 8) & 0x0F));
             data.Add((byte)(MaxNumberOfElements & 0xFF));
 
-            int octet14 = (ReadLevel & 0x0F) << 4;
-            octet14 |= (WriteLevel & 0x0F);
+            int octet14 = (((int)ReadLevel & 0x0F) << 4);
+            octet14 |= ((int)WriteLevel & 0x0F);
             data.Add((byte)octet14);
 
             return data.ToArray();
@@ -91,10 +104,10 @@ namespace Kaenx.Konnect.EMI.DataMessages
             IsWriteEnabled = (data[3] & 0x80) != 0;
             DataType = (PropertyDataTypes)(data[3] & 0x3F);
 
-            MaxNumberOfElements = ((data[4] & 0x0F) << 8) | data[5];
+            MaxNumberOfElements = (uint)((data[4] & 0x0F) << 8 | data[5]);
 
-            ReadLevel = (data[6] >> 4) & 0x0F;
-            WriteLevel = data[6] & 0x0F;
+            ReadLevel = (uint)((data[6] >> 4) & 0x0F);
+            WriteLevel = (uint)(data[6] & 0x0F);
         }
 
         public void ParseDataEmi1(byte[] data)

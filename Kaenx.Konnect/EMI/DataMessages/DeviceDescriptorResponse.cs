@@ -12,7 +12,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public ApciTypes ApciType => StaticApciType;
         public static ApciTypes StaticApciType => ApciTypes.DeviceDescriptorResponse;
 
-        public int DescriptorType { get; private set; }
+        public uint DescriptorType { get; private set; }
         public byte[] DescriptorData { get; private set; } = Array.Empty<byte>();
 
         public DeviceDescriptorResponse(byte[] data, ExternalMessageInterfaces emi) {
@@ -32,8 +32,13 @@ namespace Kaenx.Konnect.EMI.DataMessages
             }
         }
 
-        public DeviceDescriptorResponse(byte[] descriptorData, int descriptorType = 0)
+        public DeviceDescriptorResponse(byte[] descriptorData, uint descriptorType = 0)
         {
+            if(descriptorType > 0x3F)
+                throw new ArgumentOutOfRangeException(nameof(descriptorType), "Descriptor Type must be between 0 and 63.");
+            if(descriptorData.Length != 2)
+                throw new ArgumentException(nameof(descriptorData), "Descriptor Data must be exactly 2 bytes.");
+
             DescriptorType = descriptorType;
             DescriptorData = descriptorData;
         }
@@ -58,7 +63,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public void ParseDataCemi(byte[] data)
         {
-            DescriptorType = data[0] & 0x3F;
+            DescriptorType = (uint)(data[0] & 0x3F);
             DescriptorData = data.Skip(1).ToArray();
         }
 

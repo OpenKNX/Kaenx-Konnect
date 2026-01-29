@@ -12,13 +12,18 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public ApciTypes ApciType => StaticApciType;
         public static ApciTypes StaticApciType => ApciTypes.FunctionPropertyStateResponse;
 
-        public int ObjectIndex { get; private set; }
-        public int PropertyId { get; private set; }
+        public uint ObjectIndex { get; private set; }
+        public uint PropertyId { get; private set; }
         public ReturnCodes ReturnCode { get; private set; }
         public byte[] Data { get; private set; } = Array.Empty<byte>();
 
-        public FunctionPropertyStateResponse(int objectIndex, int propertyId, ReturnCodes returnCode, byte[] data)
+        public FunctionPropertyStateResponse(uint objectIndex, uint propertyId, ReturnCodes returnCode, byte[] data)
         {
+            if(objectIndex > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(objectIndex), "Object Index must be between 0 and 255.");
+            if(propertyId > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(propertyId), "Property ID must be between 0 and 255.");
+
             ObjectIndex = objectIndex;
             PropertyId = propertyId;
             ReturnCode = returnCode;

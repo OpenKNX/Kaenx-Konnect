@@ -1,6 +1,7 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Connections.Protocols;
 using Kaenx.Konnect.EMI.LData;
+using Kaenx.Konnect.Enums;
 using Kaenx.Konnect.Telegram.IP;
 using System;
 using System.Collections.Generic;
@@ -83,6 +84,24 @@ namespace Kaenx.Konnect.Connections
         public UnicastAddress? GetLocalAddress()
         {
             return _protocol.LocalAddress;
+        }
+
+        public uint GetChannelId()
+        {
+            if (_protocol is TunnelingProtocol tp)
+            {
+                return tp.GetChannelId();
+            }
+            throw new Exception("Cant get ChannelId from protocol: " + _protocol.GetType().Name);
+        }
+
+        public HostProtocols GetHostProtocol()
+        {
+            if(_protocol is TunnelingProtocol tp)
+            {
+                return tp.GetProtocolType();
+            }
+            throw new Exception("Cant get ChannelId from protocol: " + _protocol.GetType().Name);
         }
     }
 }

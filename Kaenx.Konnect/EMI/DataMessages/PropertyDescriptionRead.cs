@@ -13,12 +13,19 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public ApciTypes ApciType => StaticApciType;
         public static ApciTypes StaticApciType => ApciTypes.PropertyDescriptionRead;
 
-        public int ObjectIndex { get; private set; }
-        public int PropertyId { get; private set; }
-        public int PropertyIndex { get; private set; }
+        public uint ObjectIndex { get; private set; }
+        public uint PropertyId { get; private set; }
+        public uint PropertyIndex { get; private set; }
 
-        public PropertyDescriptionRead(int objectIndex, int propertyId, int propertyIndex = 0)
+        public PropertyDescriptionRead(uint objectIndex, uint propertyId, uint propertyIndex = 0)
         {
+            if(objectIndex > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(objectIndex), "Object Index must be between 0 and 255.");
+            if(propertyId > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(propertyId), "Property ID must be between 0 and 255.");
+            if(propertyIndex > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(propertyIndex), "Property Index must be between 0 and 255.");
+
             ObjectIndex = objectIndex;
             PropertyId = propertyId;
             PropertyIndex = propertyIndex;

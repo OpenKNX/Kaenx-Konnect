@@ -7,26 +7,26 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.EMI.DataMessages
 {
-    public class AdcRead : IDataMessage
+    public class MemoryRead : IDataMessage
     {
         public ApciTypes ApciType => StaticApciType;
-        public static ApciTypes StaticApciType => ApciTypes.ADCRead;
+        public static ApciTypes StaticApciType => ApciTypes.MemoryRead;
 
-        public uint Channel { get; private set; }
+        public uint Address { get; private set; }
         public uint Count { get; private set; }
 
-        public AdcRead(uint channel, uint count)
-        {
-            if(channel > 0x7)
-                throw new ArgumentOutOfRangeException(nameof(channel), "Channel must be between 0 and 7.");
-            if(count > 0xFF)
-                throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 255.");
 
-            Channel = channel;
+        public MemoryRead(uint address, uint count)
+        {
+            if(address > 0xFFFF)
+                throw new ArgumentOutOfRangeException(nameof(address), "Address must be between 0 and 65535.");
+            if (count > 0x1F)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 31.");
+            Address = address;
             Count = count;
         }
 
-        public AdcRead(byte[] data, ExternalMessageInterfaces emi)
+        public MemoryRead(byte[] data, ExternalMessageInterfaces emi)
         {
             switch (emi)
             {
@@ -47,8 +47,10 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public byte[] GetBytesCemi()
         {
             List<byte> data = new List<byte>();
-            data.Add((byte)(Channel & 0x3F));
-            data.Add((byte)(Count & 0xFF));
+            data.Add((byte)Count);
+            data.Add((byte)(Address & 0xFF));
+            data.Add((byte)((Address >> 8) & 0xFF));
+
             return data.ToArray();
         }
 
@@ -64,8 +66,8 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public void ParseDataCemi(byte[] data)
         {
-            Channel = (uint)(data[0] & 0x3F);
-            Count = data[1];
+            Count = data[0];
+            Address = ((uint)data[1] << 8) | data[2];
         }
 
         public void ParseDataEmi1(byte[] data)
@@ -80,7 +82,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public string GetDescription()
         {
-            return $"#{Channel} N={Count}";
+            return $"Address={Address:X4} Count={Count}";
         }
     }
 }
