@@ -408,7 +408,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="resourceId">Name der Ressource (z.B. ApplicationId)</param>
         /// <returns></returns>
         /// <exception cref="Kaenx.Konnect.Exceptions.NotSupportedException">Wenn Gerät Ressource nicht unterstützt</exception>
-        public async Task ResourceWrite(string resourceId, byte[] data, int startIndex = 1, int count = 1)
+        public async Task ResourceWrite(string resourceId, byte[] data, uint startIndex = 1, uint count = 1)
         {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
@@ -662,7 +662,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="propId">Property Id</param>
         /// <returns>Direkte Antwort vom Gerät</returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<PropertyDescriptionResponse> PropertyDescriptionRead(int objIdx, int propId, int propIndex = 0)
+        public async Task<PropertyDescriptionResponse> PropertyDescriptionRead(uint objIdx, uint propId, uint propIndex = 0)
         {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
@@ -681,7 +681,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die geschrieben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task PropertyWrite(byte objIdx, byte propId, byte[] data, int startIndex = 1, int count = 1, bool waitForResp = false)
+        public async Task PropertyWrite(uint objIdx, uint propId, byte[] data, uint startIndex = 1, uint count = 1, bool waitForResp = false)
         {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
@@ -703,7 +703,7 @@ namespace Kaenx.Konnect.Classes
         /// <param name="data">Daten die übergeben werden sollen</param>
         /// <returns></returns>
         /// <exception cref="System.TimeoutException" />
-        public async Task<FunctionPropertyStateResponse> InvokeFunctionProperty(int objIdx, int propId, byte[]? data = null)
+        public async Task<FunctionPropertyStateResponse> InvokeFunctionProperty(uint objIdx, uint propId, byte[]? data = null)
         {
             if(!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
