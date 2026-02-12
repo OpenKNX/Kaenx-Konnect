@@ -1,9 +1,8 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29920.165
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kaenx.Konnect", "Kaenx.Konnect\Kaenx.Konnect.csproj", "{B611942B-5B86-4270-8D34-9FE635D45D65}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kaenx.Konnect", "Kaenx.Konnect.csproj", "{5108C0E3-1E80-8CF7-693C-F17523A6D44C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +10,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B611942B-5B86-4270-8D34-9FE635D45D65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B611942B-5B86-4270-8D34-9FE635D45D65}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B611942B-5B86-4270-8D34-9FE635D45D65}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B611942B-5B86-4270-8D34-9FE635D45D65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5108C0E3-1E80-8CF7-693C-F17523A6D44C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5108C0E3-1E80-8CF7-693C-F17523A6D44C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5108C0E3-1E80-8CF7-693C-F17523A6D44C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5108C0E3-1E80-8CF7-693C-F17523A6D44C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {7BAF4E2C-2091-434F-ACD7-079980E13554}
+		SolutionGuid = {DE3646DF-8298-4AAE-9674-610510408FC7}
 	EndGlobalSection
 EndGlobal
