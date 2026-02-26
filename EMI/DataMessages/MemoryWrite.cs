@@ -21,7 +21,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             if(address > 0xFFFF)
                 throw new ArgumentOutOfRangeException(nameof(address), "Address must be between 0 and 65535.");
-            if (count > 0x1F)
+            if (count > 0x3F)
                 throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 31.");
             Address = address;
             Count = count;
@@ -50,8 +50,8 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             List<byte> data = new List<byte>();
             data.Add((byte)Count);
-            data.Add((byte)(Address & 0xFF));
             data.Add((byte)((Address >> 8) & 0xFF));
+            data.Add((byte)(Address & 0xFF));
             data.AddRange(Data);
 
             return data.ToArray();

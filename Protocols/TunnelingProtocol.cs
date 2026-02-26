@@ -22,6 +22,8 @@ namespace Kaenx.Konnect.Connections.Protocols
     {
         private CancellationTokenSource? _connectToken;
         private CancellationTokenSource? _confirmationToken;
+        private int _confirmationTokenSequenceCounter = -1;
+
         private uint _channelId { get; set; } = 0;
         private byte _sequenzeCounter { get; set; } = 0;
         private int _lastReceivedSequenceCounter = -1;
@@ -120,8 +122,8 @@ namespace Kaenx.Konnect.Connections.Protocols
                         bool ackRequired = false;
                         if(request.MessageCode == MessageCodes.L_Data_con)
                         {
-                            Debug.WriteLine("Got confirmation");
-                            if (_confirmationToken != null)
+                            Debug.WriteLine($"Got confirmation XX:{request.GetConnectionHeader().SequenceCounter}");
+                            if (_confirmationToken != null && _confirmationTokenSequenceCounter == request.GetConnectionHeader().SequenceCounter)
                             {
                                 _confirmationToken.Cancel();
                                 _confirmationToken = null;
@@ -136,7 +138,6 @@ namespace Kaenx.Konnect.Connections.Protocols
                             ackRequired = true;
                         }
 
-                        Debug.WriteLine($"Transport Ack Required {(_transport.IsAckRequired ? "true" : "false")}");
                         if (ackRequired && _transport.IsAckRequired)
                         {
                             Debug.WriteLine("Sending ack");
@@ -223,7 +224,8 @@ namespace Kaenx.Konnect.Connections.Protocols
 
             _ackWaitList.Add(sequenceCounter, new CancellationTokenSource());
             _confirmationToken = new CancellationTokenSource();
-
+            _confirmationTokenSequenceCounter = sequenceCounter;
+            Debug.WriteLine($"Starting confToken XX:{sequenceCounter}");
             await WaitForAck(request);
             _sequenzeCounter++;
             await WaitForConfirmation(sequenceCounter);
@@ -301,14 +303,17 @@ namespace Kaenx.Konnect.Connections.Protocols
                 // We already received the confirmation
                 if (_confirmationToken == null)
                     return;
-                    
+
+                Debug.WriteLine($"Start waiting conf XX:{sequenceCounter}");
                 await Task.Delay(delay, _confirmationToken.Token);
                 _confirmationToken = null;
+                _confirmationTokenSequenceCounter = -1;
             }
             catch (TaskCanceledException)
             {
                 // Confirmation received
                 _confirmationToken = null;
+                _confirmationTokenSequenceCounter = -1;
                 return;
             }
             throw new InterfaceException($"TunnelingConfirmation timed out #XX:{sequenceCounter}");

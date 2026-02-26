@@ -125,7 +125,7 @@ namespace Kaenx.Konnect.EMI.LData
             if (withData.Contains(GetApciType()) && lengthData != 0)
             {
                 lengthData--;
-                apci[1] = (byte)(payload[0] & 0x3F);
+                apci[1] = (byte)(apci[1] | (payload[0] & 0x3F));
                 payload = payload.Skip(1).ToArray();
             }
             if(withDataLegacy.Contains(GetApciType()))
