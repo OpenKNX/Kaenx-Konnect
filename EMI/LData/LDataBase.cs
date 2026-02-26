@@ -64,7 +64,7 @@ namespace Kaenx.Konnect.EMI.LData
             }
         }
 
-        public LDataBase(UnicastAddress destination, bool isNumbered, byte sequenceNumber, IDataMessage content, MessageCodes messageCode = MessageCodes.L_Data_req)
+        public LDataBase(IKnxAddress destination, bool isNumbered, byte sequenceNumber, IDataMessage content, MessageCodes messageCode = MessageCodes.L_Data_req)
         {
             MessageCode = messageCode;
             SourceAddress = UnicastAddress.FromString("0.0.0");
