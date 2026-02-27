@@ -27,16 +27,25 @@ namespace Kaenx.Konnect.Classes
             responses[response.SequenceNumber] = response;
         }
 
-        public async Task GroupValueWrite(MulticastAddress ga, byte data)
+        public async Task GroupValueWrite(MulticastAddress ga, bool value)
         {
-            await GroupValueWrite(ga, new byte[] { data });
+            byte[] payload = new byte[] { value ? (byte)0x01 : (byte)0x00 };
+            var content = new GroupValueWrite(payload);
+            LDataBase message = new LDataBase(ga, false, 0, content);
+            await _conn.SendAsync(message);
+        }
+
+        public async Task GroupValueWrite(MulticastAddress ga, byte value)
+        {
+            byte[] payload = new byte[] { 0x00, value };
+            var content = new GroupValueWrite(payload);
+            LDataBase message = new LDataBase(ga, false, 0, content);
+            await _conn.SendAsync(message);
         }
 
         public async Task GroupValueWrite(MulticastAddress ga, byte[] data)
         {
-            // DPT 5.x (1 Byte) send as 2-Byte-Array - trick stolen from xknx 
-            byte[] payload = data.Length == 1 ? new byte[] { 0x00, data[0] } : data;
-            var content = new GroupValueWrite(payload);
+            var content = new GroupValueWrite(data);
             LDataBase message = new LDataBase(ga, false, 0, content);
             await _conn.SendAsync(message);
         }

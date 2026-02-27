@@ -70,6 +70,8 @@ namespace Kaenx.Konnect.Connections
             await _protocol.Disconnect();
         }
 
+        public bool IsConnected => _protocol.IsConnected;
+
         public void Dispose()
         {
             _protocol.OnReceivedMessage -= _protocol_OnReceivedMessage;

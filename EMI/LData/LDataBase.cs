@@ -44,10 +44,11 @@ namespace Kaenx.Konnect.EMI.LData
         public IDataMessage? Content { get; private set; }
 
         public byte[] AdditionalData { get; private set; } = Array.Empty<byte>();
-        
+        public byte[] RawBytes { get; private set; } = Array.Empty<byte>();
 
         public LDataBase(byte[] data, ExternalMessageInterfaces emi)
         {
+            RawBytes = data;
             switch (emi)
             {
                 case ExternalMessageInterfaces.Emi1:
