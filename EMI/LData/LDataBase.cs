@@ -191,7 +191,7 @@ namespace Kaenx.Konnect.EMI.LData
             dataEnum = dataEnum.Skip(2 + additionalDataLength);
 
             BitArray ctrl1Byte = new BitArray(dataEnum.Take(1).ToArray());
-            BitArray ctrl2Byte = new BitArray(dataEnum.Skip(1).First());
+            BitArray ctrl2Byte = new BitArray(new byte[] { dataEnum.Skip(1).First() });
 
             SourceAddress = UnicastAddress.FromByteArray(dataEnum.Skip(2).Take(2).ToArray());
             DestinationAddress = ctrl2Byte.Get(7) ?
