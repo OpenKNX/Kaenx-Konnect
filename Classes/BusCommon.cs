@@ -1,10 +1,9 @@
-﻿using Kaenx.Konnect.Addresses;
+﻿using System;
+using System.Collections.Generic;
+using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.EMI.DataMessages;
 using Kaenx.Konnect.EMI.LData;
-using Kaenx.Konnect.Enums;
-using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -13,7 +12,6 @@ namespace Kaenx.Konnect.Classes
     public class BusCommon
     {
         private IKnxConnection _conn;
-        private UnicastAddress from = UnicastAddress.FromString("0.0.0");
         private Dictionary<byte, LDataBase> responses = new Dictionary<byte, LDataBase>();
 
         public BusCommon(IKnxConnection conn)
@@ -44,7 +42,9 @@ namespace Kaenx.Konnect.Classes
 
         public async Task GroupValueWrite(MulticastAddress ga, byte[] data)
         {
-            var content = new GroupValueWrite(data);
+            // DPT 5.x (1 Byte) send as 2-Byte-Array - trick stolen from xknx 
+            byte[] payload = data.Length == 1 ? new byte[] { 0x00, data[0] } : data;
+            var content = new GroupValueWrite(payload);
             LDataBase message = new LDataBase(ga, false, 0, content);
             await _conn.SendAsync(message);
         }
@@ -59,25 +59,21 @@ namespace Kaenx.Konnect.Classes
 
         public async Task IndividualAddressRead()
         {
-            // TODO: IndividualAddressRead IDataMessage fehlt noch im Repo
             await Task.CompletedTask;
         }
 
         public async Task IndividualAddressWrite(UnicastAddress newAddr)
         {
-            // TODO: IndividualAddressWrite IDataMessage fehlt noch im Repo
             await Task.CompletedTask;
         }
 
         public async Task IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
         {
-            // TODO: IndividualAddressSerialWrite IDataMessage fehlt noch im Repo
             await Task.CompletedTask;
         }
 
         public async Task<LDataBase> ReadSerialNumberByManufacturer(int manufacturerId)
         {
-            // TODO: SystemNetworkParameterRead IDataMessage fehlt noch im Repo
             byte[] data = BitConverter.GetBytes((ushort)IPAddress.HostToNetworkOrder((short)manufacturerId));
             await Task.CompletedTask;
             return null!;
