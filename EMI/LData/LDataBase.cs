@@ -44,10 +44,11 @@ namespace Kaenx.Konnect.EMI.LData
         public IDataMessage? Content { get; private set; }
 
         public byte[] AdditionalData { get; private set; } = Array.Empty<byte>();
-        
+        public byte[] RawBytes { get; private set; } = Array.Empty<byte>();
 
         public LDataBase(byte[] data, ExternalMessageInterfaces emi)
         {
+            RawBytes = data;
             switch (emi)
             {
                 case ExternalMessageInterfaces.Emi1:
@@ -64,7 +65,7 @@ namespace Kaenx.Konnect.EMI.LData
             }
         }
 
-        public LDataBase(UnicastAddress destination, bool isNumbered, byte sequenceNumber, IDataMessage content, MessageCodes messageCode = MessageCodes.L_Data_req)
+        public LDataBase(IKnxAddress destination, bool isNumbered, byte sequenceNumber, IDataMessage content, MessageCodes messageCode = MessageCodes.L_Data_req)
         {
             MessageCode = messageCode;
             SourceAddress = UnicastAddress.FromString("0.0.0");
@@ -191,7 +192,7 @@ namespace Kaenx.Konnect.EMI.LData
             dataEnum = dataEnum.Skip(2 + additionalDataLength);
 
             BitArray ctrl1Byte = new BitArray(dataEnum.Take(1).ToArray());
-            BitArray ctrl2Byte = new BitArray(dataEnum.Skip(1).First());
+            BitArray ctrl2Byte = new BitArray(new byte[] { dataEnum.Skip(1).First() });
 
             SourceAddress = UnicastAddress.FromByteArray(dataEnum.Skip(2).Take(2).ToArray());
             DestinationAddress = ctrl2Byte.Get(7) ?
