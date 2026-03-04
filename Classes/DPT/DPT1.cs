@@ -18,6 +18,13 @@ namespace Kaenx.Konnect.Classes.DPT
                 case TypeCode.Object:
                 case TypeCode.Boolean:
                     return (T)Convert.ChangeType(val == 1, typeof(T));
+                    
+                case TypeCode.Byte:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                    return (T)Convert.ChangeType(val, typeof(T));
             }
             
             throw new Exception("DPT1 kann nicht in " + typeof(T).Name + " umgewandelt werden.");
@@ -30,12 +37,21 @@ namespace Kaenx.Konnect.Classes.DPT
             switch (Type.GetTypeCode(value.GetType()))
             {
                 case TypeCode.String:
-                    string v = value.ToString() ?? "";
-                    output = (byte)((v == "on" || v == "True") ? 0x01 : 0x00);
+                    string v = value.ToString()?.ToLower() ?? "";
+                    output = (byte)((v == "on" || v == "true") ? 0x01 : 0x00);
                     break;
 
                 case TypeCode.Boolean:
                     output = (byte)(((bool)value) ? 0x01 : 0x00);
+                    break;
+
+                case TypeCode.Byte:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                    uint v2 = Convert.ToUInt32(value);
+                    output = (byte)((v2 != 0) ? 0x01 : 0x00);
                     break;
 
                 default:
