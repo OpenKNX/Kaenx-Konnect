@@ -36,7 +36,7 @@ namespace Kaenx.Konnect.Classes
         private Dictionary<int, ResponseHelper> responses = new Dictionary<int, ResponseHelper>();
         private Dictionary<int, CancellationTokenSource?> acks = new Dictionary<int, CancellationTokenSource?>();
         private Dictionary<string, string> features = new Dictionary<string, string>();
-        private int timeoutForData = 3000;
+        private int timeoutForData = 5000;
 
         private byte _seqNum = 0;
         private byte _currentSeqNum
@@ -93,7 +93,7 @@ namespace Kaenx.Konnect.Classes
             ResponseHelper helper = new ResponseHelper();
             responses.Add(sequenceNumber, helper);
 
-            Debug.WriteLine($"Bus Device | Send  Dat: {sequenceNumber} | {message.GetType().FullName}");
+            Console.WriteLine($"Bus Device | Send  Dat: {sequenceNumber} | {message.GetType().FullName}");
 
             if(!_isIndividual)
             {
@@ -102,24 +102,24 @@ namespace Kaenx.Konnect.Classes
                     try
                     {
                         await WaitForAck(message, sequenceNumber);
-                        Debug.WriteLine($"Bus Device | Send Got Ack: {sequenceNumber}");
+                        Console.WriteLine($"Bus Device | Send Got Ack: {sequenceNumber}");
                         // We got an Ack
                         break;
                     }
                     catch (TaskCanceledException)
                     {
-                        Debug.WriteLine($"Bus Device | Send Got no Ack: {sequenceNumber}");
+                        Console.WriteLine($"Bus Device | Send Got no Ack: {sequenceNumber}");
                         // We got no Ack for sending data!
                     }
                     catch (TimeoutException)
                     {
-                        Debug.WriteLine($"Bus Device | Send Timeout: {sequenceNumber}");
+                        Console.WriteLine($"Bus Device | Send Timeout: {sequenceNumber}");
                     }
                     catch (Exception ex)
                     {
                         if(helper.Response != null)
                         {
-                            Debug.WriteLine($"Bus Device | Send Got Response while waiting for Ack: {sequenceNumber}");
+                            Console.WriteLine($"Bus Device | Send Got Response while waiting for Ack: {sequenceNumber}");
                             _currentSeqNum++;
                             break;
                         }
@@ -145,10 +145,11 @@ namespace Kaenx.Konnect.Classes
                 }
             }
 
+            Console.WriteLine($"Bus Device | WaitForData finished for SeqNum: {sequenceNumber}");
             responses.Remove(sequenceNumber);
             if(helper.Response == null)
                 throw new TimeoutException("Zeitüberschreitung beim Warten auf Antwort (Seq. Nummer: " + sequenceNumber + ")");
-            Debug.WriteLine($"Bus Device | Received Data: {helper.Response.GetType().FullName}, SeqNum: {sequenceNumber}");
+            Console.WriteLine($"Bus Device | Received Data: {helper.Response.GetType().FullName}, SeqNum: {sequenceNumber}");
             try
             {
                 return (T)Convert.ChangeType(helper.Response, typeof(T));
@@ -333,6 +334,7 @@ namespace Kaenx.Konnect.Classes
 
                 if (message.Content.GetType().Name.EndsWith("Response"))
                 {
+                    Console.WriteLine($"Received Response: {message.Content.GetType().Name}, SeqNum: {message.SequenceNumber}");
                     if(!_isIndividual)
                     {
                         try
