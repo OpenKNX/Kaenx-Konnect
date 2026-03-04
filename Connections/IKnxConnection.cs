@@ -26,6 +26,8 @@ namespace Kaenx.Konnect.Connections
 
         public Task Disconnect();
 
+        public bool IsConnected { get; }
+
         public int GetMaxApduLength();
 
         public UnicastAddress? GetLocalAddress();

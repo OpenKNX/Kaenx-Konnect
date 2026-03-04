@@ -1,11 +1,12 @@
 ﻿using Kaenx.Konnect.Addresses;
 using Kaenx.Konnect.Connections;
+using Kaenx.Konnect.EMI.DataMessages;
 using Kaenx.Konnect.EMI.LData;
+using Kaenx.Konnect.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.Classes
@@ -13,107 +14,95 @@ namespace Kaenx.Konnect.Classes
     public class BusCommon
     {
         private IKnxConnection _conn;
-        private MulticastAddress to = MulticastAddress.FromString("0/0/0");
-        private UnicastAddress from = UnicastAddress.FromString("0.0.0");
-        private Dictionary<int, LDataBase> responses = new Dictionary<int, LDataBase>();
-
-        private int _lastNumb = -1;
-        private int lastReceivedNumber
-        {
-            get { return _lastNumb == 15 ? 0 : _lastNumb + 1; }
-            set { _lastNumb = value; }
-        }
-
+        private Dictionary<byte, LDataBase> responses = new Dictionary<byte, LDataBase>();
 
         public BusCommon(IKnxConnection conn)
         {
             _conn = conn;
-            //_conn.OnTunnelResponse += _conn_OnTunnelResponse;
+            _conn.OnReceivedMessage += OnReceivedMessage;
         }
 
-        private void _conn_OnTunnelResponse(LDataBase response)
+        private void OnReceivedMessage(LDataBase response)
         {
-            if (responses.ContainsKey(response.SequenceNumber))
-                responses[response.SequenceNumber] = response;
-            else
-                responses.Add(response.SequenceNumber, response);
-
-            lastReceivedNumber = response.SequenceNumber;
+            responses[response.SequenceNumber] = response;
         }
 
-
-        private async Task<LDataBase> WaitForData(int seq)
+        public async Task GroupValueWrite(MulticastAddress ga, bool value)
         {
-            if (responses.ContainsKey(seq))
-                responses.Remove(seq);
-
-            while (!responses.ContainsKey(seq))
-                await Task.Delay(10); // TODO maybe erhöhen
-
-            var resp = responses[seq];
-            responses.Remove(seq);
-            return resp;
+            byte[] payload = new byte[] { value ? (byte)0x01 : (byte)0x00 };
+            var content = new GroupValueWrite(payload);
+            LDataBase message = new LDataBase(ga, false, 0, content);
+            await _conn.SendAsync(message);
         }
 
+        public async Task GroupValueWrite(MulticastAddress ga, byte value)
+        {
+            byte[] payload = new byte[] { 0x00, value };
+            var content = new GroupValueWrite(payload);
+            LDataBase message = new LDataBase(ga, false, 0, content);
+            await _conn.SendAsync(message);
+        }
 
+        public async Task GroupValueWrite(MulticastAddress ga, byte[] data)
+        {
+            var content = new GroupValueWrite(data);
+            LDataBase message = new LDataBase(ga, false, 0, content);
+            await _conn.SendAsync(message);
+        }
+
+        public async Task<LDataBase?> GroupValueRead(MulticastAddress ga)
+        {
+            TaskCompletionSource<LDataBase> tcs = new TaskCompletionSource<LDataBase>();
+
+            void ReceivedMessage(LDataBase response)
+            {
+                if (response.GetApciType() == ApciTypes.GroupValueResponse &&
+                    response.DestinationAddress is MulticastAddress destGa &&
+                    destGa.GetBytes().SequenceEqual(ga.GetBytes()))
+                {
+                    tcs.TrySetResult(response);
+                }
+            }
+
+            _conn.OnReceivedMessage += ReceivedMessage;
+
+            try
+            {
+                var content = new GroupValueRead();
+                LDataBase message = new LDataBase(ga, false, 0, content);
+                await _conn.SendAsync(message);
+
+                if (await Task.WhenAny(tcs.Task, Task.Delay(3000)) != tcs.Task)
+                    return null;
+
+                return await tcs.Task;
+            }
+            finally
+            {
+                _conn.OnReceivedMessage -= ReceivedMessage;
+            }
+        }
 
         public async Task IndividualAddressRead()
         {
-            // MsgIndividualAddressReadReq message = new MsgIndividualAddressReadReq();
-            // TODO
-            //await _conn.SendAsync(message, to);
-            await Task.Delay(200);
+            await Task.CompletedTask;
         }
 
         public async Task IndividualAddressWrite(UnicastAddress newAddr)
         {
-            // MsgIndividualAddressWriteReq message = new MsgIndividualAddressWriteReq(newAddr);
-            // TODO
-            //await _conn.SendAsync(message, to);
-            await Task.Delay(200);
+            await Task.CompletedTask;
         }
-
 
         public async Task IndividualAddressWrite(UnicastAddress newAddr, byte[] serialNumber)
         {
-            // MsgIndividualAddressSerialWriteReq message = new MsgIndividualAddressSerialWriteReq(newAddr, serialNumber);
-            // TODO
-            //await _conn.SendAsync(message, to);
-            await Task.Delay(200);
+            await Task.CompletedTask;
         }
 
         public async Task<LDataBase> ReadSerialNumberByManufacturer(int manufacturerId)
         {
             byte[] data = BitConverter.GetBytes((ushort)IPAddress.HostToNetworkOrder((short)manufacturerId));
-
-            // MsgSystemNetworkParameterReadReq message = new MsgSystemNetworkParameterReadReq(MsgSystemNetworkParameterReadOperand.ByManufacturerSpecific, data);
-            // TODO
-            var seq = 0; // await _conn.SendAsync(message, to);
-            var x = await WaitForData(seq);
-            return x;
-        }
-
-
-
-        public async Task GroupValueWrite(MulticastAddress ga, byte data)
-        {
-            await GroupValueWrite(ga, new byte[] { data });
-        }
-
-        public async Task GroupValueWrite(MulticastAddress ga, byte[] data)
-        {
-            // MsgGroupWriteReq message = new MsgGroupWriteReq(from, ga, data);
-            // TODO
-            //await _conn.SendAsync(message, to);
-        }
-
-        public async Task<LDataBase> GroupValueRead(MulticastAddress ga)
-        {
-            // MsgGroupReadReq message = new MsgGroupReadReq(ga);
-            // TODO
-            var seq = 0; // await _conn.SendAsync(message, to);
-            var x = await WaitForData(seq);
-            return x;
+            await Task.CompletedTask;
+            return null!;
         }
     }
 }
