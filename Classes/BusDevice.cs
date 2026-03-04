@@ -117,8 +117,14 @@ namespace Kaenx.Konnect.Classes
                     }
                     catch (Exception ex)
                     {
+                        if(helper.Response != null)
+                        {
+                            Debug.WriteLine($"Bus Device | Send Got Response while waiting for Ack: {sequenceNumber}");
+                            _currentSeqNum++;
+                            break;
+                        }
                         Debug.WriteLine("Got Exception: " + ex.Message);
-                        throw new Exception("Could not wait for Ack", ex);
+                        throw new Exception($"Could not wait for Ack (Seq. {sequenceNumber})", ex);
                     }
                 }
             } else
@@ -127,20 +133,22 @@ namespace Kaenx.Konnect.Classes
                 await _conn.SendAsync(lDataBase);
             }
 
-            try {
-                await Task.Delay(timeoutForData, helper.TokenSource.Token);
-                Debug.WriteLine($"Bus Device | Try   Dat: {sequenceNumber}");
-            } catch {
-                Debug.WriteLine($"Bus Device | Catch Dat: {sequenceNumber}");
-                // If the Token was cancelled, we got the Response
+            // When we alrady got a response while waiting for an Ack, we can return it right away
+            if(!helper.TokenSource.IsCancellationRequested)
+            {
+                try {
+                    await Task.Delay(timeoutForData, helper.TokenSource.Token);
+                    Debug.WriteLine($"Bus Device | Try   Dat: {sequenceNumber}");
+                } catch {
+                    Debug.WriteLine($"Bus Device | Catch Dat: {sequenceNumber}");
+                    // If the Token was cancelled, we got the Response
+                }
             }
 
             responses.Remove(sequenceNumber);
             if(helper.Response == null)
-                throw new TimeoutException("Zeitüberschreitung beim Warten auf Antwort");
-
-            await Task.Delay(10);
-
+                throw new TimeoutException("Zeitüberschreitung beim Warten auf Antwort (Seq. Nummer: " + sequenceNumber + ")");
+            Debug.WriteLine($"Bus Device | Received Data: {helper.Response.GetType().FullName}, SeqNum: {sequenceNumber}");
             try
             {
                 return (T)Convert.ChangeType(helper.Response, typeof(T));
@@ -335,10 +343,10 @@ namespace Kaenx.Konnect.Classes
                         catch (Exception ex)
                         {
                             //throw new Exception("Device sent answer but no Ack received", ex);
-                            return;
+                            //return;
                         }
                     }
-                    
+
                     if (responses.ContainsKey(message.SequenceNumber))
                     {
                         responses[message.SequenceNumber].Response = message.Content;
@@ -703,6 +711,7 @@ namespace Kaenx.Konnect.Classes
                 verifyMode = VerifyMode.Enabled;
             }
 
+            bool mustUseExtendedMemoryWrite = address > 0xFFFF;
             bool useExtendedMemoryWrite = maxCount > 63;
             bool firstTry = true;
 
@@ -727,30 +736,25 @@ namespace Kaenx.Konnect.Classes
                     //datalist.RemoveRange(0, datalist.Count);
                 }
 
-                if(useExtendedMemoryWrite)
+                if(useExtendedMemoryWrite || mustUseExtendedMemoryWrite)
                 {
                     MemoryExtendedWrite write = new MemoryExtendedWrite(address, (uint)maxCount, datalist.ToArray());
-                    if (firstTry)
+                    try
                     {
-                        try
+                        if(verifyMode == VerifyMode.Enabled)
                         {
-                            if(verifyMode == VerifyMode.Enabled)
-                            {
-                                MemoryExtendedWriteResponse response = await WaitForData<MemoryExtendedWriteResponse>(new MemoryExtendedWrite(currentPosition, (uint)maxCount, data_temp.ToArray()), _currentSeqNum);
-                                
-                            } else
-                            {
-                                throw new NotImplementedException("MemoryExtendedWrite without verify is not implemented");
-                            }
-                                
-                        } catch(Exception ex)
+                            MemoryExtendedWriteResponse response = await WaitForData<MemoryExtendedWriteResponse>(new MemoryExtendedWrite(currentPosition, (uint)data_temp.Count, data_temp.ToArray()), _currentSeqNum);
+                            
+                        } else
                         {
-                            // maybe the device does not support MemoryExtendedWrite, so we fall back to normal MemoryWrite
-                            useExtendedMemoryWrite = false;
+                            throw new NotImplementedException("MemoryExtendedWrite without verify is not implemented");
                         }
-                    } else
+                            
+                    } catch(Exception ex)
                     {
-                        MemoryExtendedWriteResponse response = await WaitForData<MemoryExtendedWriteResponse>(new MemoryExtendedWrite(currentPosition, (uint)maxCount, data_temp.ToArray()), _currentSeqNum);
+                        // maybe the device does not support MemoryExtendedWrite, so we fall back to normal MemoryWrite
+                        if(firstTry && !mustUseExtendedMemoryWrite)
+                            useExtendedMemoryWrite = false;
                     }
                     firstTry = false;
                 } else

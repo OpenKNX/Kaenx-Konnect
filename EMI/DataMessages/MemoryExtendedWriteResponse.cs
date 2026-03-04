@@ -13,19 +13,19 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public static ApciTypes StaticApciType => ApciTypes.MemoryExtendedWriteResponse;
 
         public uint Address { get; private set; }
-        public uint Count { get; private set; }
         public byte[] Data { get; private set; } = Array.Empty<byte>();
+        public ReturnCodes ReturnCode { get; private set; }
 
 
-        public MemoryExtendedWriteResponse(uint address, uint count, byte[] data)
+        public MemoryExtendedWriteResponse(uint address, byte[] data, ReturnCodes returnCode)
         {
             if(address > 0xFFFFFF)
                 throw new ArgumentOutOfRangeException(nameof(address), "Address must be between 0 and 16777215.");
-            if (count > 0xFF)
-                throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 255.");
+            if (data.Length > 0xFF)
+                throw new ArgumentOutOfRangeException(nameof(data), "Data length must be between 0 and 255.");
 
             Address = address;
-            Count = count;
+            ReturnCode = returnCode;
             Data = data;
         }
 
@@ -50,7 +50,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public byte[] GetBytesCemi()
         {
             List<byte> data = new List<byte>();
-            data.Add((byte)Count);
+            data.Add((byte)ReturnCode);
             data.Add((byte)(Address & 0xFF));
             data.Add((byte)((Address >> 8) & 0xFF));
             data.Add((byte)((Address >> 16) & 0xFF));
@@ -71,7 +71,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public void ParseDataCemi(byte[] data)
         {
-            Count = data[0];
+            ReturnCode = (ReturnCodes)data[0];
             Address = (uint)((data[1] << 16) | (data[2] << 8) | data[3]);
             Data = data.Skip(4).ToArray();
         }
@@ -88,7 +88,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public string GetDescription()
         {
-            return $"Address={Address:X6} Count={Count} {BitConverter.ToString(Data).Replace("-", "")}";
+            return $"Address={Address:X6} Error={ReturnCode} {BitConverter.ToString(Data).Replace("-", "")}";
         }
     }
 }
