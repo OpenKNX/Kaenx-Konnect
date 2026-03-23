@@ -90,7 +90,10 @@ namespace Kaenx.Konnect.Connections.Transports
                 }
                 catch (OperationCanceledException)
                 {
-                    // Graceful exit
+                    return;
+                }
+                catch (Exception ex) when (ex.InnerException is OperationCanceledException)
+                {
                     return;
                 }
                 catch (Exception ex)

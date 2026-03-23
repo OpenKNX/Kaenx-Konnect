@@ -936,6 +936,20 @@ namespace Kaenx.Konnect.Classes
             return MaxFrameLength;
         }
 
+        public async Task<KnxDeviceInfo> ReadDeviceInfo()
+        {
+            var info = new KnxDeviceInfo
+            {
+                IndividualAddress = _address,
+                Descriptor = await PropertyRead(0, 0x0E), // PID_DEVICE_DESCRIPTOR
+                ProgrammingMode = (await PropertyRead(0, 0x01))[0] == 1, // PID_PROG_MODE
+                SerialNumber = await PropertyRead(0, 0x0B), // PID_SERIAL_NUMBER
+                ManufacturerId = await PropertyRead(0, 0x0C) // PID_MANUFACTURER_ID
+            };
+
+            return info;
+        }
+
         public T ConvertRawData<T>(byte[] data)
         {
             switch (Type.GetTypeCode(typeof(T)))
