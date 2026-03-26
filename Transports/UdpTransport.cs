@@ -19,12 +19,10 @@ internal class UdpTransport : ITransport
     private bool _isMulticast;
     private IPAddress _localIp;
 
-    // Channel entkoppelt Empfang von Verarbeitung —
-    // kein Paketverlust bei langsamen Handlern
     private readonly Channel<byte[]> _receiveChannel =
         Channel.CreateBounded<byte[]>(new BoundedChannelOptions(512)
         {
-            FullMode = BoundedChannelFullMode.DropOldest, // älteste statt neueste verwerfen
+            FullMode = BoundedChannelFullMode.DropOldest,
             SingleReader = true
         });
 
@@ -62,8 +60,6 @@ internal class UdpTransport : ITransport
         else
             _client = new UdpClient(new IPEndPoint(_localIp, 0));
 
-        // Auf Android wichtig: größerer Kernel-Receive-Buffer verhindert
-        // Paketverlust bei mehreren schnell aufeinanderfolgenden KNX-Telegrammen
         _client.Client.ReceiveBufferSize = 256 * 1024;
         _client.Client.SendBufferSize = 64 * 1024;
 
@@ -80,13 +76,10 @@ internal class UdpTransport : ITransport
 
     private void StartLoops()
     {
-        // KRITISCH: async void → unbehandelte Exception = App-Crash auf Android.
-        // Task.Run + eigene Exception-Behandlung pro Loop stattdessen.
         _ = Task.Run(ReceiveLoopAsync, _cts.Token);
         _ = Task.Run(ProcessLoopAsync, _cts.Token);
     }
 
-    // Loop 1: reiner UDP-Empfang, legt Daten nur in den Channel
     private async Task ReceiveLoopAsync()
     {
         int reconnectDelay = 500;
@@ -96,11 +89,8 @@ internal class UdpTransport : ITransport
             try
             {
                 var result = await _client.ReceiveAsync(_cts.Token);
-
-                // Schreibt non-blocking; bei vollem Channel greift DropOldest
                 _receiveChannel.Writer.TryWrite(result.Buffer);
-
-                reconnectDelay = 500; // nach Erfolg zurücksetzen
+                reconnectDelay = 500;
             }
             catch (OperationCanceledException) { return; }
             catch (Exception ex) when (ex.InnerException is OperationCanceledException) { return; }
@@ -108,10 +98,8 @@ internal class UdpTransport : ITransport
             catch (SocketException sex)
             {
                 Debug.WriteLine($"[UdpTransport] SocketException: {sex.SocketErrorCode} – versuche Reconnect...");
-
-                // Socket neu aufbauen statt dauerhaft zu brechen
                 await TryReconnectAsync(reconnectDelay);
-                reconnectDelay = Math.Min(reconnectDelay * 2, 10_000); // exponentielles Backoff
+                reconnectDelay = Math.Min(reconnectDelay * 2, 10_000);
             }
             catch (Exception ex)
             {
@@ -121,7 +109,6 @@ internal class UdpTransport : ITransport
         }
     }
 
-    // Loop 2: ruft OnReceived auf — Fehler hier killen NICHT den Empfang
     private async Task ProcessLoopAsync()
     {
         await foreach (var data in _receiveChannel.Reader.ReadAllAsync(_cts.Token))
@@ -133,7 +120,6 @@ internal class UdpTransport : ITransport
             }
             catch (Exception ex)
             {
-                // Handler-Fehler isoliert: Empfang läuft weiter
                 Debug.WriteLine($"[UdpTransport] Fehler in OnReceived-Handler: {ex}");
             }
         }
@@ -146,7 +132,7 @@ internal class UdpTransport : ITransport
             _client.Close();
             _client.Dispose();
         }
-        catch { /* ignorieren */ }
+        catch { }
 
         await Task.Delay(delayMs, _cts.Token).ConfigureAwait(false);
 
@@ -172,7 +158,7 @@ internal class UdpTransport : ITransport
         catch (SocketException sex)
         {
             Debug.WriteLine($"[UdpTransport] SendAsync SocketException: {sex.SocketErrorCode}");
-            throw; // Aufrufer soll wissen, dass Send fehlschlug
+            throw;
         }
     }
 
@@ -187,12 +173,10 @@ internal class UdpTransport : ITransport
 
         foreach (var adapter in NetworkInterface.GetAllNetworkInterfaces())
         {
-            // Nur aktive Adapter berücksichtigen
             if (adapter.OperationalStatus != OperationalStatus.Up) continue;
 
             foreach (var addr in adapter.GetIPProperties().UnicastAddresses)
             {
-                // Explizit nur IPv4 — KNX IP arbeitet ausschließlich mit IPv4
                 if (addr.Address.AddressFamily != AddressFamily.InterNetwork) continue;
 
                 string[] hostParts = addr.Address.ToString().Split('.');
@@ -210,7 +194,6 @@ internal class UdpTransport : ITransport
             }
         }
 
-        // Fallback via Dummy-Connect
         if (best == null)
         {
             try

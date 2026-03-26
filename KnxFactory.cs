@@ -9,6 +9,12 @@ namespace Kaenx.Konnect
 {
     public class KnxFactory
     {
+        public static IKnxConnection CreateSerial(string portName)
+        {
+            var connection = new SerialTransport(portName);
+            return new SerialKnxConnection(connection);
+        }
+
         public static IpKnxConnection CreateTunnelingUdp(string ip, int port)
         {
             return CreateTunnelingUdp(new IPEndPoint(IPAddress.Parse(ip), port));
