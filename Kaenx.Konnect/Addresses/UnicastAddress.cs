@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Kaenx.Konnect.Addresses
 {
-    public class UnicastAddress : IKnxAddress
+    public class UnicastAddress : IKnxAddress, IEquatable<UnicastAddress>
     {
         public UnicastAddress(byte area, byte line, byte deviceAddress)
         {
@@ -21,6 +21,22 @@ namespace Kaenx.Konnect.Addresses
         public byte Area { get; }
         public byte Line { get; }
         public byte DeviceAddress { get; }
+
+        public bool Equals(UnicastAddress? other)
+        {
+            if (other is null) return false;
+            return Area == other.Area && Line == other.Line && DeviceAddress == other.DeviceAddress;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as UnicastAddress);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Area, Line, DeviceAddress);
+        }
 
         public byte[] GetBytes()
         {

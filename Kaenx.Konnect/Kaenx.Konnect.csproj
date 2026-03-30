@@ -8,7 +8,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <NeutralLanguage>de</NeutralLanguage>
-    <AssemblyVersion>2.0.1.0</AssemblyVersion>
+    <AssemblyVersion>2.0.1.1</AssemblyVersion>
     <Description>Connect to a KNX IP (tunneling/routing) or USB Interface</Description>
     <PackageIcon>Logo.png</PackageIcon>
     <PackageIconUrl />
