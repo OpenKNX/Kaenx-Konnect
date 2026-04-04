@@ -1,53 +1,16 @@
-﻿using System;
+﻿using Kaenx.Konnect.Classes.Helper;
+using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
-using Kaenx.Konnect.Classes.Helper;
 
 namespace Kaenx.Konnect.Classes
 {
-    public class UsbDeviceInfo
+    public class DeviceEnumerator  : IUsbDeviceEnumerator
     {
-        public string PortName { get; set; }
-        public string VendorId { get; set; }
-        public string ProductId { get; set; }
-        public string Name { get; set; }
-
-        public override string ToString()
-            => $"{Name} @ {PortName} (VID={VendorId}, PID={ProductId})";
-    }
-
-    public class DeviceEnumerator
-    {
-        // ---------------------------------------------------------
-        // PUBLIC API
-        // ---------------------------------------------------------
-        public static IEnumerable<UsbDeviceInfo> GetUsbDevices()
-        {
-            var interfaces = LoadInterfaceDefinitions();
-
-            foreach (var port in SerialPort.GetPortNames())
-            {
-                if (!TryKnxHandshake(port, out var response))
-                    continue;
-
-                var (vid, pid) = ParseVendorProduct(response);
-
-                if (interfaces.TryGetValue((vid, pid), out var name))
-                {
-                    yield return new UsbDeviceInfo
-                    {
-                        PortName = port,
-                        VendorId = vid,
-                        ProductId = pid,
-                        Name = name
-                    };
-                }
-            }
-        }
-
         // ---------------------------------------------------------
         // LOAD knx_interfaces.xml  (CORRECT FOR YOUR XML)
         // ---------------------------------------------------------
@@ -129,5 +92,100 @@ namespace Kaenx.Konnect.Classes
 
             return (vid, pid);
         }
+
+        public IEnumerable<KnxUsbDeviceInfo> GetKnxDevices()
+        {
+            var interfaces = LoadInterfaceDefinitions();
+
+            foreach (var port in SerialPort.GetPortNames())
+            {
+                if (!TryKnxHandshake(port, out var response))
+                    continue;
+
+                var (vid, pid) = ParseVendorProduct(response);
+
+                if (interfaces.TryGetValue((vid, pid), out var name))
+                {
+                    yield return new KnxUsbDeviceInfo
+                    {
+                        PortName = port,
+                        VendorId = vid,
+                        ProductId = pid,
+                        Name = name
+                    };
+                }
+            }
+
+#if DEBUG
+            const string vid_debug = "0908";
+            const string pid_debug = "02DD";
+            //if (interfaces.TryGetValue((vid_debug, pid_debug), out var namedebug))
+            //{
+            //    yield return new KnxUsbDeviceInfo
+            //    {
+            //        PortName = "COM01",
+            //        VendorId = vid_debug,
+            //        ProductId = pid_debug,
+            //        Name = namedebug
+            //    };
+            //}
+#endif
+        }
+
+        public async Task<bool> RequestPermissionAsync(KnxUsbDeviceInfo device)
+        {
+            return await Task.FromResult(true);
+        }
+    }
+
+    public class KnxUsbDeviceInfo
+    {
+
+        /// <summary>Anzeigename aus knx_interfaces.xml oder UsbDevice.ProductName.</summary>
+        public string Name { get; set; } = "Unknown KNX USB Interface";
+
+        /// <summary>z.B. "0E77"</summary>
+        public string VendorId { get; set; } = "";
+
+        /// <summary>z.B. "0111"</summary>
+        public string ProductId { get; set; } = "";
+
+        /// <summary>Herstellername aus UsbDevice, falls vorhanden.</summary>
+        public string? Manufacturer { get; set; }
+
+        /// <summary>Seriennummer aus UsbDevice, falls vorhanden.</summary>
+        public string? PortName { get; set; }
+
+        /// <summary>
+        ///   True sobald UsbManager.HasPermission() positiv ist
+        ///   oder Permission explizit gewährt wurde.
+        /// </summary>
+        public bool HasPermission { get; set; }
+
+        public string? SerialNumber { get; set; }
+        public int DeviceId { get; set; }
+
+        public override string ToString() =>
+            $"{Name} (VID={VendorId} PID={ProductId})";
+    }
+
+
+    // ============================================================
+    // Services/IUsbDeviceEnumerator.cs
+    // ============================================================
+
+    public interface IUsbDeviceEnumerator
+    {
+        /// <summary>
+        ///   Gibt alle aktuell angeschlossenen KNX-USB-Interfaces zurück.
+        ///   Wird synchron aufgerufen (schnell, kein I/O).
+        /// </summary>
+        IEnumerable<KnxUsbDeviceInfo> GetKnxDevices();
+
+        /// <summary>
+        ///   Fordert USB-Permission für das Gerät an.
+        ///   Gibt true zurück wenn der User gewährt hat.
+        /// </summary>
+        Task<bool> RequestPermissionAsync(KnxUsbDeviceInfo device);
     }
 }
