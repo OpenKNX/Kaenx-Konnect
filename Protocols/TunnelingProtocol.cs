@@ -231,18 +231,21 @@ namespace Kaenx.Konnect.Connections.Protocols
 
         public override async Task<int> SendAsync(LDataBase message)
         {
-            if(!IsConnected)
+            if (!IsConnected)
                 throw new InterfaceNotConnectedException();
-
             byte sequenceCounter = _sequenzeCounter;
+            _sequenzeCounter = (byte)((_sequenzeCounter + 1) % 256); 
+
+            var confirmationCts = new CancellationTokenSource();
+            _confirmationToken = confirmationCts;
+            _confirmationTokenSequenceCounter = sequenceCounter;
+
+            var ackCts = new CancellationTokenSource();
+            _ackWaitList[sequenceCounter] = ackCts; // Add → Indexer, crash-safe
+
             TunnelingRequest request = new(message, _channelId, sequenceCounter);
 
-            _ackWaitList.Add(sequenceCounter, new CancellationTokenSource());
-            _confirmationToken = new CancellationTokenSource();
-            _confirmationTokenSequenceCounter = sequenceCounter;
-            Debug.WriteLine($"Starting confToken XX:{sequenceCounter}");
             await WaitForAck(request);
-            _sequenzeCounter++;
             await WaitForConfirmation(sequenceCounter);
             return _lastReceivedSequenceCounter + 1;
         }

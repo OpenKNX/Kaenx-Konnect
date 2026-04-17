@@ -18,6 +18,7 @@ internal class UdpTransport : ITransport
     private IPEndPoint? _source;
     private bool _isMulticast;
     private IPAddress _localIp;
+    private int _localPort = 0;
 
     private readonly Channel<byte[]> _receiveChannel =
         Channel.CreateBounded<byte[]>(new BoundedChannelOptions(512)
@@ -58,7 +59,10 @@ internal class UdpTransport : ITransport
         if (_isMulticast)
             _client = new UdpClient(new IPEndPoint(IPAddress.Any, _target.Port));
         else
-            _client = new UdpClient(new IPEndPoint(_localIp, 0));
+            _client = new UdpClient(new IPEndPoint(_localIp, _localPort)); 
+
+        if (_localPort == 0)
+            _localPort = ((IPEndPoint)_client.Client.LocalEndPoint!).Port;
 
         _client.Client.ReceiveBufferSize = 256 * 1024;
         _client.Client.SendBufferSize = 64 * 1024;
