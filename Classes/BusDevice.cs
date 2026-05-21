@@ -667,7 +667,7 @@ namespace Kaenx.Konnect.Classes
         /// <exception cref="System.TimeoutException" />
         public async Task MemoryWrite(uint address, byte[] databytes, IProgress<float>? progress = null, bool verify = false)
         {
-            if(!_isConnected && !_isIndividual)
+            if (!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
 
             List<byte> datalist = databytes.ToList();
@@ -681,7 +681,13 @@ namespace Kaenx.Konnect.Classes
 
             if (verifyMode == VerifyMode.Unknown)
             {
-                if (GetFeature("VerifyMode") == "1")
+                // Wenn keine Maske bekannt (z.B. Connect mit onlyConnect: true),
+                // VerifyMode als NotSupported behandeln — kein GetFeature-Aufruf möglich
+                if (string.IsNullOrEmpty(_mask))
+                {
+                    verifyMode = VerifyMode.NotSupported;
+                }
+                else if (GetFeature("VerifyMode") == "1")
                 {
                     deviceControl = await PropertyRead<byte>(0, 14);
                     bool verifyEnabled = (deviceControl & (1 << 2)) != 0;
@@ -693,7 +699,7 @@ namespace Kaenx.Konnect.Classes
                 }
             }
 
-            if(verify && verifyMode == VerifyMode.NotSupported)
+            if (verify && verifyMode == VerifyMode.NotSupported)
             {
                 throw new Exceptions.NotSupportedException("VerifyMode is not supported by this device");
             }
@@ -719,7 +725,7 @@ namespace Kaenx.Konnect.Classes
 
             while (datalist.Count != 0)
             {
-                if(errorCount > 2)
+                if (errorCount > 2)
                 {
                     throw new Exception("Too many errors while writing memory");
                 }
@@ -728,39 +734,39 @@ namespace Kaenx.Konnect.Classes
                 if (datalist.Count >= maxCount)
                 {
                     data_temp.AddRange(datalist.Take(maxCount));
-                    //datalist.RemoveRange(0, maxCount);
                 }
                 else
                 {
                     data_temp.AddRange(datalist.Take(datalist.Count));
-                    //datalist.RemoveRange(0, datalist.Count);
                 }
 
-                if(useExtendedMemoryWrite || mustUseExtendedMemoryWrite)
+                if (useExtendedMemoryWrite || mustUseExtendedMemoryWrite)
                 {
                     MemoryExtendedWrite write = new MemoryExtendedWrite(address, (uint)maxCount, datalist.ToArray());
                     try
                     {
-                        if(verifyMode == VerifyMode.Enabled)
+                        if (verifyMode == VerifyMode.Enabled)
                         {
-                            MemoryExtendedWriteResponse response = await WaitForData<MemoryExtendedWriteResponse>(new MemoryExtendedWrite(currentPosition, (uint)data_temp.Count, data_temp.ToArray()), _currentSeqNum);
-                            
-                        } else
+                            MemoryExtendedWriteResponse response = await WaitForData<MemoryExtendedWriteResponse>(
+                                new MemoryExtendedWrite(currentPosition, (uint)data_temp.Count, data_temp.ToArray()),
+                                _currentSeqNum);
+                        }
+                        else
                         {
                             throw new NotImplementedException("MemoryExtendedWrite without verify is not implemented");
                         }
-                            
-                    } catch(Exception ex)
+                    }
+                    catch (Exception ex)
                     {
-                        // maybe the device does not support MemoryExtendedWrite, so we fall back to normal MemoryWrite
-                        if(firstTry && !mustUseExtendedMemoryWrite)
+                        if (firstTry && !mustUseExtendedMemoryWrite)
                             useExtendedMemoryWrite = false;
                     }
                     firstTry = false;
-                } else
+                }
+                else
                 {
                     MemoryWrite write = new MemoryWrite(currentPosition, (uint)data_temp.Count, data_temp.ToArray());
-                    if(verifyMode == VerifyMode.Enabled)
+                    if (verifyMode == VerifyMode.Enabled)
                     {
                         try
                         {
@@ -768,7 +774,8 @@ namespace Kaenx.Konnect.Classes
 
                             if (BitConverter.ToString(response.Data) != BitConverter.ToString(data_temp.ToArray()))
                                 throw new Exception("Written Memory is not requested bytes to write");
-                        } catch (Exception ex)
+                        }
+                        catch (Exception ex)
                         {
                             Debug.WriteLine($"Error ({errorCount.ToString("D2")}): {ex.Message}");
                             errorCount++;
@@ -777,9 +784,8 @@ namespace Kaenx.Konnect.Classes
                             await Connect(true);
                             continue;
                         }
-
-
-                    } else
+                    }
+                    else
                     {
                         await WaitForAck(write, _currentSeqNum);
                     }
@@ -793,7 +799,7 @@ namespace Kaenx.Konnect.Classes
                     datalist.Clear();
 
                 currentPosition += (uint)data_temp.Count;
-                if(progress != null)
+                if (progress != null)
                 {
                     float prog = (databytes.Length - datalist.Count) / (float)databytes.Length;
                     progress.Report(prog);
@@ -801,11 +807,7 @@ namespace Kaenx.Konnect.Classes
 
                 await Task.Delay(300);
             }
-
         }
-
-
-
 
         /// <summary>
         /// Liest den Speicher des Gerätes aus.
@@ -818,43 +820,31 @@ namespace Kaenx.Konnect.Classes
             return await MemoryRead<byte[]>(address, length);
         }
 
-        /// <summary>
-        /// Liest den Speicher des Gerätes aus.
-        /// </summary>
-        /// <param name="address">Start Adresse</param>
-        /// <param name="length">Anzahl der Bytes die gelesen werden sollen</param>
-        /// <returns>Daten aus Speicher</returns>
-        /// <exception cref="System.TimeoutException" />
         public async Task<T> MemoryRead<T>(uint address, int length)
         {
-            if(!_isConnected && !_isIndividual)
+            if (!_isConnected && !_isIndividual)
                 throw new DeviceNotConnectedException();
 
             List<byte> readed = new List<byte>();
             uint currentPosition = address;
-            uint toRead = (uint)length;
+            uint toRead;
             uint maxCount = (uint)MaxFrameLength - 3;
-
-            // TODO implement MemoryReadExtended
             if (maxCount > 63) maxCount = 63;
 
-            while (true)
+            while (length > 0)
             {
-                if (length == 0) break;
+                toRead = (uint)Math.Min(length, (int)maxCount);
 
-                if (length > maxCount) toRead = maxCount;
-                else toRead = (uint)length;
+                MemoryResponse resp = await WaitForData<MemoryResponse>(
+                    new MemoryRead(currentPosition, toRead),
+                    _currentSeqNum);
 
-                //MsgMemoryReadReq msg = new MsgMemoryReadReq(currentPosition, toRead, _address);
-                //msg.SequenceNumber = _currentSeqNum;
-                // TODO implement MemoryRead Message
-                //IMessageResponse resp = await WaitForData(msg);
-                //readed.AddRange(resp.Raw.Skip(2));
+                readed.AddRange(resp.Data);
                 currentPosition += toRead;
                 length -= (int)toRead;
             }
 
-            //MsgMemoryReadRes Converter nutzen
+            // Konvertierung (identisch zu vorhandenem Switch-Block)
             switch (Type.GetTypeCode(typeof(T)))
             {
                 case TypeCode.String:
@@ -864,18 +854,12 @@ namespace Kaenx.Konnect.Classes
                 case TypeCode.Int32:
                     byte[] datai = readed.ToArray();
                     byte[] xint = new byte[4];
-
                     for (int i = 0; i < datai.Length; i++)
-                    {
                         xint[i] = datai[i];
-                    }
                     return (T)Convert.ChangeType(BitConverter.ToUInt32(xint, 0), typeof(T));
 
                 default:
-                    try
-                    {
-                        return (T)Convert.ChangeType(readed.ToArray(), typeof(T));
-                    }
+                    try { return (T)Convert.ChangeType(readed.ToArray(), typeof(T)); }
                     catch (Exception e)
                     {
                         throw new Exception("Data kann nicht in angegebenen Type konvertiert werden. " + typeof(T).ToString(), e);
