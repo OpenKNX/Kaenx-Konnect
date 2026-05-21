@@ -950,46 +950,6 @@ namespace Kaenx.Konnect.Classes
             return info;
         }
 
-        /// <summary>
-        /// Liest den aktuellen Programmiermodus-Status des Gerätes aus.
-        /// KNX-Spec: Interface Object 0 (Device Object), PID_PROG_MODE = 0x01
-        /// Wert 0x01 = AN, 0x00 = AUS
-        /// </summary>
-        public async Task<bool> GetProgrammingMode()
-        {
-            if (!_isConnected && !_isIndividual)
-                throw new DeviceNotConnectedException();
-
-            byte value = await PropertyRead<byte>(0, 0x01); // PID_PROG_MODE
-            return value == 0x01;
-        }
-
-        /// <summary>
-        /// Setzt den Programmiermodus des Gerätes.
-        /// KNX-Spec: Interface Object 0 (Device Object), PID_PROG_MODE = 0x01
-        /// Wert 0x01 = AN, 0x00 = AUS — physische LED leuchtet rot bei AN.
-        /// Gerät muss vorher verbunden sein (Connect/ConnectIndividual).
-        /// </summary>
-        /// <param name="enable">true = Programmiermodus einschalten, false = ausschalten</param>
-        public async Task SetProgrammingMode(bool enable)
-        {
-            if (!_isConnected && !_isIndividual)
-                throw new DeviceNotConnectedException();
-
-            byte value = enable ? (byte)0x01 : (byte)0x00;
-            await PropertyWrite(0, 0x01, new byte[] { value }, waitForResp: true);
-        }
-
-        /// <summary>
-        /// Liest den aktuellen Programmiermodus-Status und kehrt ihn um.
-        /// </summary>
-        public async Task<bool> ToggleProgrammingMode()
-        {
-            bool current = await GetProgrammingMode();
-            await SetProgrammingMode(!current);
-            return !current; // neuer Zustand
-        }
-
         public T ConvertRawData<T>(byte[] data)
         {
             switch (Type.GetTypeCode(typeof(T)))
