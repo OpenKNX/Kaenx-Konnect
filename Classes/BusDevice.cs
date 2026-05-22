@@ -256,23 +256,19 @@ namespace Kaenx.Konnect.Classes
             await Connect(onlyConnect);
         }
 
-        /// <summary>
-        /// Stellt eine Verbindung mit dem Gerät her.
-        /// Wird für viele weitere Methoden benötigt.
-        /// </summary>
         public async Task Connect(bool onlyConnect = false)
         {
-            if(_isConnected && !_isIndividual)
-                await Disconnect(); //reset the connection
+            if (_isConnected && !_isIndividual)
+                await Disconnect();
 
             _currentSeqNum = 0;
-
             _conn.OnReceivedMessage += OnTunnelResponse;
 
-            if(!_isIndividual)
+            if (!_isIndividual)
             {
                 LDataBase request = new LDataBase(_address, false, _currentSeqNum, new Connect());
                 await _conn.SendAsync(request);
+                await Task.Delay(300);
             }
 
             _isConnected = true;
@@ -286,16 +282,14 @@ namespace Kaenx.Konnect.Classes
             try
             {
                 MaxFrameLength = await PropertyRead<short>(0, 56);
-                //Debug.WriteLine("Maximale Länge:  " + MaxFrameLength);
                 if (MaxFrameLength < 15) MaxFrameLength = 15;
-                //Debug.WriteLine("Maximale Länge*: " + MaxFrameLength);
                 await GetMaskVersion();
             }
             catch
             {
                 MaxFrameLength = 15;
                 Debug.WriteLine("Bus Device | Gerät hat die Property MaxAPDU nicht. Es wird von 15 ausgegangen");
-                if(!_isIndividual)
+                if (!_isIndividual)
                 {
                     await Disconnect();
                     await Connect(true);
@@ -315,7 +309,8 @@ namespace Kaenx.Konnect.Classes
                         break;
 
                     case ApciTypes.Disconnect:
-                        _isConnected = false;
+                        if (_isConnected)
+                            _isConnected = false;
                         break;
                 }
             } else
