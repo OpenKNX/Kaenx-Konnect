@@ -922,14 +922,93 @@ namespace Kaenx.Konnect.Classes
 
         public async Task<KnxDeviceInfo> ReadDeviceInfo()
         {
+            string maskVersion = await DeviceDescriptorRead();
+
             var info = new KnxDeviceInfo
             {
                 IndividualAddress = _address,
-                Descriptor = await PropertyRead(0, 0x0E), // PID_DEVICE_DESCRIPTOR
-                ProgrammingMode = (await PropertyRead(0, 0x01))[0] == 1, // PID_PROG_MODE
-                SerialNumber = await PropertyRead(0, 0x0B), // PID_SERIAL_NUMBER
-                ManufacturerId = await PropertyRead(0, 0x0C) // PID_MANUFACTURER_ID
+                MaskVersion = MaskVersion ?? 0,
+                Descriptor = BitConverter.GetBytes(MaskVersion ?? 0),
             };
+
+            // BCU1/BCU2 erkennen — diese unterstützen kein Property-Management
+            bool isBcu1 = (MaskVersion ?? 0) <= 0x0012;
+
+            if (isBcu1)
+            {
+                // ── BCU1: alles via Memory ────────────────────────────────────────
+
+                try
+                {
+                    byte[] d = await MemoryRead(0x0060, 1);
+                    info.ProgrammingMode = (d[0] & 0x01) != 0;
+                }
+                catch { }
+
+                try
+                {
+                    byte[] d = await MemoryRead(0x0101, 2);
+                    info.ManufacturerId = d;
+                }
+                catch { }
+
+                try
+                {
+                    byte[] d = await MemoryRead(0x0102, 2);
+                    info.DeviceType = (ushort)((d[0] << 8) | d[1]);
+                }
+                catch { }
+
+                try
+                {
+                    byte[] d = await MemoryRead(0x0104, 1);
+                    info.AppVersion = d[0];
+                }
+                catch { }
+
+                try
+                {
+                    byte[] d = await MemoryRead(0x00FD, 1);
+                    info.RunError = d[0];
+                }
+                catch { }
+
+                try
+                {
+                    byte[] d = await MemoryRead(0x00F0, 1);
+                    info.PeiType = d[0];
+                }
+                catch { }
+
+                try
+                {
+                    byte[] d = await MemoryRead(0x0106, 1);
+                    info.LoadState = d[0];
+                }
+                catch { }
+            }
+            else
+            {
+                // ── Moderne Geräte: Property-based ───────────────────────────────
+
+                try
+                {
+                    info.ProgrammingMode = (await PropertyRead(0, 0x01))[0] == 1;
+                }
+                catch { }
+
+                try
+                {
+                    info.SerialNumber = await PropertyRead(0, 0x0B);
+                }
+                catch { }
+
+                try
+                {
+                    info.ManufacturerId = await PropertyRead(0, 0x0C);
+                }
+                catch { }
+            }
 
             return info;
         }

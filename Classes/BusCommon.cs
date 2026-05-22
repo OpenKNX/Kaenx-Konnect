@@ -159,5 +159,20 @@ namespace Kaenx.Konnect.Classes
                 await device.Disconnect();
             }
         }
+
+        public async Task<KnxDeviceInfo> ReadDeviceInfo(UnicastAddress address)
+        {
+            var device = new BusDevice(address, _conn);
+            await device.Connect(onlyConnect: true);  // ← true!
+            try
+            {
+                var info = await device.ReadDeviceInfo();
+                return info;
+            }
+            finally
+            {
+                await device.Disconnect();
+            }
+        }
     }
 }

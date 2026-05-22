@@ -323,11 +323,12 @@ namespace Kaenx.Konnect.Connections.Protocols
             TimeSpan delay = timeout ?? TimeSpan.FromSeconds(3);
             try
             {
-                if (_confirmationToken == null)
+                CancellationTokenSource? localToken = _confirmationToken;
+                if (localToken == null)
                     return;
 
                 Debug.WriteLine($"Start waiting conf XX:{sequenceCounter}");
-                await Task.Delay(delay, _confirmationToken.Token);
+                await Task.Delay(delay, localToken.Token);
                 _confirmationToken = null;
                 _confirmationTokenSequenceCounter = -1;
             }
