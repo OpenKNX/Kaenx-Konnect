@@ -2,17 +2,19 @@
 using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.Connections.Protocols;
 using Kaenx.Konnect.Connections.Transports;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net.Sockets;
 
 namespace Kaenx.Konnect
 {
     public class KnxFactory
     {
+        public static IKnxConnection CreateSerial(string portName)
+        {
+            var connection = new SerialTransport(portName);
+            return new SerialKnxConnection(connection);
+        }
+
         public static IpKnxConnection CreateTunnelingUdp(string ip, int port)
         {
             return CreateTunnelingUdp(new IPEndPoint(IPAddress.Parse(ip), port));
@@ -44,9 +46,24 @@ namespace Kaenx.Konnect
 
         public static IpKnxConnection CreateRouting(UnicastAddress sourceAddress, IPEndPoint endPoint)
         {
-            ITransport connection = new UdpTransport(IPAddress.Any, endPoint);
+            var localIp = GetLocalIpForTarget(endPoint.Address);
+            ITransport connection = new UdpTransport(localIp, endPoint, isMulticast: true);
             RoutingProtocol protocol = new RoutingProtocol(sourceAddress, connection);
             return new IpKnxConnection(protocol);
+        }
+
+        private static IPAddress GetLocalIpForTarget(IPAddress target)
+        {
+            try
+            {
+                using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                socket.Connect(target, 3671);
+                return ((IPEndPoint)socket.LocalEndPoint!).Address;
+            }
+            catch
+            {
+                return IPAddress.Any;
+            }
         }
     }
 }

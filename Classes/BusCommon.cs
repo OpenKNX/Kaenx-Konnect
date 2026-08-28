@@ -3,8 +3,10 @@ using Kaenx.Konnect.Connections;
 using Kaenx.Konnect.EMI.DataMessages;
 using Kaenx.Konnect.EMI.LData;
 using Kaenx.Konnect.Enums;
+using Kaenx.Konnect.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -103,6 +105,74 @@ namespace Kaenx.Konnect.Classes
             byte[] data = BitConverter.GetBytes((ushort)IPAddress.HostToNetworkOrder((short)manufacturerId));
             await Task.CompletedTask;
             return null!;
+        }
+
+        public async Task<bool> GetProgrammingMode(UnicastAddress address)
+        {
+            var device = new BusDevice(address, _conn);
+            await device.Connect(onlyConnect: true);  // ← true!
+            try
+            {
+                byte[] data = await device.MemoryRead(0x0060, 1);
+                return (data[0] & 0x01) != 0;
+            }
+            finally
+            {
+                await device.Disconnect();
+            }
+        }
+
+        public async Task SetProgrammingMode(UnicastAddress address, bool enable)
+        {
+            var device = new BusDevice(address, _conn);
+            await device.Connect(onlyConnect: true);  // ← true!
+            try
+            {
+                byte[] current = await device.MemoryRead(0x0060, 1);
+                byte newValue = enable
+                    ? (byte)(current[0] | 0x01)
+                    : (byte)(current[0] & 0xFE);
+                await device.MemoryWrite(0x0060, new byte[] { newValue });
+            }
+            finally
+            {
+                await device.Disconnect();
+            }
+        }
+
+        public async Task<bool> ToggleProgrammingMode(UnicastAddress address)
+        {
+            var device = new BusDevice(address, _conn);
+            await device.Connect(onlyConnect: true);  // ← true!
+            try
+            {
+                byte[] current = await device.MemoryRead(0x0060, 1);
+                bool isActive = (current[0] & 0x01) != 0;
+                byte newValue = isActive
+                    ? (byte)(current[0] & 0xFE)
+                    : (byte)(current[0] | 0x01);
+                await device.MemoryWrite(0x0060, new byte[] { newValue });
+                return !isActive;
+            }
+            finally
+            {
+                await device.Disconnect();
+            }
+        }
+
+        public async Task<KnxDeviceInfo> ReadDeviceInfo(UnicastAddress address)
+        {
+            var device = new BusDevice(address, _conn);
+            await device.Connect(onlyConnect: true);  // ← true!
+            try
+            {
+                var info = await device.ReadDeviceInfo();
+                return info;
+            }
+            finally
+            {
+                await device.Disconnect();
+            }
         }
     }
 }

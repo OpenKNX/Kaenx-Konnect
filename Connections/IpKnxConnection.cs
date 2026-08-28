@@ -22,8 +22,8 @@ namespace Kaenx.Konnect.Connections
         internal IpKnxConnection(IProtocol protocol)
         {
             string name = protocol.GetType().Name;
-            if (name != "TunnelingProtocol")
-                throw new Exception("Cant create IpKnxCOnnection from protocol: " + name);
+            if (name != "TunnelingProtocol" && name != "RoutingProtocol")
+                throw new Exception("Cant create IpKnxConnection from protocol: " + name);
             _protocol = protocol;
 
             _protocol.OnReceivedMessage += _protocol_OnReceivedMessage;
