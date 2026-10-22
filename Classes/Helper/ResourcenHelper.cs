@@ -86,6 +86,17 @@ namespace Kaenx.Konnect.Classes.Helper
                 string content = reader.ReadToEnd();
                 return XDocument.Parse(content);
             }
+        }        
+        
+        public static XDocument GetKnxInterfaces()
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            using (Stream stream = assembly.GetManifestResourceStream("Kaenx.Konnect.Assets.knx_interfaces.xml"))
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                string content = reader.ReadToEnd();
+                return XDocument.Parse(content);
+            }
         }
     }
 }
