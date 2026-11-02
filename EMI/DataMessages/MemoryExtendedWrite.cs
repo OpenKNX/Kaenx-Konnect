@@ -51,9 +51,9 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             List<byte> data = new List<byte>();
             data.Add((byte)Count);
-            data.Add((byte)(Address & 0xFF));
-            data.Add((byte)((Address >> 8) & 0xFF));
-            data.Add((byte)((Address >> 16) & 0xFF));
+
+            byte[] address = BitConverter.GetBytes(Address);
+            data.AddRange(address.Reverse().Skip(1).Take(3));
             data.AddRange(Data);
 
             return data.ToArray();

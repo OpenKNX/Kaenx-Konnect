@@ -33,10 +33,10 @@ namespace Kaenx.Konnect.Enums
         FunctionPropertyExtendedStateRead = 0x1D5,
         FunctionPropertyExtendedStateResponse = 0x1D6,
         //
-        MemoryExtendedRead = 0x1FB,
-        MemoryExtendedReadResponse = 0x1FC,
-        MemoryExtendedWrite = 0x1FD,
-        MemoryExtendedWriteResponse = 0x1FE,
+        MemoryExtendedWrite = 0x1FB,
+        MemoryExtendedWriteResponse = 0x1FC,
+        MemoryExtendedRead = 0x1FD,
+        MemoryExtendedReadResponse = 0x1FE,
 
 
         MemoryRead = 0x200,

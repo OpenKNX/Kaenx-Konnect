@@ -7,29 +7,28 @@ using System.Threading.Tasks;
 
 namespace Kaenx.Konnect.EMI.DataMessages
 {
-    public class MemoryExtendedWriteResponse : IDataMessage
+    public class MemoryWrite : IDataMessage
     {
         public ApciTypes ApciType => StaticApciType;
-        public static ApciTypes StaticApciType => ApciTypes.MemoryExtendedWriteResponse;
+        public static ApciTypes StaticApciType => ApciTypes.MemoryWrite;
 
         public uint Address { get; private set; }
         public uint Count { get; private set; }
         public byte[] Data { get; private set; } = Array.Empty<byte>();
 
 
-        public MemoryExtendedWriteResponse(uint address, uint count, byte[] data)
+        public MemoryWrite(uint address, uint count, byte[] data)
         {
-            if(address > 0xFFFFFF)
-                throw new ArgumentOutOfRangeException(nameof(address), "Address must be between 0 and 16777215.");
-            if (count > 0xFF)
-                throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 255.");
-
+            if(address > 0xFFFF)
+                throw new ArgumentOutOfRangeException(nameof(address), "Address must be between 0 and 65535.");
+            if (count > 0x3F)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 0 and 31.");
             Address = address;
             Count = count;
-            Data = data;
+            Data = data ?? throw new ArgumentNullException(nameof(data));
         }
 
-        public MemoryExtendedWriteResponse(byte[] data, ExternalMessageInterfaces emi)
+        public MemoryWrite(byte[] data, ExternalMessageInterfaces emi)
         {
             switch (emi)
             {
@@ -51,9 +50,8 @@ namespace Kaenx.Konnect.EMI.DataMessages
         {
             List<byte> data = new List<byte>();
             data.Add((byte)Count);
-            data.Add((byte)(Address & 0xFF));
             data.Add((byte)((Address >> 8) & 0xFF));
-            data.Add((byte)((Address >> 16) & 0xFF));
+            data.Add((byte)(Address & 0xFF));
             data.AddRange(Data);
 
             return data.ToArray();
@@ -72,8 +70,8 @@ namespace Kaenx.Konnect.EMI.DataMessages
         public void ParseDataCemi(byte[] data)
         {
             Count = data[0];
-            Address = (uint)((data[1] << 16) | (data[2] << 8) | data[3]);
-            Data = data.Skip(4).ToArray();
+            Address = ((uint)data[1] << 8) | data[2];
+            Data = data.Skip(3).ToArray();
         }
 
         public void ParseDataEmi1(byte[] data)
@@ -88,7 +86,7 @@ namespace Kaenx.Konnect.EMI.DataMessages
 
         public string GetDescription()
         {
-            return $"Address={Address:X6} Count={Count} {BitConverter.ToString(Data).Replace("-", "")}";
+            return $"A={Address:X4} N={Count} ${BitConverter.ToString(Data).Replace("-", "")}";
         }
     }
 }

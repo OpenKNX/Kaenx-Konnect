@@ -26,8 +26,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\License" Pack="True" PackagePath="\" />
-    <None Include="..\Readme.md" Pack="True" PackagePath="\" />
+    <None Include="License" Pack="True" PackagePath="\" />
+    <None Include="Readme.md" Pack="True" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,6 +45,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
   </ItemGroup>
 
 </Project>

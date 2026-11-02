@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Kaenx.Konnect/Kaenx.Konnect.csproj" />
+    <ProjectReference Include="../../Kaenx.Konnect.csproj" />
   </ItemGroup>
 </Project>
