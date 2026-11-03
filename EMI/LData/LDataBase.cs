@@ -252,7 +252,7 @@ namespace Kaenx.Konnect.EMI.LData
             }
 
             if(messageType == null)
-                throw new NotImplementedException("No IDataMessage found for ApciType: " + apciType.ToString());
+                throw new Kaenx.Konnect.Exceptions.UnsupportedApciException(apciType);
 
             List<byte> payload = new List<byte>();
 

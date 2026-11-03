@@ -22,7 +22,7 @@ namespace Kaenx.Konnect.Connections.Protocols
     {
         private CancellationTokenSource? _connectToken;
         private CancellationTokenSource? _confirmationToken;
-        private int _confirmationTokenSequenceCounter = -1;
+        private byte[] _confirmationData = Array.Empty<byte>();
 
         private uint _channelId { get; set; } = 0;
         private byte _sequenzeCounter { get; set; } = 0;
@@ -123,7 +123,11 @@ namespace Kaenx.Konnect.Connections.Protocols
                         if(request.MessageCode == MessageCodes.L_Data_con)
                         {
                             Debug.WriteLine($"Got confirmation XX:{request.GetConnectionHeader().SequenceCounter}");
-                            if (_confirmationToken != null && _confirmationTokenSequenceCounter == request.GetConnectionHeader().SequenceCounter)
+                            LDataBase? confirmation = request.Contents.OfType<EmiContent>().FirstOrDefault()?.Message as LDataBase;
+                            // Each tunnel direction has its own counter. Match destination and APDU instead.
+                            if (_confirmationToken != null && confirmation != null &&
+                                request.GetConnectionHeader().ChannelId == _channelId &&
+                                _confirmationData.SequenceEqual(GetConfirmationData(confirmation.RawBytes)))
                             {
                                 _confirmationToken.Cancel();
                                 _confirmationToken = null;
@@ -224,7 +228,7 @@ namespace Kaenx.Konnect.Connections.Protocols
 
             _ackWaitList.Add(sequenceCounter, new CancellationTokenSource());
             _confirmationToken = new CancellationTokenSource();
-            _confirmationTokenSequenceCounter = sequenceCounter;
+            _confirmationData = GetConfirmationData(message.GetBytesCemi());
             Debug.WriteLine($"Starting confToken XX:{sequenceCounter}");
             await WaitForAck(request);
             _sequenzeCounter++;
@@ -295,6 +299,17 @@ namespace Kaenx.Konnect.Connections.Protocols
             throw new InterfaceException($"TunnelingAck timed out #XX:{request.GetConnectionHeader().SequenceCounter}");
         }
 
+        private static byte[] GetConfirmationData(byte[] cemi)
+        {
+            int metadataLength = cemi[1];
+            // Match address type, destination and declared APDU; ignore source replacement,
+            // optional metadata and any bytes left in the transport receive buffer.
+            return new byte[] { (byte)(cemi[3 + metadataLength] & 0x80) }
+                .Concat(cemi.Skip(6 + metadataLength).Take(2))
+                .Concat(cemi.Skip(9 + metadataLength).Take(cemi[8 + metadataLength] + 1))
+                .ToArray();
+        }
+
         private async Task WaitForConfirmation(int sequenceCounter, TimeSpan? timeout = null)
         {
             TimeSpan delay = timeout ?? TimeSpan.FromSeconds(3);
@@ -307,13 +322,13 @@ namespace Kaenx.Konnect.Connections.Protocols
                 Debug.WriteLine($"Start waiting conf XX:{sequenceCounter}");
                 await Task.Delay(delay, _confirmationToken.Token);
                 _confirmationToken = null;
-                _confirmationTokenSequenceCounter = -1;
+                _confirmationData = Array.Empty<byte>();
             }
             catch (TaskCanceledException)
             {
                 // Confirmation received
                 _confirmationToken = null;
-                _confirmationTokenSequenceCounter = -1;
+                _confirmationData = Array.Empty<byte>();
                 return;
             }
             throw new InterfaceException($"TunnelingConfirmation timed out #XX:{sequenceCounter}");

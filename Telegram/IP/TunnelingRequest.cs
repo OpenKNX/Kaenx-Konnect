@@ -1,9 +1,11 @@
 ﻿using Kaenx.Konnect.EMI;
 using Kaenx.Konnect.EMI.LData;
 using Kaenx.Konnect.Enums;
+using Kaenx.Konnect.Exceptions;
 using Kaenx.Konnect.Telegram.Contents;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -39,8 +41,16 @@ namespace Kaenx.Konnect.Telegram.IP
 
             MessageCode = (MessageCodes)_data.First();
 
-            EmiContent content = new EmiContent(_data.ToArray(), ExternalMessageInterfaces.cEmi);
-            Contents.Add(content);
+            try
+            {
+                EmiContent content = new EmiContent(_data.ToArray(), ExternalMessageInterfaces.cEmi);
+                Contents.Add(content);
+            }
+            catch (UnsupportedApciException ex) when (ex.ApciType == ApciTypes.DataSecure)
+            {
+                // Preserve the tunnel header and message code so the protocol still sends its ACK.
+                Trace.TraceWarning($"Ignoring unsupported DataSecure telegram (channel {ConnectionHeader.ChannelId}, sequence {ConnectionHeader.SequenceCounter}).");
+            }
         }
 
         public ConnectionHeaderContent GetConnectionHeader()
